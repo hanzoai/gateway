@@ -169,6 +169,17 @@ jobs:
           echo "build_type=$BUILD_TYPE" >> $GITHUB_OUTPUT
           echo "Build type: $BUILD_TYPE"
 
+      - name: Debug - verify repository structure
+        run: |
+          echo "=== Hanzo Node Repository Structure ==="
+          ls -la hanzo-node/
+          echo "=== Hanzo Libs Directory ==="
+          ls -la hanzo-node/hanzo-libs/
+          echo "=== Checking for hanzo-tools-runner ==="
+          ls -la hanzo-node/hanzo-libs/hanzo-tools-runner/ || echo "hanzo-tools-runner NOT FOUND"
+          echo "=== Workspace Cargo.toml ==="
+          cat hanzo-node/Cargo.toml | grep -A 5 "workspace.dependencies"
+
       - name: Copy Docker files to build context
         run: |
           cp -r hanzo-gateway/docker hanzo-node/
