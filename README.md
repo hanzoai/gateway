@@ -1,10 +1,10 @@
-# Hanzo AI Inference
+# Hanzo AI Gateway
 
 > **Production-ready multi-provider AI inference platform for Hanzo ecosystem**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI Status](https://github.com/hanzoai/inference/workflows/CI/badge.svg)](https://github.com/hanzoai/inference/actions)
-[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com/r/hanzoai/inference)
+[![Build and Push](https://github.com/hanzoai/gateway/workflows/Build%20and%20Push%20Docker%20Image/badge.svg)](https://github.com/hanzoai/gateway/actions)
+[![Docker](https://img.shields.io/badge/docker-ready-blue)](https://hub.docker.com/r/hanzoai/gateway)
 
 Hanzo Gateway provides secure, cost-effective AI inference across multiple providers (DigitalOcean, OpenAI, Claude) with built-in rate limiting, cost controls, and device authentication.
 
@@ -12,8 +12,8 @@ Hanzo Gateway provides secure, cost-effective AI inference across multiple provi
 
 ```bash
 # Clone repository
-git clone https://github.com/hanzoai/inference.git
-cd inference
+git clone https://github.com/hanzoai/gateway.git
+cd gateway
 
 # Configure API keys
 cp gateway/.env.example gateway/.env
@@ -368,13 +368,13 @@ Contributions welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) first.
 ## 🔗 Links
 
 - **Website**: https://hanzo.ai
-- **Documentation**: https://docs.hanzo.ai/inference
+- **Documentation**: https://docs.hanzo.ai/gateway
 - **Discord**: https://discord.gg/hanzo
-- **GitHub**: https://github.com/hanzoai/inference
+- **GitHub**: https://github.com/hanzoai/gateway
 
 ## 📞 Support
 
-- **Issues**: https://github.com/hanzoai/inference/issues
+- **Issues**: https://github.com/hanzoai/gateway/issues
 - **Email**: support@hanzo.ai
 - **Discord**: https://discord.gg/hanzo
 

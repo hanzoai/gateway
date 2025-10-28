@@ -1,0 +1,261 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      push_image:
+        description: 'Push image to registry'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: hanzoai/gateway
+  NODE_REPO: hanzoai/node
+
+jobs:
+  # ==========================================================================
+  # Build and Test Node
+  # ==========================================================================
+  build-node:
+    name: Build Hanzo Node
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout node repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.NODE_REPO }}
+          path: hanzo-node
+          token: ${{ secrets.GH_PAT || github.token }}
+
+      - name: Checkout gateway repository
+        uses: actions/checkout@v4
+        with:
+          path: hanzo-gateway
+
+      - name: Set up Rust
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            hanzo-node/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('hanzo-node/**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os}}-cargo-
+
+      - name: Run Rust tests
+        working-directory: hanzo-node
+        run: |
+          cargo test --workspace --all-features
+          cargo clippy --workspace --all-features -- -D warnings
+
+      - name: Build debug binary
+        working-directory: hanzo-node
+        run: cargo build --workspace
+
+      - name: Build release binary
+        working-directory: hanzo-node
+        run: cargo build --workspace --release
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hanzo-node-binary-${{ github.sha }}
+          path: |
+            hanzo-node/target/release/hanzo_node
+            hanzo-node/target/release/hanzo-tools-runner-resources
+          retention-days: 7
+
+  # ==========================================================================
+  # Build and Push Docker Image
+  # ==========================================================================
+  docker-build:
+    name: Build and Push Docker Image
+    needs: build-node
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout node repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.NODE_REPO }}
+          path: hanzo-node
+          token: ${{ secrets.GH_PAT || github.token }}
+          fetch-depth: 0
+
+      - name: Checkout gateway repository
+        uses: actions/checkout@v4
+        with:
+          path: hanzo-gateway
+          fetch-depth: 0
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.title=Hanzo Gateway
+            org.opencontainers.image.description=Multi-provider AI inference platform for Hanzo ecosystem
+            org.opencontainers.image.vendor=Hanzo AI
+            org.opencontainers.image.url=https://hanzo.ai
+            org.opencontainers.image.source=https://github.com/hanzoai/gateway
+            org.opencontainers.image.licenses=MIT
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          elif [[ "${{ github.ref }}" == refs/heads/main ]]; then
+            VERSION=$(git -C hanzo-node describe --tags --always --abbrev=7)
+          else
+            VERSION=dev-$(git -C hanzo-node rev-parse --short HEAD)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+
+      - name: Determine build type
+        id: build_type
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]] || [[ "${{ github.ref }}" == refs/heads/main ]]; then
+            BUILD_TYPE=release
+          else
+            BUILD_TYPE=debug
+          fi
+          echo "build_type=$BUILD_TYPE" >> $GITHUB_OUTPUT
+          echo "Build type: $BUILD_TYPE"
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: hanzo-node
+          file: hanzo-gateway/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: ${{ (github.event_name != 'pull_request') && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            BUILD_TYPE=${{ steps.build_type.outputs.build_type }}
+            HANZO_VERSION=${{ steps.version.outputs.version }}
+            BUILD_DATE=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
+            VCS_REF=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate build summary
+        if: always()
+        run: |
+          echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Type**: ${{ steps.build_type.outputs.build_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Pushed**: ${{ (github.event_name != 'pull_request') && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull Command" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # ==========================================================================
+  # Test Docker Image
+  # ==========================================================================
+  test-image:
+    name: Test Docker Image
+    needs: docker-build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG=${GITHUB_REF#refs/tags/v}
+          elif [[ "${{ github.ref }}" == refs/heads/main ]]; then
+            TAG=latest
+          else
+            TAG=develop
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Pull image
+        run: |
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+
+      - name: Test image
+        run: |
+          # Start container
+          docker run -d --name test-hanzo \
+            -e INITIAL_AGENT_API_KEYS=test-key \
+            -e NODE_API_PORT=9550 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.tag }}
+
+          # Wait for startup
+          sleep 10
+
+          # Check if container is running
+          docker ps | grep test-hanzo
+
+          # Check logs
+          docker logs test-hanzo
+
+          # Cleanup
+          docker stop test-hanzo
+          docker rm test-hanzo
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Image Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Image successfully tested" >> $GITHUB_STEP_SUMMARY

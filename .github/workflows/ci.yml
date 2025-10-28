@@ -11,9 +11,9 @@ env:
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Gateway Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -23,8 +23,10 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: gateway/package-lock.json
 
       - name: Install dependencies
+        working-directory: gateway
         run: npm ci
 
       - name: Create .env file
@@ -38,6 +40,7 @@ jobs:
           EOF
 
       - name: Start test server
+        working-directory: gateway
         run: |
           node test-server.js &
           sleep 3
@@ -45,6 +48,7 @@ jobs:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
 
       - name: Run API tests
+        working-directory: gateway
         run: npm test
         env:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -136,9 +140,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
+        working-directory: gateway
         run: npm ci
 
       - name: Run integration tests
+        working-directory: gateway
         run: npm run test:integration --if-present
         env:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -164,67 +170,6 @@ jobs:
           base: ${{ github.event.repository.default_branch }}
           head: HEAD
 
-  docker-build:
-    name: Build Docker Images
-    needs: [test, integration-test]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # Docker builds are handled by build-and-push.yml workflow
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build inference image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          tags: hanzo/inference-gateway:${{ github.sha }},hanzo/inference-gateway:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build embedding image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: false
-          tags: hanzo/embedding-gateway:${{ github.sha }},hanzo/embedding-gateway:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy-staging:
-    name: Deploy to Staging
-    needs: [build, docker-build]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
-    environment: staging
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to staging
-        run: |
-          echo "🚀 Deploying to staging environment"
-          # Add your staging deployment script here
-
-  deploy-production:
-    name: Deploy to Production
-    needs: [build, docker-build]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    environment: production
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Deploy to production
-        run: |
-          echo "🚀 Deploying to production environment"
-          # Add your production deployment script here
+  # Deployment is handled by build-and-push.yml workflow
