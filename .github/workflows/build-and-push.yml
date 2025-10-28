@@ -90,6 +90,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      pushed: ${{ steps.docker_push.outputs.pushed }}
 
     steps:
       - name: Checkout node repository
@@ -113,7 +115,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        if: ${{ github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN }}
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        id: docker_login
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -171,7 +175,7 @@ jobs:
           context: hanzo-node
           file: hanzo-gateway/docker/Dockerfile
           platforms: linux/amd64,linux/arm64
-          push: ${{ (github.event_name != 'pull_request') && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+          push: ${{ (github.event_name != 'pull_request') && steps.docker_login.outcome == 'success' && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
@@ -182,6 +186,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Set push status output
+        id: docker_push
+        run: |
+          PUSHED="${{ (github.event_name != 'pull_request') && steps.docker_login.outcome == 'success' && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}"
+          echo "pushed=$PUSHED" >> $GITHUB_OUTPUT
+
       - name: Generate build summary
         if: always()
         run: |
@@ -191,7 +201,7 @@ jobs:
           echo "- **Build Type**: ${{ steps.build_type.outputs.build_type }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Tags**: ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
-          PUSHED=${{ (github.event_name != 'pull_request') && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+          PUSHED=${{ (github.event_name != 'pull_request') && steps.docker_login.outcome == 'success' && (github.event.inputs.push_image == 'true' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
           echo "- **Pushed to Registry**: $PUSHED" >> $GITHUB_STEP_SUMMARY
           if [ "$PUSHED" = "false" ]; then
             echo "- **Note**: Image built successfully but not pushed (Docker Hub credentials not configured)" >> $GITHUB_STEP_SUMMARY
@@ -211,7 +221,7 @@ jobs:
     name: Test Docker Image
     needs: docker-build
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' && secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN }}
+    if: needs.docker-build.outputs.pushed == 'true'
 
     steps:
       - name: Checkout
