@@ -85,8 +85,8 @@ RUN useradd -m -u 1000 -s /bin/bash hanzo
 # Set working directory
 WORKDIR /app
 
-# Copy runtime script from gateway repo
-COPY hanzo-gateway/docker/run_node.sh /app/
+# Copy runtime script
+COPY docker/run_node.sh /app/
 
 # Copy built binaries and resources from builder
 COPY --from=builder /build/hanzo_node /app/
