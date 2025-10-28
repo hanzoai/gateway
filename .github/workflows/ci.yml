@@ -30,6 +30,7 @@ jobs:
         run: npm ci
 
       - name: Create .env file
+        working-directory: gateway
         run: |
           cat > .env << EOF
           DIGITALOCEAN_API_KEY=${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -43,7 +44,7 @@ jobs:
         working-directory: gateway
         run: |
           node test-server.js &
-          sleep 3
+          sleep 5
         env:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
 
