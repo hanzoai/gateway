@@ -1,0 +1,178 @@
+version: '3.8'
+
+# Hanzo AI Inference Gateway
+# Multi-service deployment: inference.hanzo.ai + embedding.hanzo.ai
+
+services:
+  # ==========================================
+  # Inference Service (inference.hanzo.ai)
+  # ==========================================
+  inference:
+    build:
+      context: ./inference
+      dockerfile: Dockerfile
+    container_name: hanzo-inference
+    restart: unless-stopped
+    ports:
+      - "${INFERENCE_PORT:-3001}:3001"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3001
+      - SERVICE_NAME=inference
+      - DIGITALOCEAN_API_KEY=${DIGITALOCEAN_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - DAILY_BUDGET_USD=${DAILY_BUDGET_USD:-50.00}
+      - FREE_TIER_REQUESTS_PER_DAY=${FREE_TIER_REQUESTS_PER_DAY:-100}
+      - FREE_TIER_TOKENS_PER_DAY=${FREE_TIER_TOKENS_PER_DAY:-10000}
+      - FREE_TIER_MODELS=${FREE_TIER_MODELS}
+      - ENABLE_COST_TRACKING=${ENABLE_COST_TRACKING:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # Embedding Service (embedding.hanzo.ai)
+  # ==========================================
+  embedding:
+    build:
+      context: ./embedding
+      dockerfile: Dockerfile
+    container_name: hanzo-embedding
+    restart: unless-stopped
+    ports:
+      - "${EMBEDDING_PORT:-3002}:3002"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3002
+      - SERVICE_NAME=embedding
+      - DIGITALOCEAN_API_KEY=${DIGITALOCEAN_API_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - DAILY_BUDGET_USD=${DAILY_BUDGET_USD:-50.00}
+      - DEFAULT_EMBEDDING_MODEL=${DEFAULT_EMBEDDING_MODEL}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  db:
+    image: postgres:16-alpine
+    container_name: hanzo-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=hanzo_gateway
+      - POSTGRES_USER=hanzo_user
+      - POSTGRES_PASSWORD=SecurePassword123!
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./shared/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hanzo_user -d hanzo_gateway"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # Redis Cache
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: hanzo-redis
+    restart: unless-stopped
+    command: redis-server --requirepass hanzo-redis-password
+    volumes:
+      - redis-data:/data
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ==========================================
+  # Nginx Reverse Proxy
+  # ==========================================
+  nginx:
+    image: nginx:alpine
+    container_name: hanzo-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - inference
+      - embedding
+    networks:
+      - hanzo-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # Admin Dashboard (Optional)
+  # ==========================================
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: hanzo-admin
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3003
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - hanzo-network
+
+networks:
+  hanzo-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
