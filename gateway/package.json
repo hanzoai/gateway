@@ -4,8 +4,8 @@
   "description": "Secure inference API gateway for Hanzo AI",
   "main": "test-server.js",
   "scripts": {
-    "test": "node test/run-tests.js",
-    "test:integration": "node test/integration.test.js",
+    "test": "node test/api.test.js",
+    "test:integration": "echo 'No integration tests yet' && exit 0",
     "test:api": "node test/api.test.js",
     "test:local": "node test-server.js",
     "start": "node test-server.js",

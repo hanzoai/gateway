@@ -96,27 +96,21 @@ jobs:
           prerelease: ${{ github.event.inputs.prerelease || false }}
 
   # ==========================================================================
-  # Build Release Binaries
+  # Build Release Binaries (Optional - Docker images are primary distribution)
   # ==========================================================================
   build-binaries:
     name: Build Release Binaries
     needs: create-release
     runs-on: ${{ matrix.os }}
+    continue-on-error: true
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: hanzo_node
             asset_name: hanzo-gateway-linux-amd64
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-            artifact_name: hanzo_node
-            asset_name: hanzo-gateway-linux-arm64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: hanzo_node
-            asset_name: hanzo-gateway-macos-amd64
           - os: macos-latest
             target: aarch64-apple-darwin
             artifact_name: hanzo_node
@@ -143,16 +137,21 @@ jobs:
 
       - name: Build release binary
         run: |
-          cargo build --release --target ${{ matrix.target }}
+          # Build the main hanzo_node binary
+          cargo build --release --target ${{ matrix.target }} --bin hanzo_node
 
       - name: Create archive
+        if: success()
         run: |
           cd target/${{ matrix.target }}/release
           tar -czf ${{ matrix.asset_name }}-v${{ needs.create-release.outputs.version }}.tar.gz \
             ${{ matrix.artifact_name }} \
-            hanzo-tools-runner-resources || true
+            hanzo-tools-runner-resources || \
+          tar -czf ${{ matrix.asset_name }}-v${{ needs.create-release.outputs.version }}.tar.gz \
+            ${{ matrix.artifact_name }}
 
       - name: Upload release asset
+        if: success()
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -167,9 +166,9 @@ jobs:
   # ==========================================================================
   update-latest:
     name: Update Latest Tag
-    needs: [create-release, build-binaries]
+    needs: [create-release]
     runs-on: ubuntu-latest
-    if: ${{ !github.event.inputs.prerelease }}
+    if: ${{ !github.event.inputs.prerelease && always() }}
 
     steps:
       - name: Checkout
@@ -189,9 +188,9 @@ jobs:
   # ==========================================================================
   notify:
     name: Notify Release
-    needs: [create-release, build-binaries]
+    needs: [create-release]
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && needs.create-release.result == 'success'
 
     steps:
       - name: Release summary
