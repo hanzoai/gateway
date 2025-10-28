@@ -1,0 +1,32 @@
+{
+  "name": "hanzo-inference-gateway",
+  "version": "1.0.0",
+  "description": "Secure inference API gateway for Hanzo AI",
+  "main": "test-server.js",
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "test:integration": "node test/integration.test.js",
+    "test:api": "node test/api.test.js",
+    "test:local": "node test-server.js",
+    "start": "node test-server.js",
+    "dev": "nodemon test-server.js"
+  },
+  "keywords": [
+    "ai",
+    "inference",
+    "gateway",
+    "digitalocean",
+    "llm"
+  ],
+  "author": "Hanzo AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
