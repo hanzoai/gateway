@@ -44,11 +44,11 @@ COPY . .
 RUN rustup component add rustfmt
 
 # Build the project
-# Build just the hanzo_node binary from the hanzo-bin/hanzo-node package
-# Use --locked to respect Cargo.lock and avoid dependency resolution issues
+# Build the entire workspace to properly resolve all dependencies
+# Then extract just the hanzo_node binary we need
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/build/target \
-    cargo build --locked -p hanzo_node $([ "$BUILD_TYPE" = "release" ] && echo "--release") && \
+    cargo build --locked --bin hanzo_node $([ "$BUILD_TYPE" = "release" ] && echo "--release") && \
     cp target/${BUILD_TYPE}/hanzo_node /build/hanzo_node && \
     cp -r target/${BUILD_TYPE}/hanzo-tools-runner-resources /build/hanzo-tools-runner-resources || true
 
