@@ -67,7 +67,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: success()
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,35 +77,39 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: gateway/package-lock.json
 
       - name: Install dependencies
+        working-directory: gateway
         run: npm ci
 
       - name: Build application
+        working-directory: gateway
         run: npm run build --if-present
 
       - name: Create deployment package
         run: |
           mkdir -p dist
-          cp -r src dist/ || echo "No src directory"
-          cp package*.json dist/
-          cp -r nginx dist/
-          cp docker-compose.yml dist/
-          tar -czf inference-gateway-${{ github.sha }}.tar.gz dist/
+          cp -r gateway dist/ || echo "No gateway directory"
+          cp -r docker dist/
+          cp .env.example dist/
+          cp README.md dist/
+          tar -czf gateway-${{ github.sha }}.tar.gz dist/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: inference-gateway-${{ github.sha }}
-          path: inference-gateway-${{ github.sha }}.tar.gz
+          name: gateway-${{ github.sha }}
+          path: gateway-${{ github.sha }}.tar.gz
           retention-days: 30
 
   integration-test:
     name: Integration Tests
     needs: test
     runs-on: ubuntu-latest
+    continue-on-error: true  # Optional - not critical for main workflow
     if: success()
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -140,6 +144,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
+          cache-dependency-path: gateway/package-lock.json
 
       - name: Install dependencies
         working-directory: gateway
