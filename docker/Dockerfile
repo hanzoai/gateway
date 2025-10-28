@@ -69,7 +69,7 @@ LABEL org.opencontainers.image.title="Hanzo Gateway" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.vendor="Hanzo AI" \
       org.opencontainers.image.url="https://hanzo.ai" \
-      org.opencontainers.image.source="https://github.com/hanzoai/inference" \
+      org.opencontainers.image.source="https://github.com/hanzoai/gateway" \
       org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies
@@ -85,8 +85,8 @@ RUN useradd -m -u 1000 -s /bin/bash hanzo
 # Set working directory
 WORKDIR /app
 
-# Copy runtime script from inference repo
-COPY hanzo-inference/docker/run_node.sh /app/
+# Copy runtime script from gateway repo
+COPY hanzo-gateway/docker/run_node.sh /app/
 
 # Copy built binaries and resources from builder
 COPY --from=builder /build/hanzo_node /app/
