@@ -12,7 +12,7 @@ help:
 	@echo "Hanzo Gateway Deployment"
 	@echo ""
 	@echo "Quick Start:"
-	@echo "  make deploy-do          - Deploy to DigitalOcean droplet (full setup)"
+	@echo "  make deploy             - Deploy to DigitalOcean (one command)"
 	@echo ""
 	@echo "Docker Commands:"
 	@echo "  make build              - Build Docker image locally"
@@ -23,8 +23,8 @@ help:
 	@echo ""
 	@echo "DigitalOcean Commands:"
 	@echo "  make setup-do           - Create DigitalOcean droplet"
-	@echo "  make deploy-do          - Deploy to existing droplet"
 	@echo "  make ssh-do             - SSH into droplet"
+	@echo "  make status             - Check deployment status"
 	@echo "  make destroy-do         - Destroy droplet"
 	@echo ""
 	@echo "Development:"
@@ -198,22 +198,26 @@ destroy-do:
 # Quick Deployment (One Command)
 #==============================================================================
 
-# Full deployment: create droplet + deploy gateway
-deploy-full:
-	@echo "🚀 Full deployment starting..."
+# Main deployment command: create droplet + deploy gateway
+deploy:
+	@echo "🚀 Deploying Hanzo Gateway to DigitalOcean..."
 	@make setup-do
 	@echo "Waiting 30 seconds for droplet to initialize..."
 	@sleep 30
 	@make deploy-do
 	@echo ""
-	@echo "✅ Full deployment complete!"
+	@echo "✅ Deployment complete!"
 	@echo "Gateway URL: http://$$(make -s do-ip)"
+
+# Alias for deploy
+deploy-full: deploy
 
 #==============================================================================
 # Status & Monitoring
 #==============================================================================
 
 # Check status
+status: status-do
 status-do:
 	@echo "Checking gateway status on DigitalOcean..."
 	@ssh root@$$(make -s do-ip) 'docker ps | grep hanzo-gateway'
