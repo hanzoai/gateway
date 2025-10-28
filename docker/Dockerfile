@@ -92,7 +92,6 @@ COPY docker/run_node.sh /app/
 # Copy built binaries and resources from builder
 COPY --from=builder /build/hanzo_node /app/
 COPY --from=builder /build/hanzo-tools-runner-resources /app/hanzo-tools-runner-resources
-COPY --from=builder /build/pre-install /app/pre-install
 
 # Make script executable
 RUN chmod +x /app/run_node.sh /app/hanzo_node
