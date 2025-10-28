@@ -24,7 +24,7 @@ export PATH="/app/hanzo-tools-runner-resources:/root/.local/bin:$PATH"
 # Node Identity and Security
 export IDENTITY_SECRET_KEY=${IDENTITY_SECRET_KEY:-}
 export ENCRYPTION_SECRET_KEY=${ENCRYPTION_SECRET_KEY:-}
-export GLOBAL_IDENTITY_NAME=${GLOBAL_IDENTITY_NAME:-@@my_local_ai.sep-hanzo}
+export GLOBAL_IDENTITY_NAME=${GLOBAL_IDENTITY_NAME:-did:hanzo:gateway}
 
 # Node Behavior
 export PING_INTERVAL_SECS=${PING_INTERVAL_SECS:-0}

@@ -1,0 +1,95 @@
+# ============================================================================
+# Hanzo Gateway - Fast Build Using Pre-built Binaries
+# ============================================================================
+# This Dockerfile downloads pre-built hanzo_node binaries from GitHub releases
+# instead of compiling from source. This makes CI/CD extremely fast.
+#
+# Build Arguments:
+#   HANZO_NODE_VERSION: Version to download (e.g., v1.0.0)
+#   HANZO_NODE_ARCH: Architecture (x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu)
+# ============================================================================
+
+FROM debian:bookworm-slim
+
+# Build arguments
+ARG HANZO_NODE_VERSION=latest
+ARG HANZO_NODE_ARCH=x86_64-unknown-linux-gnu
+ARG HANZO_VERSION=dev
+ARG BUILD_DATE
+ARG VCS_REF
+
+# Metadata
+LABEL org.opencontainers.image.title="Hanzo Gateway" \
+      org.opencontainers.image.description="Multi-provider AI inference platform for Hanzo ecosystem" \
+      org.opencontainers.image.version="${HANZO_VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.vendor="Hanzo AI" \
+      org.opencontainers.image.url="https://hanzo.ai" \
+      org.opencontainers.image.source="https://github.com/hanzoai/gateway" \
+      org.opencontainers.image.licenses="MIT"
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libssl3 \
+    ca-certificates \
+    curl \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash hanzo
+
+# Set working directory
+WORKDIR /app
+
+# Download pre-built binary from GitHub releases
+RUN if [ "$HANZO_NODE_VERSION" = "latest" ]; then \
+      DOWNLOAD_URL="https://github.com/hanzoai/node/releases/latest/download/hanzo-node-${HANZO_NODE_ARCH}.zip"; \
+    else \
+      DOWNLOAD_URL="https://github.com/hanzoai/node/releases/download/${HANZO_NODE_VERSION}/hanzo-node-${HANZO_NODE_ARCH}.zip"; \
+    fi && \
+    echo "Downloading from: $DOWNLOAD_URL" && \
+    curl -L -o hanzo-node.zip "$DOWNLOAD_URL" && \
+    unzip hanzo-node.zip && \
+    rm hanzo-node.zip && \
+    chmod +x hanzo-node* && \
+    mv hanzo-node* hanzo_node || true
+
+# Copy runtime script from gateway repo
+COPY docker/run_node.sh /app/
+
+# Make scripts executable
+RUN chmod +x /app/run_node.sh /app/hanzo_node
+
+# Set ownership
+RUN chown -R hanzo:hanzo /app
+
+# Switch to non-root user
+USER hanzo
+
+# Environment variable defaults
+ENV BUILD_TYPE=release \
+    HANZO_VERSION=${HANZO_VERSION} \
+    NODE_API_IP=0.0.0.0 \
+    NODE_IP=0.0.0.0 \
+    NODE_API_PORT=9550 \
+    NODE_WS_PORT=9551 \
+    NODE_PORT=9552 \
+    NODE_HTTPS_PORT=9553 \
+    GLOBAL_IDENTITY_NAME=did:hanzo:gateway \
+    RUST_LOG=debug,error,info \
+    LOG_SIMPLE=true \
+    NO_SECRET_FILE=true \
+    STARTING_NUM_QR_PROFILES=1 \
+    STARTING_NUM_QR_DEVICES=1
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:${NODE_API_PORT}/v1/health || exit 1
+
+# Expose ports
+EXPOSE ${NODE_API_PORT} ${NODE_WS_PORT} ${NODE_PORT} ${NODE_HTTPS_PORT}
+
+# Run the node
+ENTRYPOINT ["/app/run_node.sh"]
