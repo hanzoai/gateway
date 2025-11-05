@@ -110,7 +110,74 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-  
+
+  // Embeddings (local Ollama fallback)
+  if (req.url === '/v1/embeddings' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => body += chunk);
+    req.on('end', async () => {
+      try {
+        const requestBody = JSON.parse(body);
+        console.log(`🔢 Embedding request: ${requestBody.model}`);
+
+        // Map DO model names to equivalent local Ollama models
+        // Match models by size and purpose:
+        // - MiniLM (22.7M) → snowflake (110MB) - small, general
+        // - mpnet (109M) → qwen3-0.6b (639MB) - medium, Q&A
+        // - GTE (434M) → nomic or mxbai (274-670MB) - large, quality
+        const modelMap = {
+          'sentence-transformers/all-MiniLM-L6-v2': 'snowflake-arctic-embed:xs',
+          'all-MiniLM-L6-v2': 'snowflake-arctic-embed:xs',
+          'sentence-transformers/multi-qa-mpnet-base-dot-v1': 'qwen3-embedding:0.6b',
+          'Alibaba-NLP/gte-large-en-v1.5': 'nomic-embed-text:v1.5',
+        };
+
+        const ollamaModel = modelMap[requestBody.model] || requestBody.model;
+
+        // Proxy to local Ollama
+        const ollamaResponse = await fetch('http://127.0.0.1:11435/api/embeddings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: ollamaModel,
+            prompt: requestBody.input
+          })
+        });
+
+        if (!ollamaResponse.ok) {
+          throw new Error(`Ollama returned ${ollamaResponse.status}`);
+        }
+
+        const ollamaData = await ollamaResponse.json();
+
+        // Convert to OpenAI format
+        const result = {
+          object: 'list',
+          data: [{
+            object: 'embedding',
+            embedding: ollamaData.embedding,
+            index: 0
+          }],
+          model: requestBody.model,
+          usage: {
+            prompt_tokens: ollamaData.prompt_eval_count || 0,
+            total_tokens: ollamaData.prompt_eval_count || 0
+          }
+        };
+
+        console.log(`✅ Embedding generated: ${result.data[0].embedding.length} dimensions`);
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch (error) {
+        console.error('❌ Embedding error:', error.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: error.message }));
+      }
+    });
+    return;
+  }
+
   // Chat completions
   if (req.url === '/v1/chat/completions' && req.method === 'POST') {
     let body = '';
