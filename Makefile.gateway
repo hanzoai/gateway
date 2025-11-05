@@ -1,0 +1,166 @@
+.PHONY: help build push deploy update test local
+
+# Configuration
+IMAGE_NAME := hanzoai/gateway
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+DO_DROPLET_IP := 143.198.188.26
+CONTAINER_NAME := hanzo-gateway
+PORT := 3001
+
+# DigitalOcean API Key (set via environment or .env)
+DO_API_KEY := $(shell cat .env 2>/dev/null | grep DIGITALOCEAN_API_KEY | cut -d '=' -f2)
+
+help:
+	@echo "Hanzo Gateway - Deployment Commands"
+	@echo ""
+	@echo "Build & Push:"
+	@echo "  make build              - Build Docker image (multi-platform)"
+	@echo "  make push               - Push to Docker Hub"
+	@echo ""
+	@echo "Deployment:"
+	@echo "  make deploy             - Deploy to DigitalOcean (update)"
+	@echo "  make update             - Same as deploy"
+	@echo "  make status             - Check deployment status"
+	@echo "  make logs               - View live logs"
+	@echo "  make restart            - Restart container"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test               - Test deployed gateway"
+	@echo "  make test-local         - Test local gateway"
+	@echo "  make local              - Run locally with DO API key"
+	@echo ""
+	@echo "Configuration:"
+	@echo "  Droplet IP: $(DO_DROPLET_IP)"
+	@echo "  Container: $(CONTAINER_NAME)"
+	@echo "  Image: $(IMAGE_NAME):$(VERSION)"
+
+# Build multi-platform image
+build:
+	@echo "🏗️  Building $(IMAGE_NAME):$(VERSION)..."
+	@docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		-t $(IMAGE_NAME):$(VERSION) \
+		-t $(IMAGE_NAME):latest \
+		.
+	@echo "✅ Built $(IMAGE_NAME):$(VERSION)"
+
+# Push to Docker Hub
+push: build
+	@echo "📤 Pushing $(IMAGE_NAME):$(VERSION)..."
+	@docker buildx build \
+		--platform linux/amd64,linux/arm64 \
+		-t $(IMAGE_NAME):$(VERSION) \
+		-t $(IMAGE_NAME):latest \
+		--push \
+		.
+	@echo "✅ Pushed to Docker Hub"
+
+# Deploy to DigitalOcean
+deploy: push
+	@echo "🚀 Deploying to DigitalOcean..."
+	@if [ -z "$(DO_API_KEY)" ]; then \
+		echo "❌ DIGITALOCEAN_API_KEY not set in .env"; \
+		exit 1; \
+	fi
+
+	@echo "📡 Connecting to $(DO_DROPLET_IP)..."
+	@ssh -o StrictHostKeyChecking=no root@$(DO_DROPLET_IP) "\
+		docker pull $(IMAGE_NAME):latest && \
+		docker stop $(CONTAINER_NAME) 2>/dev/null || true && \
+		docker rm $(CONTAINER_NAME) 2>/dev/null || true && \
+		docker run -d \
+			--name $(CONTAINER_NAME) \
+			--restart unless-stopped \
+			-p $(PORT):$(PORT) \
+			-e PORT=$(PORT) \
+			-e HOST=0.0.0.0 \
+			-e GATEWAY_IDENTITY=did:hanzo:gateway \
+			-e TRUST_PROXY=true \
+			-e DIGITALOCEAN_API_KEY=$(DO_API_KEY) \
+			$(IMAGE_NAME):latest && \
+		echo '✅ Container started' && \
+		docker ps --filter name=$(CONTAINER_NAME) --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+
+	@echo ""
+	@echo "✅ Deployment complete!"
+	@echo "🌐 Gateway: http://$(DO_DROPLET_IP):$(PORT)"
+	@echo ""
+	@echo "Test with:"
+	@echo "  curl http://$(DO_DROPLET_IP):$(PORT)/health"
+	@echo "  make test"
+
+# Alias for deploy
+update: deploy
+
+# Check deployment status
+status:
+	@echo "📊 Gateway Status:"
+	@ssh root@$(DO_DROPLET_IP) "docker ps --filter name=$(CONTAINER_NAME) --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+	@echo ""
+	@echo "🏥 Health Check:"
+	@curl -s http://$(DO_DROPLET_IP):$(PORT)/health | jq . || echo "❌ Gateway not responding"
+
+# View logs
+logs:
+	@echo "📋 Live logs from $(CONTAINER_NAME):"
+	@ssh root@$(DO_DROPLET_IP) "docker logs -f --tail 50 $(CONTAINER_NAME)"
+
+# Restart container
+restart:
+	@echo "🔄 Restarting $(CONTAINER_NAME)..."
+	@ssh root@$(DO_DROPLET_IP) "docker restart $(CONTAINER_NAME)"
+	@echo "✅ Restarted"
+
+# Test deployed gateway
+test:
+	@echo "🧪 Testing deployed gateway..."
+	@echo ""
+	@echo "1. Health Check:"
+	@curl -s http://$(DO_DROPLET_IP):$(PORT)/health | jq . || echo "❌ Health check failed"
+	@echo ""
+	@echo "2. Models List:"
+	@curl -s http://$(DO_DROPLET_IP):$(PORT)/v1/models | jq '.data[0:3]' || echo "❌ Models list failed"
+	@echo ""
+	@echo "3. Chat Completion:"
+	@curl -s http://$(DO_DROPLET_IP):$(PORT)/v1/chat/completions \
+		-X POST \
+		-H "Content-Type: application/json" \
+		-d '{"model":"alibaba-qwen3-32b","messages":[{"role":"user","content":"Say hello in 5 words"}]}' \
+		| jq '.choices[0].message.content' || echo "❌ Chat completion failed"
+	@echo ""
+	@echo "4. Embeddings:"
+	@curl -s http://$(DO_DROPLET_IP):$(PORT)/v1/embeddings \
+		-X POST \
+		-H "Content-Type: application/json" \
+		-d '{"input":"test embedding"}' \
+		| jq '.data[0].embedding[0:5]' || echo "❌ Embeddings failed"
+	@echo ""
+	@echo "✅ All tests complete"
+
+# Test local gateway
+test-local:
+	@echo "🧪 Testing local gateway..."
+	@echo ""
+	@echo "1. Health:"
+	@curl -s http://localhost:$(PORT)/health | jq .
+	@echo ""
+	@echo "2. Models:"
+	@curl -s http://localhost:$(PORT)/v1/models | jq '.data[0:3]'
+	@echo ""
+	@echo "3. Chat:"
+	@curl -s http://localhost:$(PORT)/v1/chat/completions \
+		-X POST \
+		-H "Content-Type: application/json" \
+		-d '{"model":"alibaba-qwen3-32b","messages":[{"role":"user","content":"test"}]}' \
+		| jq '.choices[0].message.content'
+
+# Run locally
+local:
+	@if [ -z "$(DO_API_KEY)" ]; then \
+		echo "❌ DIGITALOCEAN_API_KEY not set in .env"; \
+		echo "Create .env file with:"; \
+		echo "  DIGITALOCEAN_API_KEY=sk-do-..."; \
+		exit 1; \
+	fi
+	@echo "🚀 Starting local gateway..."
+	@DIGITALOCEAN_API_KEY=$(DO_API_KEY) PORT=$(PORT) node gateway/server.js
