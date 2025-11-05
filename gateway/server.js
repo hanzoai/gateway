@@ -35,8 +35,12 @@ const LIMITS = {
 const DO_API_KEY = process.env.DIGITALOCEAN_API_KEY;
 const DO_API_URL = 'https://inference.do-ai.run/v1';
 
-// Default embedding model (DigitalOcean)
-const DEFAULT_EMBEDDING_MODEL = 'Alibaba-NLP/gte-large-en-v1.5';
+// Voyage AI configuration
+const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY;
+const VOYAGE_API_URL = 'https://api.voyageai.com/v1';
+
+// Default embedding model (Voyage AI)
+const DEFAULT_EMBEDDING_MODEL = 'voyage-3.5';
 
 // In-memory rate limiting (use Redis in production)
 const ipLimits = new Map();
@@ -46,12 +50,18 @@ console.log('🚀 Hanzo AI Gateway (Production)');
 console.log(`📍 Identity: ${GATEWAY_IDENTITY}`);
 console.log(`🌐 Listening on ${HOST}:${PORT}`);
 console.log(`☁️  Cloudflare IP: ${TRUST_PROXY ? 'enabled' : 'disabled'}`);
-console.log(`🔗 Provider: DigitalOcean Gradient AI`);
+console.log(`🔗 Chat: DigitalOcean Gradient AI`);
+console.log(`🔗 Embeddings: Voyage AI`);
 console.log(`📊 Limits: ${LIMITS.requestsPerDay} req/day, ${LIMITS.tokensPerDay} tokens/day`);
 if (DO_API_KEY) {
   console.log(`🔑 DO API Key: sk-do-***${DO_API_KEY.slice(-10)}`);
 } else {
   console.log(`⚠️  No DO API Key configured`);
+}
+if (VOYAGE_API_KEY) {
+  console.log(`🔑 Voyage API Key: pa-***${VOYAGE_API_KEY.slice(-10)}`);
+} else {
+  console.log(`⚠️  No Voyage API Key configured`);
 }
 console.log('');
 
@@ -262,16 +272,16 @@ async function handleChatCompletions(req, res, body, ip) {
 }
 
 /**
- * Handle embeddings
+ * Handle embeddings (via Voyage AI)
  */
 async function handleEmbeddings(req, res, body, ip) {
   const startTime = Date.now();
 
-  if (!DO_API_KEY) {
+  if (!VOYAGE_API_KEY) {
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       error: {
-        message: 'DigitalOcean API key not configured',
+        message: 'Voyage API key not configured',
         type: 'configuration_error',
       },
     }));
@@ -288,37 +298,43 @@ async function handleEmbeddings(req, res, body, ip) {
 
     console.log(`📨 ${ip} → Embeddings (${model})`);
 
-    const response = await fetch(`${DO_API_URL}/embeddings`, {
+    // Voyage AI expects "input" field, optionally "input_type"
+    const voyageBody = {
+      model,
+      input,
+      input_type: body.input_type || 'document', // or 'query'
+    };
+
+    const response = await fetch(`${VOYAGE_API_URL}/embeddings`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${DO_API_KEY}`,
+        'Authorization': `Bearer ${VOYAGE_API_KEY}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ model, input }),
+      body: JSON.stringify(voyageBody),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`DigitalOcean API error (${response.status}): ${error}`);
+      throw new Error(`Voyage AI API error (${response.status}): ${error}`);
     }
 
     const data = await response.json();
     const latency = Date.now() - startTime;
 
-    // Estimate tokens (embeddings don't return usage)
-    const textLength = Array.isArray(input) ? input.join(' ').length : input.length;
-    const estimatedTokens = Math.ceil(textLength / 4);
+    // Voyage returns usage.total_tokens
+    const tokens = data.usage?.total_tokens || 0;
 
-    updateTokenUsage(ip, estimatedTokens);
-    trackUsage(ip, 'embeddings', estimatedTokens, latency);
+    updateTokenUsage(ip, tokens);
+    trackUsage(ip, 'embeddings', tokens, latency);
 
-    console.log(`✅ ${ip} → Embeddings: ~${estimatedTokens} tokens, ${latency}ms`);
+    console.log(`✅ ${ip} → Embeddings: ${tokens} tokens, ${latency}ms`);
 
     const rateLimitStatus = ipLimits.get(ip);
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'X-Gateway-Identity': GATEWAY_IDENTITY,
-      'X-Provider': 'digitalocean',
+      'X-Provider': 'voyage',
       'X-RateLimit-Limit-Day': LIMITS.requestsPerDay.toString(),
       'X-RateLimit-Remaining-Day': (LIMITS.requestsPerDay - (rateLimitStatus?.dayCount || 0)).toString(),
       'X-RateLimit-Remaining-Tokens': (LIMITS.tokensPerDay - (rateLimitStatus?.tokensToday || 0)).toString(),
@@ -334,7 +350,7 @@ async function handleEmbeddings(req, res, body, ip) {
       error: {
         message: error.message,
         type: 'gateway_error',
-        provider: 'digitalocean',
+        provider: 'voyage',
       },
     }));
   }
@@ -401,16 +417,19 @@ const server = http.createServer(async (req, res) => {
   // Models list
   if (req.url === '/v1/models' && req.method === 'GET') {
     const models = [
-      // Chat models
+      // Chat models (DigitalOcean)
       { id: 'alibaba-qwen3-32b', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
       { id: 'llama3.3-70b-instruct', type: 'chat', provider: 'digitalocean', pricing: '$0.60/1M tokens' },
       { id: 'llama3-8b-instruct', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
       { id: 'mistral-nemo-instruct-2407', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
       { id: 'deepseek-r1-distill-llama-70b', type: 'chat', provider: 'digitalocean', pricing: '$0.60/1M tokens' },
-      // Embedding models
-      { id: 'Alibaba-NLP/gte-large-en-v1.5', type: 'embedding', provider: 'digitalocean', pricing: 'Free tier', parameters: '434M' },
-      { id: 'sentence-transformers/all-MiniLM-L6-v2', type: 'embedding', provider: 'digitalocean', pricing: 'Free tier', parameters: '22.7M' },
-      { id: 'sentence-transformers/multi-qa-mpnet-base-dot-v1', type: 'embedding', provider: 'digitalocean', pricing: 'Free tier', parameters: '109M' },
+      // Embedding models (Voyage AI)
+      { id: 'voyage-3-large', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      { id: 'voyage-3.5', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      { id: 'voyage-3.5-lite', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      { id: 'voyage-code-3', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      { id: 'voyage-finance-2', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      { id: 'voyage-law-2', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
     ];
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
