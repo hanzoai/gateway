@@ -304,8 +304,10 @@ METRICS_PORT=9090
 ### Public (Free Tier)
 - `GET /health` - Health check
 - `GET /v1/models` - List available models
-- `POST /v1/chat/completions` - Inference (IP rate limited)
+- `POST /v1/chat/completions` - Inference (IP rate limited, 21 DO models)
 - `POST /v1/embeddings` - Embeddings (IP rate limited)
+  - Voyage AI models: `voyage-3.5` (default), `voyage-3.5-lite`, `voyage-3-large`, `voyage-code-3`
+  - DO/Sentence-Transformers models (via Ollama): `sentence-transformers/all-MiniLM-L6-v2`, etc.
 - `GET /v1/rate-limit-status` - Check current limits for IP
 
 ### Node Operators

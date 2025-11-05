@@ -10,6 +10,7 @@ require('dotenv').config();
 
 const PORT = process.env.INFERENCE_PORT || 3001;
 const DO_API_KEY = process.env.DIGITALOCEAN_API_KEY;
+const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY;
 
 if (!DO_API_KEY) {
   console.error('❌ Error: DIGITALOCEAN_API_KEY not set in .env file');
@@ -17,7 +18,14 @@ if (!DO_API_KEY) {
 }
 
 console.log('✅ DigitalOcean API key loaded');
-console.log(`🔑 Key: sk-do-***${DO_API_KEY.slice(-20)}`);
+console.log(`🔑 DO Key: sk-do-***${DO_API_KEY.slice(-20)}`);
+
+if (VOYAGE_API_KEY) {
+  console.log('✅ Voyage AI API key loaded');
+  console.log(`🔑 Voyage Key: ***${VOYAGE_API_KEY.slice(-20)}`);
+} else {
+  console.log('⚠️  Voyage AI API key not set (Voyage embeddings will not be available)');
+}
 
 // Test DigitalOcean API connection
 async function testDOConnection() {
@@ -111,14 +119,51 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // Embeddings (local Ollama fallback)
+  // Embeddings (Voyage AI or Ollama fallback)
   if (req.url === '/v1/embeddings' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
     req.on('end', async () => {
       try {
         const requestBody = JSON.parse(body);
-        console.log(`🔢 Embedding request: ${requestBody.model}`);
+        const model = requestBody.model || 'voyage-3.5';
+        console.log(`🔢 Embedding request: ${model}`);
+
+        // Check if this is a Voyage AI model
+        if (model.startsWith('voyage-')) {
+          if (!VOYAGE_API_KEY) {
+            throw new Error('Voyage AI API key not configured');
+          }
+
+          // Call Voyage AI API
+          console.log(`🚀 Routing to Voyage AI: ${model}`);
+          const voyageResponse = await fetch('https://api.voyageai.com/v1/embeddings', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${VOYAGE_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              input: requestBody.input,
+              model: model,
+              input_type: requestBody.input_type || 'document'
+            })
+          });
+
+          if (!voyageResponse.ok) {
+            const errorText = await voyageResponse.text();
+            throw new Error(`Voyage AI returned ${voyageResponse.status}: ${errorText}`);
+          }
+
+          const voyageData = await voyageResponse.json();
+
+          // Voyage AI already returns OpenAI-compatible format
+          console.log(`✅ Voyage embedding generated: ${voyageData.data[0].embedding.length} dimensions`);
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(voyageData));
+          return;
+        }
 
         // Map DO model names to equivalent local Ollama models
         // Match models by size and purpose:
@@ -132,7 +177,8 @@ const server = http.createServer(async (req, res) => {
           'Alibaba-NLP/gte-large-en-v1.5': 'nomic-embed-text:v1.5',
         };
 
-        const ollamaModel = modelMap[requestBody.model] || requestBody.model;
+        const ollamaModel = modelMap[model] || model;
+        console.log(`🔄 Routing to Ollama: ${ollamaModel}`);
 
         // Proxy to local Ollama
         const ollamaResponse = await fetch('http://127.0.0.1:11435/api/embeddings', {
@@ -158,14 +204,14 @@ const server = http.createServer(async (req, res) => {
             embedding: ollamaData.embedding,
             index: 0
           }],
-          model: requestBody.model,
+          model: model,
           usage: {
             prompt_tokens: ollamaData.prompt_eval_count || 0,
             total_tokens: ollamaData.prompt_eval_count || 0
           }
         };
 
-        console.log(`✅ Embedding generated: ${result.data[0].embedding.length} dimensions`);
+        console.log(`✅ Ollama embedding generated: ${result.data[0].embedding.length} dimensions`);
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(result));
