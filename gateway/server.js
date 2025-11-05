@@ -380,7 +380,6 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       identity: GATEWAY_IDENTITY,
-      provider: 'digitalocean',
       configured: !!DO_API_KEY,
       limits: LIMITS,
       cloudflare: TRUST_PROXY,
