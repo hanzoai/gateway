@@ -1,0 +1,13 @@
+{
+  "name": "hanzo-store",
+  "version": "1.0.0",
+  "description": "Hanzo Store API Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["store", "tools", "prompts", "hanzo"],
+  "author": "Hanzo AI",
+  "license": "MIT"
+}
