@@ -7,8 +7,9 @@ DO_DROPLET_IP := 143.198.188.26
 CONTAINER_NAME := hanzo-gateway
 PORT := 3001
 
-# DigitalOcean API Key (set via environment or .env)
+# API Keys (set via environment or .env)
 DO_API_KEY := $(shell cat .env 2>/dev/null | grep DIGITALOCEAN_API_KEY | cut -d '=' -f2)
+VOYAGE_API_KEY := $(shell cat .env 2>/dev/null | grep VOYAGE_API_KEY | cut -d '=' -f2)
 
 help:
 	@echo "Hanzo Gateway - Deployment Commands"
@@ -62,6 +63,10 @@ deploy: push
 		echo "❌ DIGITALOCEAN_API_KEY not set in .env"; \
 		exit 1; \
 	fi
+	@if [ -z "$(VOYAGE_API_KEY)" ]; then \
+		echo "❌ VOYAGE_API_KEY not set in .env"; \
+		exit 1; \
+	fi
 
 	@echo "📡 Connecting to $(DO_DROPLET_IP)..."
 	@ssh -o StrictHostKeyChecking=no root@$(DO_DROPLET_IP) "\
@@ -77,6 +82,7 @@ deploy: push
 			-e GATEWAY_IDENTITY=did:hanzo:gateway \
 			-e TRUST_PROXY=true \
 			-e DIGITALOCEAN_API_KEY=$(DO_API_KEY) \
+			-e VOYAGE_API_KEY=$(VOYAGE_API_KEY) \
 			$(IMAGE_NAME):latest && \
 		echo '✅ Container started' && \
 		docker ps --filter name=$(CONTAINER_NAME) --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
@@ -160,7 +166,12 @@ local:
 		echo "❌ DIGITALOCEAN_API_KEY not set in .env"; \
 		echo "Create .env file with:"; \
 		echo "  DIGITALOCEAN_API_KEY=sk-do-..."; \
+		echo "  VOYAGE_API_KEY=pa-..."; \
+		exit 1; \
+	fi
+	@if [ -z "$(VOYAGE_API_KEY)" ]; then \
+		echo "❌ VOYAGE_API_KEY not set in .env"; \
 		exit 1; \
 	fi
 	@echo "🚀 Starting local gateway..."
-	@DIGITALOCEAN_API_KEY=$(DO_API_KEY) PORT=$(PORT) node gateway/server.js
+	@DIGITALOCEAN_API_KEY=$(DO_API_KEY) VOYAGE_API_KEY=$(VOYAGE_API_KEY) PORT=$(PORT) node gateway/server.js

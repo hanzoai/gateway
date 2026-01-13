@@ -1,15 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Hanzo AI Gateway - Production Server
- *
+ * Hanzo AI Gateway - Enhanced Production Server
+ * 
  * Features:
- * - DigitalOcean Gradient AI Platform integration
- * - Chat completions (alibaba-qwen3-32b, llama3.3-70b-instruct, etc.)
- * - Embeddings (Alibaba-NLP/gte-large-en-v1.5, sentence-transformers)
- * - IP-based rate limiting
+ * - Cloudflare real IP extraction
+ * - IP-based rate limiting (free tier)
+ * - Multi-provider routing (DeepSeek, OpenAI, Anthropic, DigitalOcean)
+ * - Optional local node fallback
  * - Usage tracking
- * - Cloudflare real IP support
  */
 
 const http = require('http');
@@ -31,38 +30,43 @@ const LIMITS = {
   tokensPerDay: parseInt(process.env.FREE_TIER_TOKENS_PER_DAY || '50000'),
 };
 
-// DigitalOcean API configuration
-const DO_API_KEY = process.env.DIGITALOCEAN_API_KEY;
-const DO_API_URL = 'https://inference.do-ai.run/v1';
+// Provider backends
+const PROVIDERS = {
+  deepseek: {
+    url: 'https://api.deepseek.com/v1',
+    key: process.env.DEEPSEEK_API_KEY,
+  },
+  openai: {
+    url: 'https://api.openai.com/v1',
+    key: process.env.OPENAI_API_KEY,
+  },
+  anthropic: {
+    url: 'https://api.anthropic.com/v1',
+    key: process.env.ANTHROPIC_API_KEY,
+  },
+  digitalocean: {
+    url: 'https://inference.do-ai.run/v1',
+    key: process.env.DIGITALOCEAN_API_KEY,
+  },
+  local: {
+    url: process.env.LOCAL_NODE_URL || 'http://localhost:8000',
+    key: null,
+  },
+};
 
-// Voyage AI configuration
-const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY;
-const VOYAGE_API_URL = 'https://api.voyageai.com/v1';
-
-// Default embedding model (Voyage AI)
-const DEFAULT_EMBEDDING_MODEL = 'voyage-3.5';
+// Default provider
+const DEFAULT_PROVIDER = 'deepseek';
 
 // In-memory rate limiting (use Redis in production)
 const ipLimits = new Map();
 const usageStats = new Map();
 
-console.log('🚀 Hanzo AI Gateway (Production)');
+console.log('🚀 Hanzo AI Gateway (Enhanced)');
 console.log(`📍 Identity: ${GATEWAY_IDENTITY}`);
 console.log(`🌐 Listening on ${HOST}:${PORT}`);
 console.log(`☁️  Cloudflare IP: ${TRUST_PROXY ? 'enabled' : 'disabled'}`);
-console.log(`🔗 Chat: DigitalOcean Gradient AI`);
-console.log(`🔗 Embeddings: Voyage AI`);
+console.log(`🔗 Providers: ${Object.keys(PROVIDERS).filter(k => PROVIDERS[k].key || k === 'local').join(', ')}`);
 console.log(`📊 Limits: ${LIMITS.requestsPerDay} req/day, ${LIMITS.tokensPerDay} tokens/day`);
-if (DO_API_KEY) {
-  console.log(`🔑 DO API Key: sk-do-***${DO_API_KEY.slice(-10)}`);
-} else {
-  console.log(`⚠️  No DO API Key configured`);
-}
-if (VOYAGE_API_KEY) {
-  console.log(`🔑 Voyage API Key: pa-***${VOYAGE_API_KEY.slice(-10)}`);
-} else {
-  console.log(`⚠️  No Voyage API Key configured`);
-}
 console.log('');
 
 /**
@@ -73,18 +77,18 @@ function getRealIP(req) {
     // Check Cloudflare header first
     const cfIP = req.headers[CF_IP_HEADER.toLowerCase()];
     if (cfIP) return cfIP;
-
+    
     // Check X-Forwarded-For
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded) {
       return forwarded.split(',')[0].trim();
     }
-
+    
     // Check X-Real-IP
     const realIP = req.headers['x-real-ip'];
     if (realIP) return realIP;
   }
-
+  
   // Fallback to socket
   return req.socket.remoteAddress || 'unknown';
 }
@@ -180,58 +184,89 @@ function updateTokenUsage(ip, tokens) {
 /**
  * Track usage statistics
  */
-function trackUsage(ip, endpoint, tokens, latencyMs) {
+function trackUsage(ip, model, tokens, latencyMs) {
   const stats = usageStats.get(ip) || {
     firstSeen: new Date(),
     lastSeen: new Date(),
     totalRequests: 0,
     totalTokens: 0,
-    endpoints: {},
+    modelUsage: {},
     avgLatency: 0,
   };
 
   stats.lastSeen = new Date();
   stats.totalRequests++;
   stats.totalTokens += tokens;
-  stats.endpoints[endpoint] = (stats.endpoints[endpoint] || 0) + 1;
+  stats.modelUsage[model] = (stats.modelUsage[model] || 0) + 1;
   stats.avgLatency = (stats.avgLatency * (stats.totalRequests - 1) + latencyMs) / stats.totalRequests;
 
   usageStats.set(ip, stats);
 }
 
 /**
- * Handle chat completions
+ * Determine provider from model name
  */
-async function handleChatCompletions(req, res, body, ip) {
+function getProviderForModel(model) {
+  if (model.startsWith('deepseek-')) return 'deepseek';
+  if (model.startsWith('gpt-')) return 'openai';
+  if (model.startsWith('claude-')) return 'anthropic';
+  if (model.startsWith('qwen') || model.startsWith('zen-')) return 'local';
+  
+  // Default to DeepSeek for unknown models
+  return DEFAULT_PROVIDER;
+}
+
+/**
+ * Route request to appropriate provider
+ */
+async function proxyToProvider(req, res, body, ip) {
   const startTime = Date.now();
-
-  if (!DO_API_KEY) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      error: {
-        message: 'DigitalOcean API key not configured',
-        type: 'configuration_error',
-      },
-    }));
-    return;
-  }
-
+  
   try {
-    const model = body.model || 'alibaba-qwen3-32b';
-    console.log(`📨 ${ip} → Chat (${model})`);
+    // Determine provider
+    const model = body.model || 'deepseek-chat';
+    const providerName = getProviderForModel(model);
+    const provider = PROVIDERS[providerName];
 
-    const response = await fetch(`${DO_API_URL}/chat/completions`, {
+    if (!provider) {
+      throw new Error(`Provider ${providerName} not configured`);
+    }
+
+    if (!provider.key && providerName !== 'local') {
+      throw new Error(`API key for ${providerName} not configured`);
+    }
+
+    // Build target URL
+    const path = req.url;
+    const targetURL = `${provider.url}${path}`;
+
+    console.log(`📨 ${ip} → ${providerName} (${model})`);
+
+    // Build headers
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Gateway-Identity': GATEWAY_IDENTITY,
+    };
+
+    if (provider.key) {
+      if (providerName === 'anthropic') {
+        headers['x-api-key'] = provider.key;
+        headers['anthropic-version'] = '2023-06-01';
+      } else {
+        headers['Authorization'] = `Bearer ${provider.key}`;
+      }
+    }
+
+    // Forward request
+    const response = await fetch(targetURL, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${DO_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      throw new Error(`DigitalOcean API error (${response.status}): ${error}`);
+      throw new Error(`Provider error (${response.status}): ${error}`);
     }
 
     const data = await response.json();
@@ -240,16 +275,16 @@ async function handleChatCompletions(req, res, body, ip) {
     // Extract token usage
     const tokens = data.usage?.total_tokens || 0;
     updateTokenUsage(ip, tokens);
-    trackUsage(ip, 'chat', tokens, latency);
+    trackUsage(ip, model, tokens, latency);
 
-    console.log(`✅ ${ip} → Chat: ${tokens} tokens, ${latency}ms`);
+    console.log(`✅ ${ip} → ${providerName}: ${tokens} tokens, ${latency}ms`);
 
     // Return response with rate limit headers
     const rateLimitStatus = ipLimits.get(ip);
     res.writeHead(200, {
       'Content-Type': 'application/json',
       'X-Gateway-Identity': GATEWAY_IDENTITY,
-      'X-Provider': 'digitalocean',
+      'X-Provider': providerName,
       'X-RateLimit-Limit-Day': LIMITS.requestsPerDay.toString(),
       'X-RateLimit-Remaining-Day': (LIMITS.requestsPerDay - (rateLimitStatus?.dayCount || 0)).toString(),
       'X-RateLimit-Remaining-Tokens': (LIMITS.tokensPerDay - (rateLimitStatus?.tokensToday || 0)).toString(),
@@ -258,99 +293,14 @@ async function handleChatCompletions(req, res, body, ip) {
 
   } catch (error) {
     const latency = Date.now() - startTime;
-    console.error(`❌ ${ip} chat error: ${error.message} (${latency}ms)`);
-
+    console.error(`❌ ${ip} error: ${error.message} (${latency}ms)`);
+    
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
       error: {
         message: error.message,
         type: 'gateway_error',
-        provider: 'digitalocean',
-      },
-    }));
-  }
-}
-
-/**
- * Handle embeddings (via Voyage AI)
- */
-async function handleEmbeddings(req, res, body, ip) {
-  const startTime = Date.now();
-
-  if (!VOYAGE_API_KEY) {
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      error: {
-        message: 'Voyage API key not configured',
-        type: 'configuration_error',
-      },
-    }));
-    return;
-  }
-
-  try {
-    const model = body.model || DEFAULT_EMBEDDING_MODEL;
-    const input = body.input;
-
-    if (!input) {
-      throw new Error('Missing required field: input');
-    }
-
-    console.log(`📨 ${ip} → Embeddings (${model})`);
-
-    // Voyage AI expects "input" field, optionally "input_type"
-    const voyageBody = {
-      model,
-      input,
-      input_type: body.input_type || 'document', // or 'query'
-    };
-
-    const response = await fetch(`${VOYAGE_API_URL}/embeddings`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${VOYAGE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(voyageBody),
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Voyage AI API error (${response.status}): ${error}`);
-    }
-
-    const data = await response.json();
-    const latency = Date.now() - startTime;
-
-    // Voyage returns usage.total_tokens
-    const tokens = data.usage?.total_tokens || 0;
-
-    updateTokenUsage(ip, tokens);
-    trackUsage(ip, 'embeddings', tokens, latency);
-
-    console.log(`✅ ${ip} → Embeddings: ${tokens} tokens, ${latency}ms`);
-
-    const rateLimitStatus = ipLimits.get(ip);
-    res.writeHead(200, {
-      'Content-Type': 'application/json',
-      'X-Gateway-Identity': GATEWAY_IDENTITY,
-      'X-Provider': 'voyage',
-      'X-RateLimit-Limit-Day': LIMITS.requestsPerDay.toString(),
-      'X-RateLimit-Remaining-Day': (LIMITS.requestsPerDay - (rateLimitStatus?.dayCount || 0)).toString(),
-      'X-RateLimit-Remaining-Tokens': (LIMITS.tokensPerDay - (rateLimitStatus?.tokensToday || 0)).toString(),
-    });
-    res.end(JSON.stringify(data));
-
-  } catch (error) {
-    const latency = Date.now() - startTime;
-    console.error(`❌ ${ip} embeddings error: ${error.message} (${latency}ms)`);
-
-    res.writeHead(500, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      error: {
-        message: error.message,
-        type: 'gateway_error',
-        provider: 'voyage',
+        provider: error.provider || 'unknown',
       },
     }));
   }
@@ -380,7 +330,7 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       status: 'ok',
       identity: GATEWAY_IDENTITY,
-      configured: !!DO_API_KEY,
+      providers: Object.keys(PROVIDERS).filter(k => PROVIDERS[k].key || k === 'local'),
       limits: LIMITS,
       cloudflare: TRUST_PROXY,
       timestamp: new Date().toISOString(),
@@ -392,10 +342,10 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/v1/rate-limit-status') {
     const limits = ipLimits.get(ip);
     const stats = usageStats.get(ip);
-
+    
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      ip: ip.replace(/:\d+$/, ''),
+      ip: ip.replace(/:\d+$/, ''), // Remove port if present
       limits: {
         requestsPerMinute: LIMITS.requestsPerMinute,
         requestsPerHour: LIMITS.requestsPerHour,
@@ -416,19 +366,22 @@ const server = http.createServer(async (req, res) => {
   // Models list
   if (req.url === '/v1/models' && req.method === 'GET') {
     const models = [
-      // Chat models (DigitalOcean)
-      { id: 'alibaba-qwen3-32b', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
-      { id: 'llama3.3-70b-instruct', type: 'chat', provider: 'digitalocean', pricing: '$0.60/1M tokens' },
-      { id: 'llama3-8b-instruct', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
-      { id: 'mistral-nemo-instruct-2407', type: 'chat', provider: 'digitalocean', pricing: '$0.30/1M tokens' },
-      { id: 'deepseek-r1-distill-llama-70b', type: 'chat', provider: 'digitalocean', pricing: '$0.60/1M tokens' },
-      // Embedding models (Voyage AI)
-      { id: 'voyage-3-large', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
-      { id: 'voyage-3.5', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
-      { id: 'voyage-3.5-lite', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
-      { id: 'voyage-code-3', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
-      { id: 'voyage-finance-2', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
-      { id: 'voyage-law-2', type: 'embedding', provider: 'voyage', pricing: 'See Voyage pricing', dimensions: 1024 },
+      // DeepSeek
+      { id: 'deepseek-chat', provider: 'deepseek', pricing: 'Free tier' },
+      { id: 'deepseek-coder', provider: 'deepseek', pricing: 'Free tier' },
+      // OpenAI
+      ...(PROVIDERS.openai.key ? [
+        { id: 'gpt-4', provider: 'openai', pricing: 'Free tier' },
+        { id: 'gpt-3.5-turbo', provider: 'openai', pricing: 'Free tier' },
+      ] : []),
+      // Anthropic
+      ...(PROVIDERS.anthropic.key ? [
+        { id: 'claude-3-opus', provider: 'anthropic', pricing: 'Free tier' },
+        { id: 'claude-3-sonnet', provider: 'anthropic', pricing: 'Free tier' },
+      ] : []),
+      // Local
+      { id: 'qwen3-32b', provider: 'local', pricing: 'Free (local)' },
+      { id: 'zen-coder-30b', provider: 'local', pricing: 'Free (local)' },
     ];
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -438,9 +391,10 @@ const server = http.createServer(async (req, res) => {
 
   // Chat completions
   if (req.url === '/v1/chat/completions' && req.method === 'POST') {
+    // Check rate limit
     const rateLimitCheck = checkRateLimit(ip);
     if (!rateLimitCheck.allowed) {
-      res.writeHead(429, {
+      res.writeHead(429, { 
         'Content-Type': 'application/json',
         'X-RateLimit-Reset': rateLimitCheck.resetIn.toString(),
       });
@@ -454,44 +408,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // Parse and proxy request
     let body = '';
     req.on('data', chunk => { body += chunk; });
     req.on('end', async () => {
       try {
         const parsed = JSON.parse(body);
-        await handleChatCompletions(req, res, parsed, ip);
-      } catch (error) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Invalid JSON' }));
-      }
-    });
-    return;
-  }
-
-  // Embeddings
-  if (req.url === '/v1/embeddings' && req.method === 'POST') {
-    const rateLimitCheck = checkRateLimit(ip);
-    if (!rateLimitCheck.allowed) {
-      res.writeHead(429, {
-        'Content-Type': 'application/json',
-        'X-RateLimit-Reset': rateLimitCheck.resetIn.toString(),
-      });
-      res.end(JSON.stringify({
-        error: {
-          message: rateLimitCheck.reason,
-          type: 'rate_limit_exceeded',
-          reset_in_seconds: rateLimitCheck.resetIn,
-        },
-      }));
-      return;
-    }
-
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', async () => {
-      try {
-        const parsed = JSON.parse(body);
-        await handleEmbeddings(req, res, parsed, ip);
+        await proxyToProvider(req, res, parsed, ip);
       } catch (error) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid JSON' }));
@@ -510,7 +433,6 @@ server.listen(PORT, HOST, () => {
   console.log(`🏥 Health: http://${HOST}:${PORT}/health`);
   console.log(`📊 Models: http://${HOST}:${PORT}/v1/models`);
   console.log(`💬 Chat: http://${HOST}:${PORT}/v1/chat/completions`);
-  console.log(`🔢 Embeddings: http://${HOST}:${PORT}/v1/embeddings`);
   console.log('');
 });
 
