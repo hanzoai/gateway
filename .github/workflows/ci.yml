@@ -24,14 +24,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: gateway/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: gateway
         run: npm ci
 
       - name: Create .env file
-        working-directory: gateway
         run: |
           cat > .env << EOF
           DIGITALOCEAN_API_KEY=${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -42,7 +40,6 @@ jobs:
           EOF
 
       - name: Start test server
-        working-directory: gateway
         run: |
           node test-server.js &
           sleep 5
@@ -50,7 +47,6 @@ jobs:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
 
       - name: Run API tests
-        working-directory: gateway
         run: npm test
         env:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -77,23 +73,22 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: gateway/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: gateway
         run: npm ci
 
       - name: Build application
-        working-directory: gateway
         run: npm run build --if-present
 
       - name: Create deployment package
         run: |
           mkdir -p dist
-          cp -r gateway dist/ || echo "No gateway directory"
           cp -r docker dist/
           cp .env.example dist/
           cp README.md dist/
+          cp server.js dist/
+          cp package.json dist/
           tar -czf gateway-${{ github.sha }}.tar.gz dist/
 
       - name: Upload artifact
@@ -144,14 +139,12 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: gateway/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: gateway
         run: npm ci
 
       - name: Run integration tests
-        working-directory: gateway
         run: npm run test:integration --if-present
         env:
           DIGITALOCEAN_API_KEY: ${{ secrets.DIGITALOCEAN_API_KEY }}
@@ -170,7 +163,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run npm audit
-        working-directory: gateway
         run: npm audit --audit-level=moderate || true
 
       - name: Check for secrets
