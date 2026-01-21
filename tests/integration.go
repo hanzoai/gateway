@@ -360,7 +360,7 @@ func (m responseError) Error() string {
 	return "wrong response:\n\t" + strings.Join(m.errMessage, "\n\t")
 }
 
-func assertResponse(actual *http.Response, expected Output) error {
+func assertResponse(actual *http.Response, expected Output) error { // skipcq GO-R1005
 	var errMsgs []string
 	if actual.StatusCode != expected.StatusCode {
 		errMsgs = append(errMsgs, fmt.Sprintf("unexpected status code. have: %d, want: %d", actual.StatusCode, expected.StatusCode))
