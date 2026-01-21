@@ -20,7 +20,7 @@ require (
 	github.com/krakend/krakend-httpsecure/v2 v2.2.0
 	github.com/krakend/krakend-influx/v2 v2.2.0
 	github.com/krakend/krakend-jose/v2 v2.10.0
-	github.com/krakend/krakend-jsonschema/v2 v2.1.0
+	github.com/krakend/krakend-jsonschema/v2 v2.2.0
 	github.com/krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b
 	github.com/krakend/krakend-lambda/v2 v2.1.0
 	github.com/krakend/krakend-logstash/v2 v2.1.0
@@ -36,8 +36,8 @@ require (
 	github.com/krakend/krakend-usage/v2 v2.1.0
 	github.com/krakend/krakend-xml/v2 v2.2.0
 	github.com/luraproject/lura/v2 v2.12.1
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.8.1
-	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
 	golang.org/x/sync v0.18.0
 )
 
@@ -213,7 +213,6 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rs/cors/wrapper/gin v0.0.0-20240830163046-1084d89a1692 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
@@ -232,8 +231,6 @@ require (
 	github.com/ugorji/go/codec v1.2.12 // indirect
 	github.com/unrolled/secure v1.15.0 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect

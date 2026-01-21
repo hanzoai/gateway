@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/xeipuuv/gojsonschema"
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 var (
@@ -193,7 +193,6 @@ func (c *Config) getHttpClient() *http.Client {
 		return c.HttpClient
 	}
 	return defaultHttpClient()
-
 }
 
 func defaultHttpClient() *http.Client {
@@ -333,7 +332,6 @@ func (i *Runner) Close() {
 			closeF()
 		}
 	})
-
 }
 
 // Check runs a test case, returning an error if something goes wrong
@@ -424,21 +422,32 @@ func assertResponse(actual *http.Response, expected Output) error {
 				errMessage: append(errMsgs, fmt.Sprintf("problem marshaling the user provided json-schema: %s", err)),
 			}
 		}
-		schema, err := gojsonschema.NewSchema(gojsonschema.NewBytesLoader(s))
+		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(s))
+		if err != nil {
+			return responseError{
+				errMessage: append(errMsgs, fmt.Sprintf("problem unmarshaling the user provided json-schema: %s", err)),
+			}
+		}
+
+		c := jsonschema.NewCompiler()
+		c.AddResource("./schema.json", doc)
+		schema, err := c.Compile("./schema.json")
 		if err != nil {
 			return responseError{
 				errMessage: append(errMsgs, fmt.Sprintf("problem generating json-schema schema: %s", err)),
 			}
 		}
-		result, err := schema.Validate(gojsonschema.NewBytesLoader(bodyBytes))
+
+		b, err := jsonschema.UnmarshalJSON(bytes.NewReader(bodyBytes))
+		if err != nil {
+			return responseError{
+				errMessage: append(errMsgs, fmt.Sprintf("problem unmarshaling the body: %s", err)),
+			}
+		}
+		err = schema.Validate(b)
 		if err != nil {
 			return responseError{
 				errMessage: append(errMsgs, fmt.Sprintf("problem validating the body: %s", err)),
-			}
-		}
-		if !result.Valid() {
-			return responseError{
-				errMessage: append(errMsgs, fmt.Sprintf("the result is not valid: %s", result.Errors())),
 			}
 		}
 	} else if expected.Body != "" {
