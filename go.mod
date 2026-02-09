@@ -20,7 +20,7 @@ require (
 	github.com/krakend/krakend-httpsecure/v2 v2.2.0
 	github.com/krakend/krakend-influx/v2 v2.2.0
 	github.com/krakend/krakend-jose/v2 v2.10.0
-	github.com/krakend/krakend-jsonschema/v2 v2.2.0
+	github.com/krakend/krakend-jsonschema/v2 v2.2.1
 	github.com/krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b
 	github.com/krakend/krakend-lambda/v2 v2.1.0
 	github.com/krakend/krakend-logstash/v2 v2.1.0

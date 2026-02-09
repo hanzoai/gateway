@@ -520,8 +520,8 @@ github.com/krakend/krakend-influx/v2 v2.2.0 h1:rLRjKZOC3Z+YktthQ4GC1/7AG0Vdre039
 github.com/krakend/krakend-influx/v2 v2.2.0/go.mod h1:4MBZmyPNfyfbu0fFcCPtuqjrLpQ+IPukkTKnH55RXxs=
 github.com/krakend/krakend-jose/v2 v2.10.0 h1:zISCdMGd4qvJntqG32cIc37RpbLkkGV0yb+vvgVW1pQ=
 github.com/krakend/krakend-jose/v2 v2.10.0/go.mod h1:PJvsljCeamhxQnIe6sNj8S/rdVSOIqvrWXcIv2BCj6E=
-github.com/krakend/krakend-jsonschema/v2 v2.2.0 h1:EwnD5YcNu26F6etDIoeQWt61bKXi0UVFx2+lTWIgwDE=
-github.com/krakend/krakend-jsonschema/v2 v2.2.0/go.mod h1:I3iBsSUtL6jsM++jPhbmJzQ1MS5s2WCKg+ijDQffmKU=
+github.com/krakend/krakend-jsonschema/v2 v2.2.1 h1:gg5wOKgfiLoh6xvQkVo16QowO9y8loBsEpDDKwELW1I=
+github.com/krakend/krakend-jsonschema/v2 v2.2.1/go.mod h1:I3iBsSUtL6jsM++jPhbmJzQ1MS5s2WCKg+ijDQffmKU=
 github.com/krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b h1:D94Zyeg26yRQc98/eDDJy2GGpgHh1TK72SjJgc8wwIM=
 github.com/krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b/go.mod h1:x02jzsb521azFk5+pmvF2GMwleU/5QXPgl+YZu407DE=
 github.com/krakend/krakend-lambda/v2 v2.1.0 h1:I76j4cp/I8Cd7vQMyIq08aJSr42SDFZWAE48/absu2k=
