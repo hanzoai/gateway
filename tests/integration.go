@@ -447,7 +447,7 @@ func assertResponse(actual *http.Response, expected Output) error { // skipcq GO
 		err = schema.Validate(b)
 		if err != nil {
 			return responseError{
-				errMessage: append(errMsgs, fmt.Sprintf("problem validating the body: %s", err)),
+				errMessage: append(errMsgs, fmt.Sprintf("problem validating the body: %s", sanitizeValidationError(err))),
 			}
 		}
 	} else if expected.Body != "" {
@@ -462,6 +462,16 @@ func assertResponse(actual *http.Response, expected Output) error { // skipcq GO
 	return responseError{
 		errMessage: errMsgs,
 	}
+}
+
+func sanitizeValidationError(e error) string {
+	s := e.Error()
+	if strings.HasPrefix(s, "jsonschema validation failed with") {
+		if ss := strings.SplitN(s, "\n", 2); len(ss) == 2 {
+			return ss[1]
+		}
+	}
+	return s
 }
 
 func testCases(cfg Config) ([]TestCase, error) {
