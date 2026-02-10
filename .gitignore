@@ -1,8 +1,25 @@
+# Binary
+gateway
+krakend
+
+# Build artifacts
+builder/skel/
+vendor/
+cmd/krakend-ce/schema/schema.json
+
+# Secrets
 .env
 .env.local
 *.secret
 *.pem
 *.key
 *.crt
-.DS_Store
+
+# IDE
+.idea/
+.vscode/
 *.swp
+*.swo
+
+# OS
+.DS_Store

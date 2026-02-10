@@ -1,15 +1,51 @@
-.PHONY: help build-hanzo build-lux deploy-hanzo deploy-lux apply-hanzo apply-lux validate
+.PHONY: all build test help deploy deploy-hanzo deploy-lux apply-hanzo apply-lux validate status clean docker
 
-KRAKEND_IMAGE ?= devopsfaith/krakend:2.5
+BIN_NAME := gateway
+OS := $(shell uname | tr '[:upper:]' '[:lower:]')
+MODULE := github.com/hanzoai/gateway/v2
+VERSION := 2.12.1
+SCHEMA_VERSION := $(shell echo "${VERSION}" | cut -d '.' -f 1,2)
+GIT_COMMIT := $(shell git rev-parse --short=7 HEAD)
+GOLANG_VERSION := 1.25.6
+ALPINE_VERSION := 3.23
+GLIBC_VERSION := $(shell sh find_glibc.sh 2>/dev/null || echo "unknown")
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+## Build
+
+all: test
+
+build: cmd/krakend-ce/schema/schema.json ## Build the gateway binary
+	@echo "Building the gateway binary..."
+	@go get .
+	@go build -ldflags="-X ${MODULE}/pkg.Version=${VERSION} -X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION} \
+	-X github.com/luraproject/lura/v2/core.GlibcVersion=${GLIBC_VERSION}" \
+	-o ${BIN_NAME} ./cmd/krakend-ce
+	@echo "You can now use ./${BIN_NAME}"
+
+test: build ## Build and run tests
+	go test -v ./tests
+
+cmd/krakend-ce/schema/schema.json:
+	@echo "Fetching v${SCHEMA_VERSION} schema"
+	@wget -qO $@ https://raw.githubusercontent.com/krakend/krakend-schema/refs/heads/main/v${SCHEMA_VERSION}/krakend.json || wget -qO $@ https://krakend.io/schema/krakend.json
+
+docker: ## Build Docker image
+	docker build --no-cache --pull --build-arg GOLANG_VERSION=${GOLANG_VERSION} --build-arg ALPINE_VERSION=${ALPINE_VERSION} -t hanzoai/gateway:${VERSION} .
+
+docker-hanzo: ## Build hanzo config Docker image
+	docker build --build-arg CONFIG=hanzo -t hanzoai/gateway:hanzo-latest .
+
+docker-lux: ## Build lux config Docker image
+	docker build --build-arg CONFIG=lux -t hanzoai/gateway:lux-latest .
+
 ## Validation
 
-validate: ## Validate all KrakenD configs
-	docker run --rm -v $(PWD)/configs/hanzo:/etc/krakend $(KRAKEND_IMAGE) check -c /etc/krakend/krakend.json
-	docker run --rm -v $(PWD)/configs/lux:/etc/krakend $(KRAKEND_IMAGE) check -c /etc/krakend/krakend.json
+validate: ## Validate all configs
+	./$(BIN_NAME) check -c configs/hanzo/krakend.json
+	./$(BIN_NAME) check -c configs/lux/krakend.json
 
 ## Hanzo cluster (hanzo-k8s)
 
@@ -49,3 +85,9 @@ logs-hanzo: ## Tail hanzo gateway logs
 
 logs-lux: ## Tail lux gateway logs
 	kubectl --context do-sfo3-lux-k8s -n lux-gateway logs -l app=krakend -f --tail=50
+
+clean: ## Clean build artifacts
+	rm -rf builder/skel/*
+	rm -f ${BIN_NAME}
+	rm -rf vendor/
+	rm -f cmd/krakend-ce/schema/schema.json

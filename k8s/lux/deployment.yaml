@@ -13,9 +13,11 @@ spec:
       labels:
         app: krakend
     spec:
+      imagePullSecrets:
+        - name: registry-credentials
       containers:
         - name: krakend
-          image: devopsfaith/krakend:2.5
+          image: registry.hanzo.ai/gateway:lux-latest
           command: ["/usr/bin/krakend"]
           args: ["run", "-c", "/etc/krakend/krakend.json", "-d"]
           ports:
