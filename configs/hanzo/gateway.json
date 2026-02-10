@@ -3,7 +3,7 @@
   "version": 3,
   "name": "Hanzo API Gateway",
   "port": 8080,
-  "timeout": "60s",
+  "timeout": "120s",
   "cache_ttl": "0s",
   "output_encoding": "no-op",
   "extra_config": {
@@ -38,8 +38,8 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/chat/completions",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/chat/completions",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -59,8 +59,8 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/completions",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/chat/completions",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -80,8 +80,8 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/embeddings",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/chat/completions",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -101,8 +101,8 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/models",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/get-providers",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -122,8 +122,8 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/images/generations",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/chat/completions",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -143,8 +143,34 @@
       },
       "backend": [
         {
-          "url_pattern": "/v1/audio/transcriptions",
-          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
+          "url_pattern": "/api/process-speech-to-text",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/api/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
