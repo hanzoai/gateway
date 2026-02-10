@@ -21,7 +21,10 @@ spec:
         - name: registry-credentials
       containers:
         - name: krakend
-          image: registry.hanzo.ai/gateway:hanzo-latest
+          image: ghcr.io/hanzoai/gateway:hanzo-latest
+          env:
+            - name: KRAKEND_PORT
+              value: "8080"
           ports:
             - containerPort: 8080
               name: http
