@@ -18,22 +18,22 @@ LABEL maintainer="dev@hanzo.ai"
 
 RUN apk upgrade --no-cache --no-interactive && \
     apk add --no-cache ca-certificates tzdata && \
-    adduser -u 1000 -S -D -H krakend && \
-    mkdir /etc/krakend && \
-    echo '{ "version": 3 }' > /etc/krakend/krakend.json
+    adduser -u 1000 -S -D -H gateway && \
+    mkdir /etc/gateway && \
+    echo '{ "version": 3 }' > /etc/gateway/gateway.json
 
-COPY --from=builder /app/gateway /usr/bin/krakend
+COPY --from=builder /app/gateway /usr/bin/gateway
 
 # Bake in the config for the target cluster
 ARG CONFIG=hanzo
-COPY configs/${CONFIG}/krakend.json /etc/krakend/krakend.json
+COPY configs/${CONFIG}/gateway.json /etc/gateway/gateway.json
 
 USER 1000
 
-WORKDIR /etc/krakend
+WORKDIR /etc/gateway
 
-ENTRYPOINT [ "/usr/bin/krakend" ]
-CMD [ "run", "-c", "/etc/krakend/krakend.json" ]
+ENTRYPOINT [ "/usr/bin/gateway" ]
+CMD [ "run", "-c", "/etc/gateway/gateway.json" ]
 
 EXPOSE 8080 8090
 

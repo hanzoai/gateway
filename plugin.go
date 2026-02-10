@@ -1,4 +1,4 @@
-package krakend
+package gateway
 
 import (
 	"context"
@@ -89,9 +89,9 @@ var (
 
 	testPluginCmd = &cobra.Command{
 		Use:     "test-plugin [flags] [artifacts]",
-		Short:   "Tests that one or more plugins are loadable into KrakenD.",
+		Short:   "Tests that one or more plugins are loadable into Gateway.",
 		Run:     testPluginFunc,
-		Example: "krakend test-plugin -scm ./plugins/my_plugin.so ./plugins/my_other_plugin.so",
+		Example: "gateway test-plugin -scm ./plugins/my_plugin.so ./plugins/my_other_plugin.so",
 	}
 
 	serverExpectedFlag   cmd.FlagBuilder

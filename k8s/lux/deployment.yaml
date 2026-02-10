@@ -1,27 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: krakend
+  name: gateway
   namespace: lux-gateway
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: krakend
+      app: gateway
   template:
     metadata:
       labels:
-        app: krakend
+        app: gateway
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: ghcr-secret
       containers:
-        - name: krakend
+        - name: gateway
           image: ghcr.io/hanzoai/gateway:lux-latest
-          command: ["/usr/bin/krakend"]
-          args: ["run", "-c", "/etc/krakend/krakend.json", "-d"]
+          command: ["/usr/bin/gateway"]
+          args: ["run", "-c", "/etc/gateway/gateway.json", "-d"]
           env:
-            - name: KRAKEND_PORT
+            - name: GATEWAY_PORT
               value: "8080"
           ports:
             - containerPort: 8080
@@ -46,8 +47,8 @@ spec:
             periodSeconds: 5
           volumeMounts:
             - name: config
-              mountPath: /etc/krakend
+              mountPath: /etc/gateway
       volumes:
         - name: config
           configMap:
-            name: krakend-config
+            name: gateway-config

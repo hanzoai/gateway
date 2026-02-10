@@ -12,7 +12,7 @@
       },
       "telemetry/logging": {
         "level":  "DEBUG",
-        "prefix": "[KRAKEND]",
+        "prefix": "[GATEWAY]",
         "syslog": false,
         "stdout": true
       },

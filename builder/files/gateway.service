@@ -1,11 +1,11 @@
 [Unit]
-Description=Krakend API Gateway
-Documentation=http://krakend.io
+Description=Hanzo API Gateway
+Documentation=https://hanzo.ai
 After=network.target
 
 [Service]
-User=krakend
-ExecStart=/usr/bin/krakend run -c /etc/krakend/krakend.json
+User=gateway
+ExecStart=/usr/bin/gateway run -c /etc/gateway/gateway.json
 ExecStop=/bin/kill -s TERM $MAINPID
 # Having non-zero Limit*s causes performance problems due to accounting overhead
 # in the kernel. We recommend using cgroups to do container-local accounting.

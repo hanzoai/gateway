@@ -1,26 +1,26 @@
 #!/bin/bash
 ### BEGIN INIT INFO
-# Provides:          krakend
+# Provides:          gateway
 # Required-Start:    $local_fs $remote_fs $network $syslog
 # Required-Stop:     $local_fs $remote_fs $network $syslog
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
-# Short-Description: Init for KrakenD
-# Description:      Init and control system for KrakenD
+# Short-Description: Init for Hanzo Gateway
+# Description:      Init and control system for Hanzo Gateway
 ### END INIT INFO
 set -ue
 
-NAME="krakend"
-DESC="krakend"
+NAME="gateway"
+DESC="gateway"
 
 . /lib/lsb/init-functions
 
-PID=/var/run/krakend.pid
+PID=/var/run/gateway.pid
 
 start() {
   start-stop-daemon --start --background --quiet \
                     --pidfile "$PID" --make-pidfile \
-                    --exec /usr/bin/krakend run -c /etc/krakend/krakend.json
+                    --exec /usr/bin/gateway run -c /etc/gateway/gateway.json
 }
 
 stop() {

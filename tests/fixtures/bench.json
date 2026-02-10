@@ -5,7 +5,7 @@
     "extra_config": {
         "github_com/devopsfaith/krakend-gologging": {
             "level": "CRITICAL",
-            "prefix": "[KRAKEND]"
+            "prefix": "[GATEWAY]"
         }
     },
     "endpoints": [{

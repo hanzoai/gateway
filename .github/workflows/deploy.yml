@@ -84,18 +84,18 @@ jobs:
 
       - name: Apply ConfigMap
         run: |
-          kubectl -n hanzo create configmap krakend-config \
-            --from-file=krakend.json=configs/hanzo/krakend.json \
+          kubectl -n hanzo create configmap gateway-config \
+            --from-file=gateway.json=configs/hanzo/gateway.json \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply manifests
         run: kubectl apply -f k8s/hanzo/
 
-      - name: Restart KrakenD
-        run: kubectl -n hanzo rollout restart deployment krakend
+      - name: Restart Gateway
+        run: kubectl -n hanzo rollout restart deployment gateway
 
       - name: Wait for rollout
-        run: kubectl -n hanzo rollout status deployment krakend --timeout=120s
+        run: kubectl -n hanzo rollout status deployment gateway --timeout=120s
 
   deploy-lux:
     needs: build
@@ -114,15 +114,15 @@ jobs:
 
       - name: Apply ConfigMap
         run: |
-          kubectl -n lux-gateway create configmap krakend-config \
-            --from-file=krakend.json=configs/lux/krakend.json \
+          kubectl -n lux-gateway create configmap gateway-config \
+            --from-file=gateway.json=configs/lux/gateway.json \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply manifests
         run: kubectl apply -f k8s/lux/
 
-      - name: Restart KrakenD
-        run: kubectl -n lux-gateway rollout restart deployment krakend
+      - name: Restart Gateway
+        run: kubectl -n lux-gateway rollout restart deployment gateway
 
       - name: Wait for rollout
-        run: kubectl -n lux-gateway rollout status deployment krakend --timeout=120s
+        run: kubectl -n lux-gateway rollout status deployment gateway --timeout=120s

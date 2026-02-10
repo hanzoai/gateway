@@ -1,4 +1,4 @@
-package krakend
+package gateway
 
 import (
 	"context"
@@ -83,32 +83,32 @@ type MetricsAndTracesRegister interface {
 	Register(context.Context, config.ServiceConfig, logging.Logger) *metrics.Metrics
 }
 
-// EngineFactory returns a gin engine, ready to be passed to the KrakenD RouterFactory
+// EngineFactory returns a gin engine, ready to be passed to the Gateway RouterFactory
 type EngineFactory interface {
 	NewEngine(config.ServiceConfig, router.EngineOptions) *gin.Engine
 }
 
-// ProxyFactory returns a KrakenD proxy factory, ready to be passed to the KrakenD RouterFactory
+// ProxyFactory returns a Gateway proxy factory, ready to be passed to the Gateway RouterFactory
 type ProxyFactory interface {
 	NewProxyFactory(logging.Logger, proxy.BackendFactory, *metrics.Metrics) proxy.Factory
 }
 
-// BackendFactory returns a KrakenD backend factory, ready to be passed to the KrakenD proxy factory
+// BackendFactory returns a Gateway backend factory, ready to be passed to the Gateway proxy factory
 type BackendFactory interface {
 	NewBackendFactory(context.Context, logging.Logger, *metrics.Metrics) proxy.BackendFactory
 }
 
-// HandlerFactory returns a KrakenD router handler factory, ready to be passed to the KrakenD RouterFactory
+// HandlerFactory returns a Gateway router handler factory, ready to be passed to the Gateway RouterFactory
 type HandlerFactory interface {
 	NewHandlerFactory(logging.Logger, *metrics.Metrics, jose.RejecterFactory) router.HandlerFactory
 }
 
-// LoggerFactory returns a KrakenD Logger factory, ready to be passed to the KrakenD RouterFactory
+// LoggerFactory returns a Gateway Logger factory, ready to be passed to the Gateway RouterFactory
 type LoggerFactory interface {
 	NewLogger(config.ServiceConfig) (logging.Logger, io.Writer, error)
 }
 
-// RunServer defines the interface of a function used by the KrakenD router to start the service
+// RunServer defines the interface of a function used by the Gateway router to start the service
 type RunServer func(context.Context, config.ServiceConfig, http.Handler) error
 
 // RunServerFactory returns a RunServer with several wraps around the injected one
@@ -162,7 +162,7 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 			return
 		}
 
-		logger.Info(fmt.Sprintf("Starting KrakenD v%s", core.KrakendVersion))
+		logger.Info(fmt.Sprintf("Starting Gateway v%s", core.KrakendVersion))
 		startReporter(ctx, logger, cfg)
 
 		if wd, err := os.Getwd(); err == nil {
@@ -210,7 +210,7 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		runServerChain = otellura.GlobalRunServer(logger, runServerChain)
 		runServerChain = router.RunServerFunc(e.RunServerFactory.NewRunServer(logger, runServerChain))
 
-		// setup the krakend router
+		// setup the gateway router
 		routerFactory := router.NewFactory(router.Config{
 			Engine: e.EngineFactory.NewEngine(cfg, router.EngineOptions{
 				Logger: logger,
@@ -225,7 +225,7 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		})
 
 		// start the engines
-		logger.Info("Starting the KrakenD instance")
+		logger.Info("Starting the Gateway instance")
 
 		if len(cfg.AsyncAgents) == 0 {
 			routerFactory.NewWithContext(ctx).Run(cfg)
@@ -334,7 +334,7 @@ func (LoggerBuilder) NewLogger(cfg config.ServiceConfig) (logging.Logger, io.Wri
 
 		if gologgingErr != nil {
 			var err error
-			logger, err = logging.NewLogger("DEBUG", os.Stdout, "KRAKEND")
+			logger, err = logging.NewLogger("DEBUG", os.Stdout, "GATEWAY")
 			if err != nil {
 				return logger, gelfWriter, err
 			}

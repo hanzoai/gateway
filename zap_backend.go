@@ -1,4 +1,4 @@
-package krakend
+package gateway
 
 import (
 	"context"
@@ -27,7 +27,7 @@ const (
 	MsgTypeHTTPResponse uint16 = 201
 )
 
-// ZapConfig holds the ZAP backend configuration extracted from krakend.json.
+// ZapConfig holds the ZAP backend configuration extracted from gateway.json.
 type ZapConfig struct {
 	// NodeID is the ZAP node ID for this service
 	NodeID string `json:"node_id"`

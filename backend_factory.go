@@ -1,4 +1,4 @@
-package krakend
+package gateway
 
 import (
 	"context"
