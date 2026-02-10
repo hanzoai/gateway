@@ -1,0 +1,162 @@
+{
+  "$schema": "https://www.krakend.io/schema/v3.json",
+  "version": 3,
+  "name": "Hanzo API Gateway",
+  "timeout": "60s",
+  "cache_ttl": "0s",
+  "output_encoding": "no-op",
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    },
+    "qos/ratelimit/router": {
+      "max_rate": 5000,
+      "client_max_rate": 500,
+      "strategy": "ip"
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/v1/chat/completions",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/chat/completions",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/completions",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/completions",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/embeddings",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/embeddings",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/models",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/models",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/images/generations",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/images/generations",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/audio/transcriptions",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/audio/transcriptions",
+          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/commerce/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://commerce.hanzo.svc.cluster.local:8001"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/commerce/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://commerce.hanzo.svc.cluster.local:8001"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/__health",
+          "host": ["http://localhost:8080"],
+          "encoding": "json"
+        }
+      ]
+    }
+  ]
+}

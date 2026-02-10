@@ -1,0 +1,86 @@
+name: Deploy Gateway
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'configs/**'
+      - 'k8s/**'
+  workflow_dispatch:
+    inputs:
+      cluster:
+        description: 'Target cluster'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - hanzo
+          - lux
+          - both
+
+jobs:
+  deploy-hanzo:
+    if: github.event_name == 'push' || github.event.inputs.cluster == 'hanzo' || github.event.inputs.cluster == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Configure kubectl (hanzo-k8s)
+        run: doctl kubernetes cluster kubeconfig save do-sfo3-hanzo-k8s
+
+      - name: Validate config
+        run: |
+          docker run --rm -v ${{ github.workspace }}/configs/hanzo:/etc/krakend devopsfaith/krakend:2.5 check -c /etc/krakend/krakend.json
+
+      - name: Apply ConfigMap
+        run: |
+          kubectl -n hanzo create configmap krakend-config \
+            --from-file=krakend.json=configs/hanzo/krakend.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply manifests
+        run: kubectl apply -f k8s/hanzo/
+
+      - name: Restart KrakenD
+        run: kubectl -n hanzo rollout restart deployment krakend
+
+      - name: Wait for rollout
+        run: kubectl -n hanzo rollout status deployment krakend --timeout=120s
+
+  deploy-lux:
+    if: github.event_name == 'push' || github.event.inputs.cluster == 'lux' || github.event.inputs.cluster == 'both'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Configure kubectl (lux-k8s)
+        run: doctl kubernetes cluster kubeconfig save do-sfo3-lux-k8s
+
+      - name: Validate config
+        run: |
+          docker run --rm -v ${{ github.workspace }}/configs/lux:/etc/krakend devopsfaith/krakend:2.5 check -c /etc/krakend/krakend.json
+
+      - name: Apply ConfigMap
+        run: |
+          kubectl -n lux-gateway create configmap krakend-config \
+            --from-file=krakend.json=configs/lux/krakend.json \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Apply manifests
+        run: kubectl apply -f k8s/lux/
+
+      - name: Restart KrakenD
+        run: kubectl -n lux-gateway rollout restart deployment krakend
+
+      - name: Wait for rollout
+        run: kubectl -n lux-gateway rollout status deployment krakend --timeout=120s

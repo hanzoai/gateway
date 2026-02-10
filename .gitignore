@@ -1,0 +1,8 @@
+.env
+.env.local
+*.secret
+*.pem
+*.key
+*.crt
+.DS_Store
+*.swp
