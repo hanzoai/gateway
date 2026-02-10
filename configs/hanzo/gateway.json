@@ -12,8 +12,14 @@
     },
     "qos/ratelimit/router": {
       "max_rate": 5000,
-      "client_max_rate": 500,
+      "client_max_rate": 100,
       "strategy": "ip"
+    },
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[GATEWAY]",
+      "syslog": false,
+      "stdout": true
     }
   },
   "endpoints": [
@@ -22,10 +28,18 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 500,
+          "client_max_rate": 10,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/chat/completions",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
@@ -35,10 +49,18 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 500,
+          "client_max_rate": 10,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/completions",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
@@ -48,10 +70,18 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 30,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/embeddings",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
@@ -61,10 +91,18 @@
       "method": "GET",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 500,
+          "client_max_rate": 60,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/models",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
@@ -74,10 +112,18 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "client_max_rate": 5,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/images/generations",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
@@ -87,10 +133,18 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 200,
+          "client_max_rate": 5,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/v1/audio/transcriptions",
-          "host": ["http://gateway.hanzo.svc.cluster.local:4000"],
+          "host": ["http://llm.hanzo.svc.cluster.local:4000"],
           "encoding": "no-op"
         }
       ]
