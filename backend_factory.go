@@ -70,6 +70,8 @@ func internalNewBackendFactory(ctx context.Context, requestExecutorFactory func(
 	backendFactory = metricCollector.BackendFactory("backend", backendFactory)
 	backendFactory = opencensus.BackendFactory(backendFactory)
 	backendFactory = otellura.BackendFactory(backendFactory)
+	// ZAP transport: zero-copy binary protocol for internal services
+	backendFactory = ZapBackendFactory(logger, backendFactory)
 	return func(remote *config.Backend) proxy.Proxy {
 		logger.Debug(fmt.Sprintf("[BACKEND: %s] Building the backend pipe", remote.URLPattern))
 		return backendFactory(remote)
