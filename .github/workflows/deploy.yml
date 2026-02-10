@@ -1,11 +1,8 @@
-name: Deploy Gateway
+name: Build and Deploy Gateway
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'configs/**'
-      - 'k8s/**'
   workflow_dispatch:
     inputs:
       cluster:
@@ -19,7 +16,59 @@ on:
           - both
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        config: [hanzo, lux]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to Hanzo Registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.hanzo.ai
+          username: ${{ secrets.HANZO_REGISTRY_USERNAME }}
+          password: ${{ secrets.HANZO_REGISTRY_PASSWORD }}
+
+      - name: Build and push (${{ matrix.config }})
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          build-args: CONFIG=${{ matrix.config }}
+          tags: |
+            ghcr.io/hanzoai/gateway:${{ matrix.config }}-latest
+            ghcr.io/hanzoai/gateway:${{ matrix.config }}-${{ github.sha }}
+            docker.io/hanzoai/gateway:${{ matrix.config }}-latest
+            docker.io/hanzoai/gateway:${{ matrix.config }}-${{ github.sha }}
+            registry.hanzo.ai/gateway:${{ matrix.config }}-latest
+            registry.hanzo.ai/gateway:${{ matrix.config }}-${{ github.sha }}
+          cache-from: type=gha,scope=gateway-${{ matrix.config }}
+          cache-to: type=gha,mode=max,scope=gateway-${{ matrix.config }}
+
   deploy-hanzo:
+    needs: build
     if: github.event_name == 'push' || github.event.inputs.cluster == 'hanzo' || github.event.inputs.cluster == 'both'
     runs-on: ubuntu-latest
     steps:
@@ -32,10 +81,6 @@ jobs:
 
       - name: Configure kubectl (hanzo-k8s)
         run: doctl kubernetes cluster kubeconfig save do-sfo3-hanzo-k8s
-
-      - name: Validate config
-        run: |
-          docker run --rm -v ${{ github.workspace }}/configs/hanzo:/etc/krakend devopsfaith/krakend:2.5 check -c /etc/krakend/krakend.json
 
       - name: Apply ConfigMap
         run: |
@@ -53,6 +98,7 @@ jobs:
         run: kubectl -n hanzo rollout status deployment krakend --timeout=120s
 
   deploy-lux:
+    needs: build
     if: github.event_name == 'push' || github.event.inputs.cluster == 'lux' || github.event.inputs.cluster == 'both'
     runs-on: ubuntu-latest
     steps:
@@ -65,10 +111,6 @@ jobs:
 
       - name: Configure kubectl (lux-k8s)
         run: doctl kubernetes cluster kubeconfig save do-sfo3-lux-k8s
-
-      - name: Validate config
-        run: |
-          docker run --rm -v ${{ github.workspace }}/configs/lux:/etc/krakend devopsfaith/krakend:2.5 check -c /etc/krakend/krakend.json
 
       - name: Apply ConfigMap
         run: |
