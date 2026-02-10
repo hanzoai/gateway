@@ -1,31 +1,18 @@
 # Security Policy
-KrakenD Community Edition only fixes the latest version of the software, and does not patch prior versions.
+
+Hanzo Gateway is built on KrakenD Community Edition. Only the latest version is maintained.
 
 ## Reporting a Vulnerability
 
-If you are an existing KrakenD customer or partner, please submit a support ticket or contact KrakenD through any Enterprise channels explaining your findings.
+Please email security@hanzo.ai with your discovery.
 
-If you are not a customer, please email security@krakend.io with your discovery.
+For upstream KrakenD issues, please also contact security@krakend.io.
 
 As soon as we read and understand your finding we will provide an answer with next steps and possible timelines.
 
-We want to thank you in advance for the time you have spent to follow this issue, as it helps all open source users. We develop our software in the open with the help of a global community of developers and contributors with whom we share a common understanding and trust in the free exchange of knowledge.
+We follow responsible disclosure practices:
 
-KrakenD’s policy is to credit and reward all researchers provided they follow responsible disclosure practices:
+- Vulnerabilities are not published prior to a fix being released.
+- Exact details (exploits, proof-of-concept) are not divulged publicly.
 
-    They do not publish the vulnerability prior to KrakenD releasing a fix for it.
-    They do not divulge exact details of the issue, for example, through exploits or proof-of-concept code.
-    KrakenD does not credit employees of KrakenD for vulnerabilities they have found.
-
-Current rewards could include (but are not limited to):
-
-    Public acknowledgement in release notes when a fix for reported security bug is issued
-    Addition to the KrakenD Contributors Github organization
-    Opportunity to meet with our technical staff
-    KrakenD swag
-
-KrakenD DOES NOT provide cash awards for discovered vulnerabilities at this time.
-
-Thank you
-
-
+Thank you for helping keep Hanzo Gateway and the open source community secure.

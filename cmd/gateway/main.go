@@ -1,4 +1,4 @@
-// Krakend-ce sets up a complete KrakenD API Gateway ready to serve
+// Gateway sets up a complete Hanzo API Gateway ready to serve
 
 package main
 
@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	krakend "github.com/hanzoai/gateway/v2"
+	gateway "github.com/hanzoai/gateway/v2"
 	cmd "github.com/krakend/krakend-cobra/v2"
 	flexibleconfig "github.com/krakend/krakend-flexibleconfig/v2"
 	koanf "github.com/krakend/krakend-koanf"
@@ -43,7 +43,7 @@ func main() {
 		}
 	}()
 
-	krakend.RegisterEncoders()
+	gateway.RegisterEncoders()
 
 	for key, alias := range aliases {
 		config.ExtraConfigAlias[alias] = key
@@ -73,13 +73,13 @@ func main() {
 		cmd.PluginCommand,
 		cmd.VersionCommand,
 		cmd.AuditCommand,
-		krakend.NewTestPluginCmd(),
+		gateway.NewTestPluginCmd(),
 	}
 
 	cmd.DefaultRoot = cmd.NewRoot(cmd.RootCommand, commandsToLoad...)
 	cmd.DefaultRoot.Cmd.CompletionOptions.DisableDefaultCmd = true
 
-	cmd.Execute(cfg, krakend.NewExecutor(ctx))
+	cmd.Execute(cfg, gateway.NewExecutor(ctx))
 }
 
 var aliases = map[string]string{

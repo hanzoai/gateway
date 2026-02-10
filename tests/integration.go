@@ -26,37 +26,37 @@ import (
 )
 
 var (
-	defaultBinPath     *string = flag.String("krakend_bin_path", ".././krakend", "The default path to the krakend bin")
-	defaultSpecsPath   *string = flag.String("krakend_specs_path", "./fixtures/specs", "The default path to the specs folder")
-	defaultBackendPort *int    = flag.Int("krakend_backend_port", 8081, "The port for the mocked backend api")
+	defaultBinPath     *string = flag.String("gateway_bin_path", ".././gateway", "The default path to the gateway bin")
+	defaultSpecsPath   *string = flag.String("gateway_specs_path", "./fixtures/specs", "The default path to the specs folder")
+	defaultBackendPort *int    = flag.Int("gateway_backend_port", 8081, "The port for the mocked backend api")
 	defaultCfgPath     *string = flag.String(
-		"krakend_config_path",
-		"fixtures/krakend.json",
-		"The default path to the krakend config",
+		"gateway_config_path",
+		"fixtures/gateway.json",
+		"The default path to the gateway config",
 	)
 	defaultDelay *time.Duration = flag.Duration(
-		"krakend_delay",
+		"gateway_delay",
 		200*time.Millisecond,
 		"The delay for the delayed backend endpoint",
 	)
 	defaultEnvironPatterns *string = flag.String(
-		"krakend_envar_pattern",
+		"gateway_envar_pattern",
 		"",
 		"Comma separated list of patterns to use to filter the envars to pass (set to \".*\" to pass everything)",
 	)
 	notFollowRedirects                = flag.Bool("client_not_follow_redirects", false, "The test http client should not follow http redirects")
 	defaultStartupWait *time.Duration = flag.Duration(
-		"krakend_startup_wait",
+		"gateway_startup_wait",
 		1500*time.Millisecond,
 		"The time to wait to let servers startup before start testing",
 	)
 	defaultReadyURL *string = flag.String(
-		"krakend_ready_url",
+		"gateway_ready_url",
 		"",
 		"The url to check for system under test readiness.",
 	)
 	defaultReadyURLWait *time.Duration = flag.Duration(
-		"krakend_ready_url_wait",
+		"gateway_ready_url_wait",
 		1500*time.Millisecond,
 		"The maximum time to wait for the ready url to return a 200 Ok response.",
 	)
@@ -532,17 +532,17 @@ func readSpecs(dirPath string) (map[string][]byte, error) {
 	return data, nil
 }
 
-var defaultCmdBuilder krakendCmdBuilder
+var defaultCmdBuilder gatewayCmdBuilder
 
-type krakendCmdBuilder struct{}
+type gatewayCmdBuilder struct{}
 
-func (k krakendCmdBuilder) New(cfg *Config) *exec.Cmd {
+func (k gatewayCmdBuilder) New(cfg *Config) *exec.Cmd {
 	cmd := exec.Command(cfg.getBinPath(), "run", "-d", "-c", cfg.getCfgPath())
 	cmd.Env = k.getEnviron(cfg)
 	return cmd
 }
 
-func (krakendCmdBuilder) getEnviron(cfg *Config) []string {
+func (gatewayCmdBuilder) getEnviron(cfg *Config) []string {
 	environ := []string{"USAGE_DISABLE=1"}
 
 	var patterns []*regexp.Regexp

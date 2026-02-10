@@ -1,11 +1,10 @@
-# Binary
-gateway
-krakend
+# Binary (root only)
+/gateway
 
 # Build artifacts
 builder/skel/
 vendor/
-cmd/krakend-ce/schema/schema.json
+cmd/gateway/schema/schema.json
 
 # Secrets
 .env

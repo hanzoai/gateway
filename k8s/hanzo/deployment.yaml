@@ -1,29 +1,30 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: krakend
+  name: gateway
   namespace: hanzo
   labels:
-    app: krakend
-    app.kubernetes.io/name: krakend
+    app: gateway
+    app.kubernetes.io/name: gateway
     app.kubernetes.io/part-of: hanzo-platform
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: krakend
+      app: gateway
   template:
     metadata:
       labels:
-        app: krakend
+        app: gateway
     spec:
+      enableServiceLinks: false
       imagePullSecrets:
         - name: registry-credentials
       containers:
-        - name: krakend
+        - name: gateway
           image: ghcr.io/hanzoai/gateway:hanzo-latest
           env:
-            - name: KRAKEND_PORT
+            - name: GATEWAY_PORT
               value: "8080"
           ports:
             - containerPort: 8080
@@ -49,8 +50,8 @@ spec:
             periodSeconds: 5
           volumeMounts:
             - name: config
-              mountPath: /etc/krakend
+              mountPath: /etc/gateway
       volumes:
         - name: config
           configMap:
-            name: krakend-config
+            name: gateway-config

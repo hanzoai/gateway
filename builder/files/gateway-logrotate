@@ -1,4 +1,4 @@
-/var/log/krakend.log
+/var/log/gateway.log
 {
 	rotate 7
 	daily
