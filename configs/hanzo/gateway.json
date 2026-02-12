@@ -30,8 +30,8 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 500,
-          "client_max_rate": 10,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
@@ -39,7 +39,7 @@
       "backend": [
         {
           "url_pattern": "/api/chat/completions",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
@@ -51,8 +51,8 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 500,
-          "client_max_rate": 10,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
@@ -60,7 +60,7 @@
       "backend": [
         {
           "url_pattern": "/api/chat/completions",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
@@ -72,16 +72,16 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 1000,
-          "client_max_rate": 30,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
       },
       "backend": [
         {
-          "url_pattern": "/api/chat/completions",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "url_pattern": "/v1/embeddings",
+          "host": ["https://inference.do-ai.run"],
           "encoding": "no-op"
         }
       ]
@@ -93,16 +93,16 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 500,
-          "client_max_rate": 60,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
       },
       "backend": [
         {
-          "url_pattern": "/api/get-providers",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "url_pattern": "/v1/models",
+          "host": ["https://inference.do-ai.run"],
           "encoding": "no-op"
         }
       ]
@@ -114,16 +114,16 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 200,
-          "client_max_rate": 5,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
       },
       "backend": [
         {
-          "url_pattern": "/api/chat/completions",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "url_pattern": "/v1/images/generations",
+          "host": ["https://inference.do-ai.run"],
           "encoding": "no-op"
         }
       ]
@@ -135,42 +135,110 @@
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
-          "max_rate": 200,
-          "client_max_rate": 5,
+          "max_rate": 5000,
+          "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
         }
       },
       "backend": [
         {
-          "url_pattern": "/api/process-speech-to-text",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "url_pattern": "/v1/audio/transcriptions",
+          "host": ["https://inference.do-ai.run"],
           "encoding": "no-op"
         }
       ]
     },
     {
-      "endpoint": "/api/{path}",
+      "endpoint": "/v1/audio/speech",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/v1/audio/speech",
+          "host": ["https://inference.do-ai.run"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/async-invoke",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/v1/async-invoke",
+          "host": ["https://inference.do-ai.run"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/async-invoke/{request_id}/status",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/async-invoke/{request_id}/status",
+          "host": ["https://inference.do-ai.run"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/async-invoke/{request_id}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/async-invoke/{request_id}",
+          "host": ["https://inference.do-ai.run"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/cloud/{path}",
       "method": "GET",
       "input_headers": ["*"],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
     },
     {
-      "endpoint": "/api/{path}",
+      "endpoint": "/cloud/{path}",
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://cloud.hanzo.svc.cluster.local:80"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
@@ -249,6 +317,268 @@
         {
           "url_pattern": "/{path}",
           "host": ["http://analytics.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/bot/health",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/health",
+          "host": ["http://bot-gateway.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/bot/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://bot-gateway.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/bot/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://bot-gateway.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/bot/ws",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/ws",
+          "host": ["http://bot-gateway.hanzo.svc.cluster.local:18790"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/operative/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://operative.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/operative/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://operative.hanzo.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/kms/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/kms/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/kms/{path}",
+      "method": "PATCH",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/kms/{path}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/agents/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://agents.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/agents/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://agents.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/console/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://console.hanzo.svc.cluster.local:3000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/console/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://console.hanzo.svc.cluster.local:3000"],
           "encoding": "no-op"
         }
       ]
