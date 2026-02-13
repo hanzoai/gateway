@@ -584,6 +584,74 @@
       ]
     },
     {
+      "endpoint": "/web3/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/v1/{path}",
+          "host": ["http://bootnode-api.bootnode.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/web3/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/v1/{path}",
+          "host": ["http://bootnode-api.bootnode.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/web3/{path}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/{path}",
+          "host": ["http://bootnode-api.bootnode.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/web3/{path}",
+      "method": "PATCH",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/{path}",
+          "host": ["http://bootnode-api.bootnode.svc.cluster.local:80"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/health",
       "method": "GET",
       "output_encoding": "json",

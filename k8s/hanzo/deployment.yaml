@@ -23,6 +23,9 @@ spec:
       containers:
         - name: gateway
           image: ghcr.io/hanzoai/gateway:hanzo-latest
+          imagePullPolicy: Always
+          command: ["/usr/bin/gateway"]
+          args: ["run", "-c", "/etc/gateway/gateway.json"]
           env:
             - name: GATEWAY_PORT
               value: "8080"
