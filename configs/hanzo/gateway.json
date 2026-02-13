@@ -463,7 +463,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "host": ["http://kms.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -484,7 +484,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "host": ["http://kms.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -497,7 +497,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "host": ["http://kms.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -510,7 +510,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://kms.hanzo.svc.cluster.local:8080"],
+          "host": ["http://kms.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -531,7 +531,7 @@
       "backend": [
         {
           "url_pattern": "/{path}",
-          "host": ["http://agents.hanzo.svc.cluster.local:8000"],
+          "host": ["http://agents.hanzo.svc.cluster.local:8080"],
           "encoding": "no-op"
         }
       ]
@@ -552,7 +552,7 @@
       "backend": [
         {
           "url_pattern": "/{path}",
-          "host": ["http://agents.hanzo.svc.cluster.local:8000"],
+          "host": ["http://agents.hanzo.svc.cluster.local:8080"],
           "encoding": "no-op"
         }
       ]
@@ -565,7 +565,7 @@
       "backend": [
         {
           "url_pattern": "/{path}",
-          "host": ["http://console.hanzo.svc.cluster.local:3000"],
+          "host": ["http://console.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
@@ -578,7 +578,7 @@
       "backend": [
         {
           "url_pattern": "/{path}",
-          "host": ["http://console.hanzo.svc.cluster.local:3000"],
+          "host": ["http://console.hanzo.svc.cluster.local:80"],
           "encoding": "no-op"
         }
       ]
