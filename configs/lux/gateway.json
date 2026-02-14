@@ -22,65 +22,154 @@
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/ext/bc/C/rpc",
-          "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{
+        "url_pattern": "/ext/bc/C/rpc",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
     },
     {
-      "endpoint": "/mainnet/ext/bc/C/rpc",
+      "endpoint": "/ext/bc/C/ws",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/bc/C/ws",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/bc/X",
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/ext/bc/C/rpc",
-          "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{
+        "url_pattern": "/ext/bc/X",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
     },
     {
-      "endpoint": "/testnet/ext/bc/C/rpc",
+      "endpoint": "/ext/bc/P",
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/ext/bc/C/rpc",
-          "host": ["http://luxd.lux-testnet.svc.cluster.local:9640"],
-          "encoding": "no-op"
-        }
-      ]
-    },
-    {
-      "endpoint": "/devnet/ext/bc/C/rpc",
-      "method": "POST",
-      "input_headers": ["*"],
-      "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/ext/bc/C/rpc",
-          "host": ["http://luxd.lux-devnet.svc.cluster.local:9650"],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{
+        "url_pattern": "/ext/bc/P",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
     },
     {
       "endpoint": "/ext/info",
       "method": "POST",
       "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/ext/info",
-          "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{
+        "url_pattern": "/ext/info",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/health",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/health",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/keystore",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/keystore",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/index/C/block",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/index/C/block",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/index/C/tx",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/index/C/tx",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/index/X/tx",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/index/X/tx",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/index/P/block",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/index/P/block",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/index/P/tx",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/index/P/tx",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/metrics",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/metrics",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/ext/admin",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/ext/admin",
+        "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
+        "encoding": "no-op"
+      }]
     }
   ]
 }
