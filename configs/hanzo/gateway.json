@@ -652,6 +652,165 @@
       ]
     },
     {
+      "endpoint": "/ai/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://casibase.hanzo.svc.cluster.local:14000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/ai/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://casibase.hanzo.svc.cluster.local:14000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/infra/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://casvisor.hanzo.svc.cluster.local:19000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/infra/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://casvisor.hanzo.svc.cluster.local:19000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/team/_accounts/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://team-account.hanzo.svc.cluster.local:3000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/team/_accounts/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://team-account.hanzo.svc.cluster.local:3000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/team/_collaborator/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://team-collaborator.hanzo.svc.cluster.local:3078"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/team/_transactor/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://team-transactor.hanzo.svc.cluster.local:3333"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/team/_rekoni/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/{path}",
+          "host": ["http://team-rekoni.hanzo.svc.cluster.local:4004"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/billing/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/{path}",
+          "host": ["http://commerce.hanzo.svc.cluster.local:8001"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/billing/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/api/v1/{path}",
+          "host": ["http://commerce.hanzo.svc.cluster.local:8001"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/health",
       "method": "GET",
       "output_encoding": "json",
