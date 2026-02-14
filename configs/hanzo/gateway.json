@@ -59,7 +59,7 @@
       },
       "backend": [
         {
-          "url_pattern": "/api/chat/completions",
+          "url_pattern": "/api/completions",
           "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
