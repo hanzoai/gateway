@@ -667,7 +667,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://casibase.hanzo.svc.cluster.local:14000"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
@@ -688,7 +688,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://casibase.hanzo.svc.cluster.local:14000"],
+          "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
           "encoding": "no-op"
         }
       ]
@@ -701,7 +701,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://casvisor.hanzo.svc.cluster.local:19000"],
+          "host": ["http://visor.hanzo.svc.cluster.local:19000"],
           "encoding": "no-op"
         }
       ]
@@ -714,7 +714,7 @@
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://casvisor.hanzo.svc.cluster.local:19000"],
+          "host": ["http://visor.hanzo.svc.cluster.local:19000"],
           "encoding": "no-op"
         }
       ]
