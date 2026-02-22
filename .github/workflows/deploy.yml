@@ -80,7 +80,7 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Configure kubectl (hanzo-k8s)
-        run: doctl kubernetes cluster kubeconfig save do-sfo3-hanzo-k8s
+        run: doctl kubernetes cluster kubeconfig save hanzo-k8s
 
       - name: Apply ConfigMap
         run: |
@@ -110,7 +110,7 @@ jobs:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
 
       - name: Configure kubectl (lux-k8s)
-        run: doctl kubernetes cluster kubeconfig save do-sfo3-lux-k8s
+        run: doctl kubernetes cluster kubeconfig save lux-k8s
 
       - name: Apply ConfigMap
         run: |
