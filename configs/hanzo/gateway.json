@@ -811,6 +811,45 @@
       ]
     },
     {
+      "endpoint": "/v1/pricing",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/pricing",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pricing/{path}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/pricing/{path}",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pricing/{path}",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/pricing/{path}",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/health",
       "method": "GET",
       "output_encoding": "json",
