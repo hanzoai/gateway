@@ -837,6 +837,19 @@
       ]
     },
     {
+      "endpoint": "/v1/pricing/model/{name}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/pricing/model/{name}",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/v1/pricing/{path}",
       "method": "POST",
       "input_headers": ["*"],
