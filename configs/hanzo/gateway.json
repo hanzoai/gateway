@@ -850,6 +850,71 @@
       ]
     },
     {
+      "endpoint": "/v1/pubsub/varz",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/varz",
+          "host": ["http://pubsub.hanzo.svc.cluster.local:8222"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pubsub/connz",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/connz",
+          "host": ["http://pubsub.hanzo.svc.cluster.local:8222"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pubsub/subsz",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/subsz",
+          "host": ["http://pubsub.hanzo.svc.cluster.local:8222"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pubsub/jsz",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/jsz",
+          "host": ["http://pubsub.hanzo.svc.cluster.local:8222"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pubsub/healthz",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/healthz",
+          "host": ["http://pubsub.hanzo.svc.cluster.local:8222"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/health",
       "method": "GET",
       "output_encoding": "json",
