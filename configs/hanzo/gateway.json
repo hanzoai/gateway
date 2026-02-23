@@ -607,6 +607,14 @@
         "*"
       ],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 50,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/api/{path}",
@@ -641,6 +649,77 @@
         "*"
       ],
       "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 50,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/{path}",
+      "method": "PUT",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 50,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/{path}",
+      "method": "PATCH",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 50,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
+      "backend": [
+        {
+          "url_pattern": "/api/{path}",
+          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/auth/{path}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 1000,
+          "client_max_rate": 50,
+          "strategy": "ip",
+          "every": "1m"
+        }
+      },
       "backend": [
         {
           "url_pattern": "/api/{path}",
