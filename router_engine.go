@@ -104,8 +104,7 @@ var hostRoutes = map[string][]pathBackend{
 	// --- IAM for partner orgs ---
 	"pars.id":       {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
 	"lux.id":        {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
-	"zoo.id":        {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
-	"id.bootno.de":  {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
+	"id.bootno.de":   {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
 	"id.zoo.network": {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
 
 	// --- Lux ---
