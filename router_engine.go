@@ -36,10 +36,9 @@ type hostRoute struct {
 // httputil.ReverseProxy handles WebSocket upgrades natively.
 var hostRoutes = map[string][]pathBackend{
 	// --- Hanzo core ---
-	"hanzo.id":     {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
-	"hanzo.app":    {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
-	"app.hanzo.ai": {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
-	"hanzo.bot":    {{prefix: "/", target: mustURL("http://hanzo-bot-site.hanzo.svc.cluster.local:80")}},
+	"hanzo.id":  {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"hanzo.app": {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
+	"hanzo.bot": {{prefix: "/", target: mustURL("http://hanzo-bot-site.hanzo.svc.cluster.local:80")}},
 
 	// --- Hanzo Bot ---
 	"app.hanzo.bot":    {{prefix: "/", target: mustURL("http://hanzo-playground.hanzo.svc.cluster.local:8080")}},
@@ -135,6 +134,11 @@ var hostRoutes = map[string][]pathBackend{
 	"dev.hanzo.team": {{prefix: "/", target: mustURL("http://team-nginx.team.svc.cluster.local:80")}},
 }
 
+// hostRedirects maps hostnames that should 301 redirect to a canonical domain.
+var hostRedirects = map[string]string{
+	"app.hanzo.ai": "https://hanzo.app",
+}
+
 // subdomainRoutes maps substring patterns for wildcard-style matching.
 // Checked only if no exact host match is found.
 var subdomainRoutes = map[string]string{
@@ -200,6 +204,13 @@ func hostProxyMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
+
+		// Host redirects (301 permanent).
+		if target, ok := hostRedirects[host]; ok {
+			c.Redirect(301, target+path)
+			c.Abort()
+			return
+		}
 
 		// Exact host match.
 		if routes, ok := exactRoutes[host]; ok {
