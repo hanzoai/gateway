@@ -36,9 +36,10 @@ type hostRoute struct {
 // httputil.ReverseProxy handles WebSocket upgrades natively.
 var hostRoutes = map[string][]pathBackend{
 	// --- Hanzo core ---
-	"hanzo.id":  {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
-	"hanzo.app": {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
-	"hanzo.bot": {{prefix: "/", target: mustURL("http://hanzo-bot-site.hanzo.svc.cluster.local:80")}},
+	"hanzo.id":     {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"hanzo.app":    {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
+	"app.hanzo.ai": {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
+	"hanzo.bot":    {{prefix: "/", target: mustURL("http://hanzo-bot-site.hanzo.svc.cluster.local:80")}},
 
 	// --- Hanzo Bot ---
 	"app.hanzo.bot":    {{prefix: "/", target: mustURL("http://hanzo-playground.hanzo.svc.cluster.local:8080")}},
@@ -60,8 +61,12 @@ var hostRoutes = map[string][]pathBackend{
 	"cloud.hanzo.ai":      {{prefix: "/", target: mustURL("http://cloud.hanzo.svc.cluster.local:80")}},
 	"cloud-api.hanzo.ai":  {{prefix: "/", target: mustURL("http://cloud-api.hanzo.svc.cluster.local:8000")}},
 	"api.cloud.hanzo.ai":  {{prefix: "/", target: mustURL("http://cloud-api.hanzo.svc.cluster.local:8000")}},
-	"commerce.hanzo.ai":   {{prefix: "/", target: mustURL("http://commerce.hanzo.svc.cluster.local:8001")}},
-	"console.hanzo.ai":    {{prefix: "/", target: mustURL("http://console.hanzo.svc.cluster.local:80")}},
+	"commerce.hanzo.ai":       {{prefix: "/", target: mustURL("http://commerce-site.hanzo.svc.cluster.local:80")}},
+	"api.commerce.hanzo.ai":   {{prefix: "/", target: mustURL("http://commerce.hanzo.svc.cluster.local:8001")}},
+	"admin.commerce.hanzo.ai": {{prefix: "/", target: mustURL("http://commerce-admin.hanzo.svc.cluster.local:80")}},
+	"store.commerce.hanzo.ai": {{prefix: "/", target: mustURL("http://commerce-store.hanzo.svc.cluster.local:80")}},
+	"console.hanzo.ai":        {{prefix: "/", target: mustURL("http://console.hanzo.svc.cluster.local:80")}},
+	"docs.hanzo.ai":           {{prefix: "/", target: mustURL("http://docs-landing.hanzo.svc.cluster.local:3000")}},
 	"flow.hanzo.ai":       {{prefix: "/", target: mustURL("http://flow-site.hanzo.svc.cluster.local:80")}},
 	"app.flow.hanzo.ai":   {{prefix: "/", target: mustURL("http://flow.hanzo.svc.cluster.local:80")}},
 	"iam.hanzo.ai":        {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
@@ -73,6 +78,7 @@ var hostRoutes = map[string][]pathBackend{
 	"s3.hanzo.ai":         {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9000")}},
 	"status.hanzo.ai":     {{prefix: "/", target: mustURL("http://status.hanzo.svc.cluster.local:80")}},
 	"studio.hanzo.ai":     {{prefix: "/", target: mustURL("http://studio.hanzo.svc.cluster.local:80")}},
+	"visor.hanzo.ai":      {{prefix: "/", target: mustURL("http://visor.hanzo.svc.cluster.local:19000")}},
 	"vm.hanzo.ai":         {{prefix: "/", target: mustURL("http://visor.hanzo.svc.cluster.local:19000")}},
 	"hanzo.chat":          {{prefix: "/", target: mustURL("http://chat.hanzo.svc.cluster.local:80")}},
 	"hanzo.space":         {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9001")}},
@@ -112,7 +118,7 @@ var hostRoutes = map[string][]pathBackend{
 	"rpc.lux.network":  {{prefix: "/", target: mustURL("http://luxd.lux-mainnet.svc.cluster.local:9650")}},
 
 	// --- ZeroTrust ---
-	"zt.hanzo.ai":     {{prefix: "/", target: mustURL("http://hanzo-zt-controller.hanzo-zt.svc.cluster.local:443")}},
+	"zt.hanzo.ai":     {{prefix: "/", target: mustURL("http://hanzo-zt-console.hanzo-zt.svc.cluster.local:80")}},
 	"zt-api.hanzo.ai": {{prefix: "/", target: mustURL("http://hanzo-zt-controller.hanzo-zt.svc.cluster.local:443")}},
 	"ztc.hanzo.ai":    {{prefix: "/", target: mustURL("http://hanzo-zt-console.hanzo-zt.svc.cluster.local:80")}},
 
