@@ -2,8 +2,10 @@ package gateway
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -18,33 +20,202 @@ import (
 	"github.com/luraproject/lura/v2/transport/http/server"
 )
 
-// hostProxyTargets maps host patterns to backend URLs.
-// The k8s service round-robins across all pods in the deployment.
-var hostProxyTargets = map[string]string{
+// pathBackend maps a path prefix to a backend URL.
+type pathBackend struct {
+	prefix string
+	target *url.URL
+}
+
+// hostRoute defines routing for a single host with ordered path backends.
+type hostRoute struct {
+	backends []pathBackend // longest prefix first
+}
+
+// hostRoutes maps exact hostnames to their routing config.
+// Supports multiple path-based backends per host.
+// httputil.ReverseProxy handles WebSocket upgrades natively.
+var hostRoutes = map[string][]pathBackend{
+	// --- Hanzo core ---
+	"hanzo.id":  {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"hanzo.app": {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
+	"hanzo.bot": {{prefix: "/", target: mustURL("http://hanzo-bot-site.hanzo.svc.cluster.local:80")}},
+
+	// --- Hanzo Bot ---
+	"app.hanzo.bot":    {{prefix: "/", target: mustURL("http://hanzo-playground.hanzo.svc.cluster.local:8080")}},
+	"gw.hanzo.bot":     {{prefix: "/", target: mustURL("http://bot-gateway.hanzo.svc.cluster.local:80")}},
+	"docs.hanzo.bot":   {{prefix: "/", target: mustURL("http://bot-docs.hanzo.svc.cluster.local:80")}},
+	"skills.hanzo.bot": {{prefix: "/", target: mustURL("http://bot-docs.hanzo.svc.cluster.local:80")}},
+	"market.hanzo.bot": {{prefix: "/", target: mustURL("http://hanzo-market-site.hanzo.svc.cluster.local:80")}},
+	"hub.hanzo.bot": {
+		{prefix: "/api", target: mustURL("http://bot-hub.hanzo.svc.cluster.local:3001")},
+		{prefix: "/health", target: mustURL("http://bot-hub.hanzo.svc.cluster.local:3001")},
+		{prefix: "/", target: mustURL("http://bot-hub.hanzo.svc.cluster.local:80")},
+	},
+
+	// --- Hanzo AI services ---
+	"analytics.hanzo.ai":  {{prefix: "/", target: mustURL("http://analytics.hanzo.svc.cluster.local:80")}},
+	"auto.hanzo.ai":       {{prefix: "/", target: mustURL("http://auto.hanzo.svc.cluster.local:80")}},
+	"billing.hanzo.ai":    {{prefix: "/", target: mustURL("http://billing.hanzo.svc.cluster.local:80")}},
+	"chat.hanzo.ai":       {{prefix: "/", target: mustURL("http://chat.hanzo.svc.cluster.local:80")}},
+	"cloud.hanzo.ai":      {{prefix: "/", target: mustURL("http://cloud.hanzo.svc.cluster.local:80")}},
+	"cloud-api.hanzo.ai":  {{prefix: "/", target: mustURL("http://cloud-api.hanzo.svc.cluster.local:8000")}},
+	"api.cloud.hanzo.ai":  {{prefix: "/", target: mustURL("http://cloud-api.hanzo.svc.cluster.local:8000")}},
+	"commerce.hanzo.ai":   {{prefix: "/", target: mustURL("http://commerce.hanzo.svc.cluster.local:8001")}},
+	"console.hanzo.ai":    {{prefix: "/", target: mustURL("http://console.hanzo.svc.cluster.local:80")}},
+	"flow.hanzo.ai":       {{prefix: "/", target: mustURL("http://flow-site.hanzo.svc.cluster.local:80")}},
+	"app.flow.hanzo.ai":   {{prefix: "/", target: mustURL("http://flow.hanzo.svc.cluster.local:80")}},
+	"iam.hanzo.ai":        {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
+	"kms.hanzo.ai":        {{prefix: "/", target: mustURL("http://kms.hanzo.svc.cluster.local:80")}},
+	"mpc.hanzo.ai":        {{prefix: "/", target: mustURL("http://hanzo-mpc.hanzo.svc.cluster.local:8080")}},
+	"orm.hanzo.ai":        {{prefix: "/", target: mustURL("http://hanzo-app.hanzo.svc.cluster.local:80")}},
+	"pricing.hanzo.ai":    {{prefix: "/", target: mustURL("http://pricing.hanzo.svc.cluster.local:8080")}},
+	"registry.hanzo.ai":   {{prefix: "/", target: mustURL("http://registry.hanzo.svc.cluster.local:5000")}},
+	"s3.hanzo.ai":         {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9000")}},
+	"status.hanzo.ai":     {{prefix: "/", target: mustURL("http://status.hanzo.svc.cluster.local:80")}},
+	"studio.hanzo.ai":     {{prefix: "/", target: mustURL("http://studio.hanzo.svc.cluster.local:80")}},
+	"vm.hanzo.ai":         {{prefix: "/", target: mustURL("http://visor.hanzo.svc.cluster.local:19000")}},
+	"hanzo.chat":          {{prefix: "/", target: mustURL("http://chat.hanzo.svc.cluster.local:80")}},
+	"hanzo.space":         {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9001")}},
+	"api.hanzo.space":     {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9000")}},
+	"docs.hanzo.space":    {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9001")}},
+	"s3.hanzo.space":      {{prefix: "/", target: mustURL("http://s3.hanzo.svc.cluster.local:9000")}},
+
+	// --- Insights (multi-path) ---
+	"insights.hanzo.ai": {
+		{prefix: "/capture", target: mustURL("http://insights-capture.hanzo.svc.cluster.local:3000")},
+		{prefix: "/batch", target: mustURL("http://insights-capture.hanzo.svc.cluster.local:3000")},
+		{prefix: "/e", target: mustURL("http://insights-capture.hanzo.svc.cluster.local:3000")},
+		{prefix: "/", target: mustURL("http://insights-web.hanzo.svc.cluster.local:80")},
+	},
+
+	// --- Platform (multi-path) ---
+	"platform.hanzo.ai": {
+		{prefix: "/sync", target: mustURL("http://sync.hanzo.svc.cluster.local:4000")},
+		{prefix: "/api", target: mustURL("http://platform.hanzo.svc.cluster.local:4000")},
+		{prefix: "/socket.io/", target: mustURL("http://platform.hanzo.svc.cluster.local:4000")},
+		{prefix: "/v1/", target: mustURL("http://platform.hanzo.svc.cluster.local:4000")},
+		{prefix: "/", target: mustURL("http://paas-ui.hanzo.svc.cluster.local:80")},
+	},
+	"api.platform.hanzo.ai":     {{prefix: "/", target: mustURL("http://platform.hanzo.svc.cluster.local:4000")}},
+	"oauth.platform.hanzo.ai":   {{prefix: "/", target: mustURL("http://oauth-proxy.hanzo.svc.cluster.local:80")}},
+	"sync.platform.hanzo.ai":    {{prefix: "/", target: mustURL("http://sync.hanzo.svc.cluster.local:4000")}},
+	"webhook.platform.hanzo.ai": {{prefix: "/", target: mustURL("http://hanzo-webhook.hanzo.svc.cluster.local:8080")}},
+
+	// --- IAM for partner orgs ---
+	"pars.id":       {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"lux.id":        {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"zoo.id":        {{prefix: "/", target: mustURL("http://hanzo-login.hanzo.svc.cluster.local:80")}},
+	"id.bootno.de":  {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
+	"id.zoo.network": {{prefix: "/", target: mustURL("http://iam.hanzo.svc.cluster.local:80")}},
+
+	// --- Lux ---
+	"api.lux.network":  {{prefix: "/", target: mustURL("http://luxd.lux-mainnet.svc.cluster.local:9650")}},
+	"rpc.lux.network":  {{prefix: "/", target: mustURL("http://luxd.lux-mainnet.svc.cluster.local:9650")}},
+
+	// --- ZeroTrust ---
+	"zt.hanzo.ai":     {{prefix: "/", target: mustURL("http://hanzo-zt-controller.hanzo-zt.svc.cluster.local:443")}},
+	"zt-api.hanzo.ai": {{prefix: "/", target: mustURL("http://hanzo-zt-controller.hanzo-zt.svc.cluster.local:443")}},
+	"ztc.hanzo.ai":    {{prefix: "/", target: mustURL("http://hanzo-zt-console.hanzo-zt.svc.cluster.local:80")}},
+
+	// --- Zen ---
+	"zen.hanzo.ai": {
+		{prefix: "/v1", target: mustURL("http://zen-gateway.zen.svc.cluster.local:4100")},
+		{prefix: "/health", target: mustURL("http://zen-gateway.zen.svc.cluster.local:4100")},
+		{prefix: "/", target: mustURL("http://zen-landing.zen.svc.cluster.local:80")},
+	},
+	"api.zen.hanzo.ai": {{prefix: "/", target: mustURL("http://zen-gateway.zen.svc.cluster.local:4100")}},
+
+	// --- Hanzo Team ---
+	"hanzo.team":     {{prefix: "/", target: mustURL("http://team-nginx.team.svc.cluster.local:80")}},
+	"dev.hanzo.team": {{prefix: "/", target: mustURL("http://team-nginx.team.svc.cluster.local:80")}},
+}
+
+// subdomainRoutes maps substring patterns for wildcard-style matching.
+// Checked only if no exact host match is found.
+var subdomainRoutes = map[string]string{
 	"lux-test": "http://luxd.lux-testnet.svc.cluster.local:9640",
 	"lux-dev":  "http://luxd.lux-devnet.svc.cluster.local:9650",
 }
 
-// hostProxyMiddleware intercepts requests for known host patterns and
-// transparently proxies them to the correct backend. All paths pass
-// through unchanged — no rewriting, no fake prefixes.
-// Requests that don't match any pattern fall through to KrakenD.
+func mustURL(raw string) *url.URL {
+	u, err := url.Parse(raw)
+	if err != nil {
+		panic("bad backend URL: " + raw)
+	}
+	return u
+}
+
+// newProxy creates an httputil.ReverseProxy that preserves the original
+// Host header and supports WebSocket upgrade transparently.
+func newProxy(target *url.URL) *httputil.ReverseProxy {
+	p := httputil.NewSingleHostReverseProxy(target)
+	original := p.Director
+	p.Director = func(req *http.Request) {
+		original(req)
+		req.Host = req.URL.Host
+	}
+	return p
+}
+
+// hostProxyMiddleware intercepts requests and routes them to the correct
+// backend based on hostname and path prefix. Supports WebSocket upgrades
+// natively via httputil.ReverseProxy. Requests that don't match any host
+// fall through to KrakenD API endpoints.
 func hostProxyMiddleware() gin.HandlerFunc {
-	proxies := make(map[string]*httputil.ReverseProxy, len(hostProxyTargets))
-	for pattern, target := range hostProxyTargets {
+	// Pre-build proxy instances for exact hosts.
+	type compiledRoute struct {
+		prefix string
+		proxy  *httputil.ReverseProxy
+	}
+	exactRoutes := make(map[string][]compiledRoute, len(hostRoutes))
+	for host, backends := range hostRoutes {
+		sorted := make([]pathBackend, len(backends))
+		copy(sorted, backends)
+		sort.Slice(sorted, func(i, j int) bool {
+			return len(sorted[i].prefix) > len(sorted[j].prefix)
+		})
+		compiled := make([]compiledRoute, len(sorted))
+		for i, b := range sorted {
+			compiled[i] = compiledRoute{prefix: b.prefix, proxy: newProxy(b.target)}
+		}
+		exactRoutes[host] = compiled
+	}
+
+	// Pre-build proxy instances for subdomain patterns.
+	type subProxy struct {
+		pattern string
+		proxy   *httputil.ReverseProxy
+	}
+	var subProxies []subProxy
+	for pattern, target := range subdomainRoutes {
 		u, _ := url.Parse(target)
-		proxies[pattern] = httputil.NewSingleHostReverseProxy(u)
+		subProxies = append(subProxies, subProxy{pattern: pattern, proxy: newProxy(u)})
 	}
 
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
-		for pattern, proxy := range proxies {
-			if strings.Contains(host, pattern) {
-				proxy.ServeHTTP(c.Writer, c.Request)
+		path := c.Request.URL.Path
+
+		// Exact host match.
+		if routes, ok := exactRoutes[host]; ok {
+			for _, r := range routes {
+				if strings.HasPrefix(path, r.prefix) {
+					r.proxy.ServeHTTP(c.Writer, c.Request)
+					c.Abort()
+					return
+				}
+			}
+		}
+
+		// Subdomain pattern match.
+		for _, sp := range subProxies {
+			if strings.Contains(host, sp.pattern) {
+				sp.proxy.ServeHTTP(c.Writer, c.Request)
 				c.Abort()
 				return
 			}
 		}
+
 		c.Next()
 	}
 }
@@ -53,9 +224,9 @@ func hostProxyMiddleware() gin.HandlerFunc {
 func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
 	engine := luragin.NewEngine(cfg, opt)
 
-	// Host-based transparent proxy: lux-test and lux-dev domains bypass
-	// KrakenD and proxy directly to the correct network's luxd service.
-	// Default (api.lux.network) falls through to KrakenD endpoints.
+	// Host-based transparent proxy: routes all Hanzo domains to their
+	// backend services. WebSocket upgrades are handled natively.
+	// Unmatched hosts fall through to KrakenD API endpoints.
 	engine.Use(hostProxyMiddleware())
 
 	engine.NoRoute(func(c *gin.Context) {
