@@ -10,3 +10,29 @@ spec:
     - port: 8080
       targetPort: 8080
   type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hanzo-ingress
+  namespace: hanzo
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "true"
+    service.beta.kubernetes.io/do-loadbalancer-name: hanzo-ingress
+    service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
+  labels:
+    app: hanzo-ingress
+spec:
+  selector:
+    app: gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+    - name: https
+      port: 443
+      targetPort: 8080
+      protocol: TCP
+  type: LoadBalancer
+  externalTrafficPolicy: Local
