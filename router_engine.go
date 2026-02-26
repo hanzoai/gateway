@@ -169,7 +169,7 @@ func newProxy(target *url.URL) *httputil.ReverseProxy {
 // hostProxyMiddleware intercepts requests and routes them to the correct
 // backend based on hostname and path prefix. Supports WebSocket upgrades
 // natively via httputil.ReverseProxy. Requests that don't match any host
-// fall through to KrakenD API endpoints.
+// fall through to gateway API endpoints.
 func hostProxyMiddleware() gin.HandlerFunc {
 	// Pre-build proxy instances for exact hosts.
 	type compiledRoute struct {
@@ -242,7 +242,7 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 
 	// Host-based transparent proxy: routes all Hanzo domains to their
 	// backend services. WebSocket upgrades are handled natively.
-	// Unmatched hosts fall through to KrakenD API endpoints.
+	// Unmatched hosts fall through to gateway API endpoints.
 	engine.Use(hostProxyMiddleware())
 
 	engine.NoRoute(func(c *gin.Context) {
