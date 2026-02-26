@@ -1,6 +1,6 @@
 #!/bin/sh
 
-USERNAME=krakend
+USERNAME=gateway
 
 if [ "$1" = "0" ]; then
   getent passwd $USERNAME && userdel $USERNAME > /dev/null

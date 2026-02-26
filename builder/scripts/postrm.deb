@@ -1,6 +1,6 @@
 #!/bin/sh
 
-USERNAME=krakend
+USERNAME=gateway
 
 if [ -x "$(command -v deluser)" ]; then
    deluser --quiet --system $USERNAME > /dev/null || true
