@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           - source: devopsfaith/krakend:2.5
-            target: krakend
+            target: gateway-upstream
             tags: "2.5,latest"
           - source: bitnami/mongodb:latest
             target: mongodb

@@ -2,12 +2,12 @@
 
 set -e
 
-USER=krakend
+USER=gateway
 
 if ! getent passwd $USER >/dev/null ; then
-  adduser --system --disabled-login --gecos "KrakenD" --shell /bin/false --no-create-home $USER > /dev/null
+  adduser --system --disabled-login --gecos "Hanzo Gateway" --shell /bin/false --no-create-home $USER > /dev/null
 fi
 
-if [ -x "/etc/init.d/krakend" ] || [ -e "/etc/init/krakend.conf" ]; then
-	service krakend stop || exit $?
+if [ -x "/etc/init.d/gateway" ] || [ -e "/etc/init/gateway.conf" ]; then
+	service gateway stop || exit $?
 fi

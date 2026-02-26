@@ -2,6 +2,6 @@
 
 set -e
 
-if [ -e "/etc/init/krakend.conf" ]; then
-	initctl stop krakend > /dev/null
+if [ -e "/etc/init/gateway.conf" ]; then
+	initctl stop gateway > /dev/null
 fi
