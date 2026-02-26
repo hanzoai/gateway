@@ -1,12 +1,10 @@
 # Security Policy
 
-Hanzo Gateway is built on KrakenD Community Edition. Only the latest version is maintained.
+Only the latest version of Hanzo Gateway is maintained.
 
 ## Reporting a Vulnerability
 
 Please email security@hanzo.ai with your discovery.
-
-For upstream KrakenD issues, please also contact security@krakend.io.
 
 As soon as we read and understand your finding we will provide an answer with next steps and possible timelines.
 
