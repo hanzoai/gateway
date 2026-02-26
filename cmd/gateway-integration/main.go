@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/hanzoai/gateway/v2/tests"
+	"github.com/hanzoai/gateway/tests"
 )
 
 func main() {
