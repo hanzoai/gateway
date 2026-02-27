@@ -2704,6 +2704,20 @@
           "encoding": "json"
         }
       ]
+    },
+    {
+      "endpoint": "/",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/__health",
+          "host": [
+            "http://localhost:8080"
+          ],
+          "encoding": "json"
+        }
+      ]
     }
   ]
 }
