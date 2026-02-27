@@ -2470,6 +2470,58 @@
       ]
     },
     {
+      "endpoint": "/v1/plans",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/plans",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/cloud",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/cloud",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/gpu",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/gpu",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/tools",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/tools",
+          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
       "endpoint": "/v1/pubsub/varz",
       "method": "GET",
       "input_headers": [
