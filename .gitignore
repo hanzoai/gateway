@@ -22,3 +22,4 @@ cmd/gateway/schema/schema.json
 
 # OS
 .DS_Store
+ingress
