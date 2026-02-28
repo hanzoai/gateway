@@ -533,72 +533,60 @@
       }
     },
     {
-      "endpoint": "/commerce/{path}",
+      "endpoint": "/v1/billing/subscriptions",
       "method": "GET",
-      "input_headers": [
-        "*"
-      ],
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/v1/commerce/{path}",
+      "endpoint": "/v1/billing/subscriptions",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/subscriptions/{id}",
       "method": "GET",
-      "input_headers": [
-        "*"
-      ],
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/commerce/{path}",
-      "method": "POST",
-      "input_headers": [
-        "*"
-      ],
+      "endpoint": "/v1/billing/subscriptions/{id}",
+      "method": "PATCH",
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/v1/commerce/{path}",
-      "method": "POST",
-      "input_headers": [
-        "*"
-      ],
+      "endpoint": "/v1/billing/subscriptions/{id}",
+      "method": "DELETE",
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/subscriptions/{id}/promotion",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}/promotion", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/plans",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/plans", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/plans/{id}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/plans/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
       "endpoint": "/auth/{path}",
@@ -2266,72 +2254,200 @@
       ]
     },
     {
-      "endpoint": "/billing/{path}",
+      "endpoint": "/v1/billing/balance",
       "method": "GET",
-      "input_headers": [
-        "*"
-      ],
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/api/v1/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/balance", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/v1/billing/{path}",
+      "endpoint": "/v1/billing/deposit",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/deposit", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/credit",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/credit", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/transactions",
       "method": "GET",
-      "input_headers": [
-        "*"
-      ],
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/api/v1/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/transactions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/billing/{path}",
-      "method": "POST",
-      "input_headers": [
-        "*"
-      ],
+      "endpoint": "/v1/billing/invoices",
+      "method": "GET",
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/api/v1/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/invoices", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
-      "endpoint": "/v1/billing/{path}",
-      "method": "POST",
-      "input_headers": [
-        "*"
-      ],
+      "endpoint": "/v1/billing/payment-methods",
+      "method": "GET",
+      "input_headers": ["*"],
       "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/api/v1/{path}",
-          "host": [
-            "http://commerce.hanzo.svc.cluster.local:8001"
-          ],
-          "encoding": "no-op"
-        }
-      ]
+      "backend": [{"url_pattern": "/api/v1/billing/payment-methods", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/payment-methods",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/payment-methods", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/payment-methods/{id}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/payment-methods/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/payment-methods/{id}/default",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/payment-methods/{id}/default", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/usage",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/usage", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/spend-alerts",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/spend-alerts",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/spend-alerts/{id}",
+      "method": "PATCH",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/spend-alerts/{id}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/discount/validate",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/discount/validate", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/credit-grants",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/credit-grants", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/credit-balance",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/credit-balance", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/payment",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/payment", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/portal/overview",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/portal/overview", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/meters",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/meters", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/meter-events/summary",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/meter-events/summary", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts/{id}",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts/{id}/members",
+      "method": "GET",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts/{id}/members",
+      "method": "POST",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts/{id}/members/{mid}",
+      "method": "PATCH",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+    },
+    {
+      "endpoint": "/v1/billing/accounts/{id}/members/{mid}",
+      "method": "DELETE",
+      "input_headers": ["*"],
+      "output_encoding": "no-op",
+      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
     },
     {
       "endpoint": "/v1/pricing",
