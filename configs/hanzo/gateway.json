@@ -27,7 +27,12 @@
       "endpoint": "/v1/chat/completions",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -45,6 +50,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -52,7 +81,12 @@
       "endpoint": "/v1/completions",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -70,6 +104,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -77,7 +135,12 @@
       "endpoint": "/v1/models",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -102,7 +165,12 @@
       "endpoint": "/v1/messages",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -120,6 +188,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -127,7 +219,12 @@
       "endpoint": "/v1/zap",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -145,6 +242,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -152,7 +273,12 @@
       "endpoint": "/zap",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -170,6 +296,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -177,7 +327,12 @@
       "endpoint": "/v1/embeddings",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -195,6 +350,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -202,7 +381,12 @@
       "endpoint": "/v1/images/generations",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -220,6 +404,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -227,7 +435,12 @@
       "endpoint": "/v1/audio/transcriptions",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -245,6 +458,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -252,7 +489,12 @@
       "endpoint": "/v1/audio/speech",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -270,6 +512,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -277,7 +543,12 @@
       "endpoint": "/v1/async-invoke",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -295,6 +566,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -302,7 +597,12 @@
       "endpoint": "/v1/async-invoke/{request_id}/status",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -313,13 +613,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/async-invoke/{request_id}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -330,13 +661,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/cloud/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -354,6 +716,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -361,7 +747,12 @@
       "endpoint": "/v1/cloud/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -379,6 +770,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -386,7 +801,12 @@
       "endpoint": "/cloud/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -404,6 +824,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -411,7 +855,12 @@
       "endpoint": "/v1/cloud/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -429,6 +878,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -436,7 +909,12 @@
       "endpoint": "/ai/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -454,6 +932,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -461,7 +963,12 @@
       "endpoint": "/v1/ai/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -479,6 +986,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -486,7 +1017,12 @@
       "endpoint": "/ai/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -504,6 +1040,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -511,7 +1071,12 @@
       "endpoint": "/v1/ai/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -529,70 +1094,427 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
     {
       "endpoint": "/v1/billing/subscriptions",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/subscriptions",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/subscriptions/{id}",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/subscriptions/{id}",
       "method": "PATCH",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/subscriptions/{id}",
       "method": "DELETE",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/subscriptions/{id}/promotion",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/subscriptions/{id}/promotion", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/subscriptions/{id}/promotion",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/plans",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/plans", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/plans",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/plans/{id}",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/plans/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/plans/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/auth/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -601,6 +1523,30 @@
           "client_max_rate": 50,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       },
       "backend": [
@@ -617,7 +1563,12 @@
       "endpoint": "/v1/auth/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -628,13 +1579,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/auth/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -643,12 +1625,38 @@
           "client_max_rate": 50,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       },
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "host": [
+            "http://iam.hanzo.svc.cluster.local:8000"
+          ],
           "encoding": "no-op"
         }
       ]
@@ -656,7 +1664,14 @@
     {
       "endpoint": "/auth/{path}",
       "method": "PUT",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
@@ -664,12 +1679,38 @@
           "client_max_rate": 50,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       },
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "host": [
+            "http://iam.hanzo.svc.cluster.local:8000"
+          ],
           "encoding": "no-op"
         }
       ]
@@ -677,7 +1718,14 @@
     {
       "endpoint": "/auth/{path}",
       "method": "PATCH",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
@@ -685,12 +1733,38 @@
           "client_max_rate": 50,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       },
       "backend": [
         {
           "url_pattern": "/api/{path}",
-          "host": ["http://iam.hanzo.svc.cluster.local:8000"],
+          "host": [
+            "http://iam.hanzo.svc.cluster.local:8000"
+          ],
           "encoding": "no-op"
         }
       ]
@@ -698,7 +1772,14 @@
     {
       "endpoint": "/auth/{path}",
       "method": "DELETE",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "extra_config": {
         "qos/ratelimit/router": {
@@ -706,6 +1787,30 @@
           "client_max_rate": 50,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       },
       "backend": [
@@ -722,7 +1827,12 @@
       "endpoint": "/v1/auth/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -733,13 +1843,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/analytics/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -750,13 +1891,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/analytics/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -767,13 +1939,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/analytics/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -784,13 +1987,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/analytics/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -801,13 +2035,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/operative/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -825,6 +2090,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -832,7 +2121,12 @@
       "endpoint": "/v1/operative/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -850,6 +2144,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -857,7 +2175,12 @@
       "endpoint": "/operative/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -875,6 +2198,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -882,7 +2229,12 @@
       "endpoint": "/v1/operative/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -900,6 +2252,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -907,7 +2283,12 @@
       "endpoint": "/agents/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -925,6 +2306,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -932,7 +2337,12 @@
       "endpoint": "/v1/agents/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -950,6 +2360,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -957,7 +2391,12 @@
       "endpoint": "/agents/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -975,6 +2414,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -982,7 +2445,12 @@
       "endpoint": "/v1/agents/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1000,6 +2468,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1007,7 +2499,12 @@
       "endpoint": "/console/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1018,13 +2515,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/console/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1035,13 +2563,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/console/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1052,13 +2611,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/console/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1069,13 +2659,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/infra/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1086,13 +2707,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/infra/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1103,13 +2755,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/infra/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1120,13 +2803,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/infra/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1137,13 +2851,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/chat/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1154,13 +2899,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/chat/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1171,13 +2947,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/chat/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1188,13 +2995,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/chat/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1205,13 +3043,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/base/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1222,13 +3091,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/base/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1239,13 +3139,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/base/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1256,13 +3187,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/base/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1273,13 +3235,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/platform/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1290,13 +3283,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/platform/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1307,13 +3331,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/platform/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1324,13 +3379,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/platform/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1341,13 +3427,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/functions/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1358,13 +3475,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/functions/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1375,13 +3523,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/functions/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1392,13 +3571,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/functions/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1409,13 +3619,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/search/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1426,13 +3667,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/search/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1443,13 +3715,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/search/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1460,13 +3763,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/search/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1477,13 +3811,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/vector/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1494,13 +3859,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/vector/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1511,13 +3907,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/vector/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1528,13 +3955,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/vector/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1545,13 +4003,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/kms/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1569,6 +4058,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1576,7 +4089,12 @@
       "endpoint": "/v1/kms/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1594,6 +4112,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1601,7 +4143,12 @@
       "endpoint": "/kms/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1619,6 +4166,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1626,7 +4197,12 @@
       "endpoint": "/v1/kms/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1644,6 +4220,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1651,7 +4251,12 @@
       "endpoint": "/kms/{path}",
       "method": "PATCH",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1662,13 +4267,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/kms/{path}",
       "method": "PATCH",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1679,13 +4315,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/kms/{path}",
       "method": "DELETE",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1696,13 +4363,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/kms/{path}",
       "method": "DELETE",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1713,13 +4411,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/web3/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1737,6 +4466,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1744,7 +4497,12 @@
       "endpoint": "/v1/web3/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1762,6 +4520,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1769,7 +4551,12 @@
       "endpoint": "/web3/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1787,6 +4574,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1794,7 +4605,12 @@
       "endpoint": "/v1/web3/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1812,6 +4628,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1819,7 +4659,12 @@
       "endpoint": "/web3/{path}",
       "method": "DELETE",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1830,13 +4675,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/web3/{path}",
       "method": "DELETE",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1847,13 +4723,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/web3/{path}",
       "method": "PATCH",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1864,13 +4771,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/web3/{path}",
       "method": "PATCH",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1881,13 +4819,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/bot/health",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1912,7 +4881,12 @@
       "endpoint": "/bot/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1930,6 +4904,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1937,7 +4935,12 @@
       "endpoint": "/bot/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1955,6 +4958,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1962,7 +4989,12 @@
       "endpoint": "/bot/ws",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1980,6 +5012,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -1987,7 +5043,12 @@
       "endpoint": "/v1/bot/health",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2012,7 +5073,12 @@
       "endpoint": "/v1/bot/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2030,6 +5096,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -2037,7 +5127,12 @@
       "endpoint": "/v1/bot/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2055,6 +5150,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -2062,7 +5181,12 @@
       "endpoint": "/v1/bot/ws",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2080,6 +5204,30 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
         }
       }
     },
@@ -2087,7 +5235,12 @@
       "endpoint": "/team/_accounts/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2098,13 +5251,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/team/_accounts/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2115,13 +5299,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/team/_accounts/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2132,13 +5347,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/team/_accounts/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2149,13 +5395,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/team/_collaborator/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2166,13 +5443,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/team/_collaborator/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2183,13 +5491,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/team/_transactor/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2200,13 +5539,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/team/_transactor/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2217,13 +5587,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/team/_rekoni/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2234,13 +5635,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/team/_rekoni/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2251,209 +5683,1388 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/balance",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/balance", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/balance",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/deposit",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/deposit", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/deposit",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/credit",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/credit", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/credit",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/transactions",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/transactions", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/transactions",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/invoices",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/invoices", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/invoices",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/payment-methods",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/payment-methods", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/payment-methods",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/payment-methods",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/payment-methods", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/payment-methods",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/payment-methods/{id}",
       "method": "DELETE",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/payment-methods/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/payment-methods/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/payment-methods/{id}/default",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/payment-methods/{id}/default", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/payment-methods/{id}/default",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/usage",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/usage", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/usage",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/spend-alerts",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/spend-alerts",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/spend-alerts",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/spend-alerts",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/spend-alerts/{id}",
       "method": "PATCH",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/spend-alerts/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/spend-alerts/{id}",
       "method": "DELETE",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/spend-alerts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/spend-alerts/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/discount/validate",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/discount/validate", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/discount/validate",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/credit-grants",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/credit-grants", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/credit-grants",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/credit-balance",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/credit-balance", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/credit-balance",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/payment",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/payment", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/payment",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/portal/overview",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/portal/overview", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/portal/overview",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/meters",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/meters", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/meters",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/meter-events/summary",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/meter-events/summary", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/meter-events/summary",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts/{id}",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts/{id}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts/{id}/members",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts/{id}/members",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts/{id}/members",
       "method": "POST",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts/{id}/members",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts/{id}/members/{mid}",
       "method": "PATCH",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/billing/accounts/{id}/members/{mid}",
       "method": "DELETE",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
-      "backend": [{"url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}", "host": ["http://commerce.hanzo.svc.cluster.local:8001"], "encoding": "no-op"}]
+      "backend": [
+        {
+          "url_pattern": "/api/v1/billing/accounts/{id}/members/{mid}",
+          "host": [
+            "http://commerce.hanzo.svc.cluster.local:8001"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pricing",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2464,13 +7075,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pricing/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2481,13 +7123,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pricing/model/{name}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2498,13 +7171,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pricing/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2515,13 +7219,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pricing",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2532,13 +7267,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pricing/{path}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2549,13 +7315,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pricing/model/{name}",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2566,13 +7363,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pricing/{path}",
       "method": "POST",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2583,65 +7411,236 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/plans",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/v1/plans",
-          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "host": [
+            "http://pricing.hanzo.svc.cluster.local:8080"
+          ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/cloud",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/v1/cloud",
-          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "host": [
+            "http://pricing.hanzo.svc.cluster.local:8080"
+          ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/gpu",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/v1/gpu",
-          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "host": [
+            "http://pricing.hanzo.svc.cluster.local:8080"
+          ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/tools",
       "method": "GET",
-      "input_headers": ["*"],
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
+      ],
       "output_encoding": "no-op",
       "backend": [
         {
           "url_pattern": "/v1/tools",
-          "host": ["http://pricing.hanzo.svc.cluster.local:8080"],
+          "host": [
+            "http://pricing.hanzo.svc.cluster.local:8080"
+          ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pubsub/varz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2652,13 +7651,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pubsub/varz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2669,13 +7699,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pubsub/connz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2686,13 +7747,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pubsub/connz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2703,13 +7795,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pubsub/subsz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2720,13 +7843,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pubsub/subsz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2737,13 +7891,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pubsub/jsz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2754,13 +7939,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/pubsub/jsz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2771,13 +7987,44 @@
           ],
           "encoding": "no-op"
         }
-      ]
+      ],
+      "extra_config": {
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "https://hanzo.id/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": false,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-IAM-User-Id"
+            ],
+            [
+              "email",
+              "X-IAM-Email"
+            ],
+            [
+              "owner",
+              "X-IAM-Org"
+            ],
+            [
+              "roles",
+              "X-IAM-Roles"
+            ]
+          ]
+        }
+      }
     },
     {
       "endpoint": "/v1/pubsub/healthz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2794,7 +8041,12 @@
       "endpoint": "/pubsub/healthz",
       "method": "GET",
       "input_headers": [
-        "*"
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id"
       ],
       "output_encoding": "no-op",
       "backend": [
