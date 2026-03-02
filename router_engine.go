@@ -166,6 +166,37 @@ func newProxy(target *url.URL) *httputil.ReverseProxy {
 	return p
 }
 
+// newRewriteProxy creates an httputil.ReverseProxy that rewrites path prefixes.
+// Used for api.hanzo.ai where /v1/* must map to cloud-api's /api/* routes.
+func newRewriteProxy(target *url.URL, oldPrefix, newPrefix string) *httputil.ReverseProxy {
+	p := httputil.NewSingleHostReverseProxy(target)
+	original := p.Director
+	p.Director = func(req *http.Request) {
+		if strings.HasPrefix(req.URL.Path, oldPrefix) {
+			req.URL.Path = newPrefix + req.URL.Path[len(oldPrefix):]
+		}
+		original(req)
+		req.Host = req.URL.Host
+	}
+	return p
+}
+
+// apiHanzoAIEndpoints lists the /v1/* path prefixes that should route directly
+// to cloud-api, bypassing KrakenD JWT middleware. Cloud-api handles all auth
+// internally (hk-* API keys, JWTs, sk-* provider keys).
+// Other paths (billing, auth, analytics) fall through to KrakenD endpoints.
+var apiHanzoAIEndpoints = []string{
+	"/v1/chat",
+	"/v1/completions",
+	"/v1/messages",
+	"/v1/models",
+	"/v1/embeddings",
+	"/v1/images",
+	"/v1/audio",
+	"/v1/zap",
+	"/zap",
+}
+
 // hostProxyMiddleware intercepts requests and routes them to the correct
 // backend based on hostname and path prefix. Supports WebSocket upgrades
 // natively via httputil.ReverseProxy. Requests that don't match any host
@@ -201,6 +232,12 @@ func hostProxyMiddleware() gin.HandlerFunc {
 		subProxies = append(subProxies, subProxy{pattern: pattern, proxy: newProxy(u)})
 	}
 
+	// Pre-build the api.hanzo.ai rewrite proxy for AI endpoints.
+	// These paths bypass KrakenD JWT middleware — cloud-api handles auth.
+	cloudAPITarget := mustURL("http://cloud-api.hanzo.svc.cluster.local:8000")
+	apiRewriteProxy := newRewriteProxy(cloudAPITarget, "/v1/", "/api/")
+	apiNoRewriteProxy := newRewriteProxy(cloudAPITarget, "/zap", "/api/zap")
+
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
@@ -210,6 +247,24 @@ func hostProxyMiddleware() gin.HandlerFunc {
 			c.Redirect(301, target+path)
 			c.Abort()
 			return
+		}
+
+		// api.hanzo.ai: route AI endpoints directly to cloud-api.
+		// /v1/* paths are rewritten to /api/* for cloud-api compatibility.
+		// Non-AI paths fall through to KrakenD endpoint handlers.
+		if host == "api.hanzo.ai" {
+			for _, prefix := range apiHanzoAIEndpoints {
+				if strings.HasPrefix(path, prefix) {
+					if strings.HasPrefix(path, "/v1/") {
+						apiRewriteProxy.ServeHTTP(c.Writer, c.Request)
+					} else {
+						apiNoRewriteProxy.ServeHTTP(c.Writer, c.Request)
+					}
+					c.Abort()
+					return
+				}
+			}
+			// Non-AI paths fall through to KrakenD endpoints (billing, auth, etc.)
 		}
 
 		// Exact host match.
