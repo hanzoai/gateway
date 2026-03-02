@@ -19,6 +19,11 @@ import (
 
 // AuthConfig holds configuration for the auth middleware.
 type AuthConfig struct {
+	// Enabled controls whether the auth middleware is active.
+	// Default: true. Set to false via AUTH_ENABLED=false to disable
+	// all auth checks (useful for integration tests and development).
+	Enabled bool
+
 	// JWKS URL to fetch signing keys (default: https://hanzo.id/.well-known/jwks)
 	JWKSURL string
 
@@ -226,6 +231,11 @@ func (b *billingChecker) checkBalance(userID string) (bool, error) {
 
 // DefaultAuthConfig returns the default auth configuration from environment variables.
 func DefaultAuthConfig() AuthConfig {
+	enabled := true
+	if os.Getenv("AUTH_ENABLED") == "false" {
+		enabled = false
+	}
+
 	jwksURL := os.Getenv("AUTH_JWKS_URL")
 	if jwksURL == "" {
 		jwksURL = "https://hanzo.id/.well-known/jwks"
@@ -287,6 +297,7 @@ func DefaultAuthConfig() AuthConfig {
 	requireAuth := os.Getenv("AUTH_REQUIRE") == "true"
 
 	return AuthConfig{
+		Enabled:        enabled,
 		JWKSURL:        jwksURL,
 		Issuer:         issuer,
 		BillingURL:     billingURL,
@@ -313,6 +324,14 @@ func DefaultAuthConfig() AuthConfig {
 //
 // Public endpoints (configurable allowlist) bypass all auth checks.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
+	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
+	// without any token validation or billing checks.
+	if !cfg.Enabled {
+		return func(c *gin.Context) {
+			c.Next()
+		}
+	}
+
 	cache := newJWKSCache(cfg.JWKSURL, 5*time.Minute)
 	billing := newBillingChecker(cfg.BillingURL, cfg.BillingToken)
 
