@@ -1,9 +1,10 @@
 module github.com/hanzoai/gateway
 
-go 1.25.3
+go 1.26.0
 
 require (
 	github.com/gin-gonic/gin v1.9.1
+	github.com/go-jose/go-jose/v4 v4.0.5
 	github.com/krakend/bloomfilter/v2 v2.1.0
 	github.com/krakend/krakend-amqp/v2 v2.3.0
 	github.com/krakend/krakend-botdetector/v2 v2.3.0
@@ -116,7 +117,6 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
-	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
