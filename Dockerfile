@@ -1,4 +1,5 @@
-ARG GOLANG_VERSION=1.25.6
+# syntax=docker/dockerfile:1
+ARG GOLANG_VERSION=1.26.0
 ARG ALPINE_VERSION=3.23
 
 # Stage 1: Build the gateway binary from source
@@ -12,7 +13,9 @@ RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git
 COPY . /app
 WORKDIR /app
 
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
 
 # Stage 2: Runtime image

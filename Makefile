@@ -6,7 +6,7 @@ MODULE := github.com/hanzoai/gateway
 VERSION := 2.12.1
 SCHEMA_VERSION := $(shell echo "${VERSION}" | cut -d '.' -f 1,2)
 GIT_COMMIT := $(shell git rev-parse --short=7 HEAD)
-GOLANG_VERSION := 1.25.6
+GOLANG_VERSION := 1.26.0
 ALPINE_VERSION := 3.23
 GLIBC_VERSION := $(shell sh find_glibc.sh 2>/dev/null || echo "unknown")
 
