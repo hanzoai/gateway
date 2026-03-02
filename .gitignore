@@ -23,3 +23,9 @@ cmd/gateway/schema/schema.json
 # OS
 .DS_Store
 ingress
+
+# AI agent context files
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+QWEN.md
