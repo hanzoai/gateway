@@ -151,6 +151,58 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 	}
 }
 
+func TestIsAPIKey(t *testing.T) {
+	tests := []struct {
+		token    string
+		expected bool
+	}{
+		{"hk-0d2eb9cfafd049389f2904cad770a9d8", true},
+		{"sk-ant-api03-cPXAHvR", true},
+		{"sk-live-abc123", true},
+		{"fw_6UVdtest", true},
+		{"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig", false},
+		{"random-token", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		if got := isAPIKey(tt.token); got != tt.expected {
+			t.Errorf("isAPIKey(%q) = %v, want %v", tt.token, got, tt.expected)
+		}
+	}
+}
+
+func TestAuthMiddlewareAPIKeyPassthrough(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{},
+		PublicHosts: []string{},
+		RequireAuth: true,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	r.Use(middleware)
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer hk-0d2eb9cfafd049389f2904cad770a9d8")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("API key should pass through auth middleware, got %d", w.Code)
+	}
+}
+
 func TestDefaultAuthConfig(t *testing.T) {
 	cfg := DefaultAuthConfig()
 
