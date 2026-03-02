@@ -68,6 +68,7 @@ func TestAuthMiddlewarePublicPaths(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := AuthConfig{
+		Enabled:     true,
 		JWKSURL:     "https://hanzo.id/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{"/__health", "/.well-known/"},
@@ -119,6 +120,7 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := AuthConfig{
+		Enabled:     true,
 		JWKSURL:     "https://hanzo.id/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
@@ -175,6 +177,7 @@ func TestAuthMiddlewareAPIKeyPassthrough(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	cfg := AuthConfig{
+		Enabled:     true,
 		JWKSURL:     "https://hanzo.id/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
@@ -206,6 +209,9 @@ func TestAuthMiddlewareAPIKeyPassthrough(t *testing.T) {
 func TestDefaultAuthConfig(t *testing.T) {
 	cfg := DefaultAuthConfig()
 
+	if !cfg.Enabled {
+		t.Error("Enabled should default to true")
+	}
 	if cfg.JWKSURL == "" {
 		t.Error("JWKSURL should not be empty")
 	}
@@ -220,6 +226,35 @@ func TestDefaultAuthConfig(t *testing.T) {
 	}
 	if cfg.RequireAuth {
 		t.Error("RequireAuth should default to false")
+	}
+}
+
+func TestAuthMiddlewareDisabled(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled:     false,
+		RequireAuth: true,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	r.Use(middleware)
+	r.GET("/api/test", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer not-a-valid-jwt")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("disabled auth should pass through all requests, got %d", w.Code)
 	}
 }
 

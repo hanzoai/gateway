@@ -543,7 +543,7 @@ func (k gatewayCmdBuilder) New(cfg *Config) *exec.Cmd {
 }
 
 func (gatewayCmdBuilder) getEnviron(cfg *Config) []string {
-	environ := []string{"USAGE_DISABLE=1"}
+	environ := []string{"USAGE_DISABLE=1", "AUTH_ENABLED=false"}
 
 	var patterns []*regexp.Regexp
 	for _, pattern := range strings.Split(cfg.getEnvironPatterns(), ",") {
