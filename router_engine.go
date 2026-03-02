@@ -240,6 +240,12 @@ func hostProxyMiddleware() gin.HandlerFunc {
 func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
 	engine := luragin.NewEngine(cfg, opt)
 
+	// Auth middleware: validates IAM JWT tokens, checks billing,
+	// injects X-Hanzo-Org-Id / X-Hanzo-User-Id / X-Hanzo-User-Email
+	// headers into the request before proxying to backends.
+	// Runs BEFORE host proxy so downstream services see identity headers.
+	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
+
 	// Host-based transparent proxy: routes all Hanzo domains to their
 	// backend services. WebSocket upgrades are handled natively.
 	// Unmatched hosts fall through to gateway API endpoints.
