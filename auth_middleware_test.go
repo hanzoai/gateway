@@ -1,0 +1,193 @@
+package gateway
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+)
+
+func TestExtractBearerToken(t *testing.T) {
+	tests := []struct {
+		name     string
+		header   string
+		expected string
+	}{
+		{"valid bearer", "Bearer eyJhbGciOi...", "eyJhbGciOi..."},
+		{"lowercase bearer", "bearer eyJhbGciOi...", "eyJhbGciOi..."},
+		{"no bearer prefix", "Basic dXNlcjpwYXNz", ""},
+		{"empty header", "", ""},
+		{"bearer only", "Bearer", ""},
+		{"bearer with spaces", "Bearer  eyJhbGciOi... ", "eyJhbGciOi..."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tt.header != "" {
+				req.Header.Set("Authorization", tt.header)
+			}
+			got := extractBearerToken(req)
+			if got != tt.expected {
+				t.Errorf("extractBearerToken() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestExtractTokenFromCookie(t *testing.T) {
+	tests := []struct {
+		name       string
+		cookieName string
+		value      string
+		expected   string
+	}{
+		{"casdoor cookie", "casdoor_access_token", "tok123", "tok123"},
+		{"access_token cookie", "access_token", "tok456", "tok456"},
+		{"hanzo_token cookie", "hanzo_token", "tok789", "tok789"},
+		{"unknown cookie", "random_cookie", "tokXYZ", ""},
+		{"empty cookie", "casdoor_access_token", "", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if tt.value != "" {
+				req.AddCookie(&http.Cookie{Name: tt.cookieName, Value: tt.value})
+			}
+			got := extractTokenFromCookie(req)
+			if got != tt.expected {
+				t.Errorf("extractTokenFromCookie() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestAuthMiddlewarePublicPaths(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{"/__health", "/.well-known/"},
+		PublicHosts: []string{"hanzo.id"},
+		RequireAuth: true, // Even with require=true, public paths should pass
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	tests := []struct {
+		name           string
+		path           string
+		host           string
+		expectedStatus int
+	}{
+		{"health check bypasses auth", "/__health", "api.hanzo.ai", http.StatusOK},
+		{"well-known bypasses auth", "/.well-known/jwks", "api.hanzo.ai", http.StatusOK},
+		{"public host bypasses auth", "/api/anything", "hanzo.id", http.StatusOK},
+		{"non-public path requires auth", "/api/chat/completions", "api.hanzo.ai", http.StatusUnauthorized},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, r := gin.CreateTestContext(w)
+
+			r.Use(middleware)
+			r.GET(tt.path, func(c *gin.Context) {
+				c.Status(http.StatusOK)
+			})
+			// Also handle POST for api paths
+			r.POST(tt.path, func(c *gin.Context) {
+				c.Status(http.StatusOK)
+			})
+
+			c.Request = httptest.NewRequest(http.MethodGet, tt.path, nil)
+			c.Request.Host = tt.host
+
+			r.ServeHTTP(w, c.Request)
+
+			if w.Code != tt.expectedStatus {
+				t.Errorf("status = %d, want %d", w.Code, tt.expectedStatus)
+			}
+		})
+	}
+}
+
+func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{},
+		PublicHosts: []string{},
+		RequireAuth: false, // Don't require auth
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotOrgHeader string
+	r.Use(middleware)
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrgHeader = c.Request.Header.Get("X-Hanzo-Org-Id")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected 200 for optional auth without token, got %d", w.Code)
+	}
+	if gotOrgHeader != "" {
+		t.Errorf("expected no X-Hanzo-Org-Id header without token, got %q", gotOrgHeader)
+	}
+}
+
+func TestDefaultAuthConfig(t *testing.T) {
+	cfg := DefaultAuthConfig()
+
+	if cfg.JWKSURL == "" {
+		t.Error("JWKSURL should not be empty")
+	}
+	if cfg.Issuer == "" {
+		t.Error("Issuer should not be empty")
+	}
+	if len(cfg.PublicPaths) == 0 {
+		t.Error("PublicPaths should have defaults")
+	}
+	if len(cfg.PublicHosts) == 0 {
+		t.Error("PublicHosts should have defaults")
+	}
+	if cfg.RequireAuth {
+		t.Error("RequireAuth should default to false")
+	}
+}
+
+func TestBillingCheckerFailOpen(t *testing.T) {
+	// Test with unreachable billing URL - should fail open
+	checker := newBillingChecker("http://127.0.0.1:1", "test-token") // unreachable port
+	ok, _ := checker.checkBalance("hanzo/test-user")
+	if !ok {
+		t.Error("billing check should fail-open when service is unreachable")
+	}
+}
+
+func TestBillingCheckerNoURL(t *testing.T) {
+	// Test with empty billing URL - should pass through
+	checker := newBillingChecker("", "")
+	ok, err := checker.checkBalance("hanzo/test-user")
+	if !ok {
+		t.Error("billing check should pass when no URL configured")
+	}
+	if err != nil {
+		t.Errorf("billing check should not error when no URL configured: %v", err)
+	}
+}
