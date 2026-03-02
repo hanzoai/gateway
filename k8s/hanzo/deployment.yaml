@@ -29,6 +29,27 @@ spec:
           env:
             - name: GATEWAY_PORT
               value: "8080"
+            # -- Unified Auth Middleware --
+            - name: AUTH_JWKS_URL
+              value: "https://hanzo.id/.well-known/jwks"
+            - name: AUTH_ISSUER
+              value: "https://hanzo.id"
+            - name: AUTH_PUBLIC_PATHS
+              value: "/__health,/__stats,/.well-known/,/favicon"
+            - name: AUTH_PUBLIC_HOSTS
+              value: "hanzo.id,lux.id,pars.id,id.bootno.de,id.zoo.network,iam.hanzo.ai"
+            # Set to "true" to require auth on all non-public endpoints
+            - name: AUTH_REQUIRE
+              value: "false"
+            # -- Billing enforcement via Commerce API --
+            - name: AUTH_BILLING_URL
+              value: "http://commerce.hanzo.svc.cluster.local:8001"
+            - name: COMMERCE_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: gateway-secrets
+                  key: COMMERCE_SERVICE_TOKEN
+                  optional: true
           ports:
             - containerPort: 8080
               name: http
