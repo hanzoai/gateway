@@ -50,30 +50,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -104,30 +80,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -188,30 +140,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -242,30 +170,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -296,30 +200,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -716,30 +596,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -770,30 +626,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -824,30 +656,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -878,30 +686,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -932,30 +716,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -986,30 +746,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -1040,30 +776,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
@@ -1094,30 +806,6 @@
           "client_max_rate": 100,
           "strategy": "ip",
           "every": "1m"
-        },
-        "auth/validator": {
-          "alg": "RS256",
-          "jwk_url": "https://hanzo.id/.well-known/jwks",
-          "issuer": "https://hanzo.id",
-          "disable_jwk_security": false,
-          "propagate_claims": [
-            [
-              "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-Email"
-            ],
-            [
-              "owner",
-              "X-IAM-Org"
-            ],
-            [
-              "roles",
-              "X-IAM-Roles"
-            ]
-          ]
         }
       }
     },
