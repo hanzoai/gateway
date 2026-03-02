@@ -6,7 +6,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  ingressClassName: hanzo
+  ingressClassName: ingress
   tls:
   - hosts:
     - api.hanzo.ai
