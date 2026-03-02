@@ -359,6 +359,14 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			return
 		}
 
+		// API keys (hk-*, sk-*, sk-ant-*) are validated by the backend
+		// services directly (cloud-api, commerce, etc.), not by the gateway.
+		// Pass them through without JWT validation.
+		if isAPIKey(token) {
+			c.Next()
+			return
+		}
+
 		// Parse and validate JWT
 		claims, err := validateToken(token, cache, cfg.Issuer)
 		if err != nil {
@@ -481,6 +489,14 @@ validated:
 	}
 
 	return &claims, nil
+}
+
+// isAPIKey returns true for opaque API keys that should bypass JWT validation.
+// These are validated by the backend services (cloud-api via IAM).
+func isAPIKey(token string) bool {
+	return strings.HasPrefix(token, "hk-") ||
+		strings.HasPrefix(token, "sk-") ||
+		strings.HasPrefix(token, "fw_")
 }
 
 // extractBearerToken extracts a Bearer token from the Authorization header.
