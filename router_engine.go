@@ -301,6 +301,11 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	// Runs BEFORE host proxy so downstream services see identity headers.
 	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
 
+	// Widget security: per-IP rate limiting + origin validation for
+	// widget keys (hz_*). Prevents abuse of public widget credentials.
+	// Runs AFTER auth (so token is already extracted) and BEFORE proxy.
+	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
+
 	// Host-based transparent proxy: routes all Hanzo domains to their
 	// backend services. WebSocket upgrades are handled natively.
 	// Unmatched hosts fall through to gateway API endpoints.
