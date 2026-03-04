@@ -210,6 +210,10 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		runServerChain = otellura.GlobalRunServer(logger, runServerChain)
 		runServerChain = router.RunServerFunc(e.RunServerFactory.NewRunServer(logger, runServerChain))
 
+		// Start the inbound ZAP listener (TLS 1.3+PQ) for external clients.
+		InitZapListenerFromEnv()
+		defer StopZapListener()
+
 		// setup the gateway router
 		routerFactory := router.NewFactory(router.Config{
 			Engine: e.EngineFactory.NewEngine(cfg, router.EngineOptions{
