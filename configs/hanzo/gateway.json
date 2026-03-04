@@ -41,7 +41,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -71,7 +79,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -101,7 +117,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -131,67 +155,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
-        }
-      ],
-      "extra_config": {
-        "qos/ratelimit/router": {
-          "max_rate": 5000,
-          "client_max_rate": 100,
-          "strategy": "ip",
-          "every": "1m"
-        }
-      }
-    },
-    {
-      "endpoint": "/v1/zap",
-      "method": "POST",
-      "input_headers": [
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "X-Request-ID",
-        "X-Org-Id",
-        "X-Project-Id"
-      ],
-      "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/zap",
-          "host": [
-            "http://cloud-api.hanzo.svc.cluster.local:8000"
-          ],
-          "encoding": "no-op"
-        }
-      ],
-      "extra_config": {
-        "qos/ratelimit/router": {
-          "max_rate": 5000,
-          "client_max_rate": 100,
-          "strategy": "ip",
-          "every": "1m"
-        }
-      }
-    },
-    {
-      "endpoint": "/zap",
-      "method": "POST",
-      "input_headers": [
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "X-Request-ID",
-        "X-Org-Id",
-        "X-Project-Id"
-      ],
-      "output_encoding": "no-op",
-      "backend": [
-        {
-          "url_pattern": "/zap",
-          "host": [
-            "http://cloud-api.hanzo.svc.cluster.local:8000"
-          ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -587,7 +559,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -617,7 +597,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -647,7 +635,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -677,7 +673,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -707,7 +711,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -737,7 +749,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -767,7 +787,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {
@@ -797,7 +825,15 @@
           "host": [
             "http://cloud-api.hanzo.svc.cluster.local:8000"
           ],
-          "encoding": "no-op"
+          "encoding": "no-op",
+          "extra_config": {
+            "github.com/hanzoai/gateway/zap": {
+              "node_id": "gateway",
+              "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+              "no_discovery": true,
+              "timeout_ms": 120000
+            }
+          }
         }
       ],
       "extra_config": {

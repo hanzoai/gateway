@@ -7,8 +7,12 @@ spec:
   selector:
     app: gateway
   ports:
-    - port: 8080
+    - name: http
+      port: 8080
       targetPort: 8080
+    - name: zap
+      port: 9651
+      targetPort: 9651
   type: ClusterIP
 ---
 apiVersion: v1
@@ -33,6 +37,27 @@ spec:
     - name: https
       port: 443
       targetPort: 8080
+      protocol: TCP
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+---
+# Dedicated TCP LoadBalancer for ZAP binary protocol.
+# DNS: zap.hanzo.ai → this LB's external IP.
+apiVersion: v1
+kind: Service
+metadata:
+  name: zap-ingress
+  namespace: hanzo
+  annotations:
+    service.beta.kubernetes.io/do-loadbalancer-name: zap-ingress
+    service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
+spec:
+  selector:
+    app: gateway
+  ports:
+    - name: zap
+      port: 9651
+      targetPort: 9651
       protocol: TCP
   type: LoadBalancer
   externalTrafficPolicy: Local

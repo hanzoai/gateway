@@ -41,6 +41,17 @@ spec:
             # Set to "true" to require auth on all non-public endpoints
             - name: AUTH_REQUIRE
               value: "false"
+            # -- ZAP native binary listener (TLS 1.3+PQ) --
+            - name: ZAP_LISTENER_ENABLED
+              value: "true"
+            - name: ZAP_LISTENER_PORT
+              value: "9651"
+            - name: ZAP_TLS_CERT
+              value: "/etc/tls/tls.crt"
+            - name: ZAP_TLS_KEY
+              value: "/etc/tls/tls.key"
+            - name: ZAP_INTERNAL_ADDR
+              value: "127.0.0.1:9652"
             # -- Billing enforcement via Commerce API --
             - name: AUTH_BILLING_URL
               value: "http://commerce.hanzo.svc.cluster.local:8001"
@@ -53,6 +64,8 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: 9651
+              name: zap
           resources:
             requests:
               cpu: 100m
@@ -75,7 +88,13 @@ spec:
           volumeMounts:
             - name: config
               mountPath: /etc/gateway
+            - name: tls
+              mountPath: /etc/tls
+              readOnly: true
       volumes:
         - name: config
           configMap:
             name: gateway-config
+        - name: tls
+          secret:
+            secretName: api-hanzo-ai-tls
