@@ -1,0 +1,224 @@
+# Gateway routing configuration.
+# Loaded from KMS at startup (KMS_ROUTES_PATH), falls back to this file.
+# Hot-reloaded when KMS secret changes (via annotation secrets.lux.network/auto-reload).
+#
+# Pattern:
+#   host:
+#     paths:
+#       - prefix: /api/
+#         backend: http://service.namespace.svc.cluster.local:port
+#       - prefix: /
+#         backend: http://static.namespace.svc.cluster.local:80
+#
+#   redirect:
+#     old.domain.com: https://new.domain.com
+
+# --- Redirects (301 permanent) ---
+redirects:
+  app.hanzo.ai: https://hanzo.app
+  app.hanzo.bot: https://hanzo.bot
+  docs.hanzo.bot: https://hanzo.bot/docs
+  skills.hanzo.bot: https://hanzo.bot/skills
+  market.hanzo.bot: https://hanzo.bot/market
+  hub.hanzo.bot: https://hanzo.bot/hub
+  gw.hanzo.bot: https://hanzo.bot/gw
+  dev.hanzo.team: https://hanzo.team
+  app.flow.hanzo.ai: https://flow.hanzo.ai
+  cloud-api.hanzo.ai: https://cloud.hanzo.ai/api
+  api.cloud.hanzo.ai: https://cloud.hanzo.ai/api
+  api.commerce.hanzo.ai: https://commerce.hanzo.ai/api
+  admin.commerce.hanzo.ai: https://commerce.hanzo.ai/admin
+  store.commerce.hanzo.ai: https://commerce.hanzo.ai/store
+  api.platform.hanzo.ai: https://platform.hanzo.ai/api
+  api.zen.hanzo.ai: https://zen.hanzo.ai/v1
+  vm.hanzo.ai: https://visor.hanzo.ai
+  ztc.hanzo.ai: https://zt.hanzo.ai
+  orm.hanzo.ai: https://hanzo.app
+  studio.hanzo.ai: https://hanzo.app
+
+# --- Core domains (static + app on same origin) ---
+routes:
+  hanzo.app:
+    - prefix: /api/
+      backend: http://hanzo-app.hanzo.svc.cluster.local:8080
+    - prefix: /
+      backend: http://hanzo-app.hanzo.svc.cluster.local:80
+
+  hanzo.bot:
+    - prefix: /api/
+      backend: http://hanzo-playground.hanzo.svc.cluster.local:8080
+    - prefix: /ws/
+      backend: http://hanzo-playground.hanzo.svc.cluster.local:8080
+    - prefix: /docs/
+      backend: http://bot-docs.hanzo.svc.cluster.local:80
+    - prefix: /skills/
+      backend: http://bot-docs.hanzo.svc.cluster.local:80
+    - prefix: /market/
+      backend: http://hanzo-market-site.hanzo.svc.cluster.local:80
+    - prefix: /hub/api/
+      backend: http://bot-hub.hanzo.svc.cluster.local:3001
+    - prefix: /hub/
+      backend: http://bot-hub.hanzo.svc.cluster.local:80
+    - prefix: /gw/
+      backend: http://bot-gateway.hanzo.svc.cluster.local:80
+    - prefix: /
+      backend: http://hanzo-playground.hanzo.svc.cluster.local:8080
+
+  hanzo.team:
+    - prefix: /api/
+      backend: http://team-nginx.team.svc.cluster.local:80
+    - prefix: /
+      backend: http://team-nginx.team.svc.cluster.local:80
+
+  hanzo.id:
+    - prefix: /
+      backend: http://hanzo-login.hanzo.svc.cluster.local:80
+
+  hanzo.chat:
+    - prefix: /
+      backend: http://chat.hanzo.svc.cluster.local:80
+
+  # --- hanzo.ai services ---
+  console.hanzo.ai:
+    - prefix: /
+      backend: http://console.hanzo.svc.cluster.local:80
+
+  platform.hanzo.ai:
+    - prefix: /sync/
+      backend: http://sync.hanzo.svc.cluster.local:4000
+    - prefix: /api/
+      backend: http://platform.hanzo.svc.cluster.local:4000
+    - prefix: /socket.io/
+      backend: http://platform.hanzo.svc.cluster.local:4000
+    - prefix: /v1/
+      backend: http://platform.hanzo.svc.cluster.local:4000
+    - prefix: /
+      backend: http://paas-ui.hanzo.svc.cluster.local:80
+
+  llm.hanzo.ai:
+    - prefix: /v1/
+      backend: http://cloud-api.hanzo.svc.cluster.local:8000
+    - prefix: /health
+      backend: http://cloud-api.hanzo.svc.cluster.local:8000
+    - prefix: /docs/
+      backend: http://docs-landing.hanzo.svc.cluster.local:3000
+    - prefix: /
+      backend: http://cloud.hanzo.svc.cluster.local:80
+
+  cloud.hanzo.ai:
+    - prefix: /api/
+      backend: http://cloud-api.hanzo.svc.cluster.local:8000
+    - prefix: /
+      backend: http://cloud.hanzo.svc.cluster.local:80
+
+  chat.hanzo.ai:
+    - prefix: /
+      backend: http://chat.hanzo.svc.cluster.local:80
+
+  flow.hanzo.ai:
+    - prefix: /api/
+      backend: http://flow.hanzo.svc.cluster.local:80
+    - prefix: /
+      backend: http://flow-site.hanzo.svc.cluster.local:80
+
+  commerce.hanzo.ai:
+    - prefix: /api/
+      backend: http://commerce.hanzo.svc.cluster.local:8001
+    - prefix: /admin/
+      backend: http://commerce-admin.hanzo.svc.cluster.local:80
+    - prefix: /store/
+      backend: http://commerce-store.hanzo.svc.cluster.local:80
+    - prefix: /
+      backend: http://commerce-site.hanzo.svc.cluster.local:80
+
+  zen.hanzo.ai:
+    - prefix: /v1/
+      backend: http://zen-gateway.zen.svc.cluster.local:4100
+    - prefix: /health
+      backend: http://zen-gateway.zen.svc.cluster.local:4100
+    - prefix: /
+      backend: http://zen-landing.zen.svc.cluster.local:80
+
+  insights.hanzo.ai:
+    - prefix: /capture/
+      backend: http://insights-capture.hanzo.svc.cluster.local:3000
+    - prefix: /batch/
+      backend: http://insights-capture.hanzo.svc.cluster.local:3000
+    - prefix: /e/
+      backend: http://insights-capture.hanzo.svc.cluster.local:3000
+    - prefix: /
+      backend: http://insights-web.hanzo.svc.cluster.local:80
+
+  docs.hanzo.ai:
+    - prefix: /
+      backend: http://docs-landing.hanzo.svc.cluster.local:3000
+
+  # --- Infrastructure (API-only) ---
+  iam.hanzo.ai:
+    - prefix: /
+      backend: http://iam.hanzo.svc.cluster.local:80
+  kms.hanzo.ai:
+    - prefix: /
+      backend: http://kms.hanzo.svc.cluster.local:80
+  registry.hanzo.ai:
+    - prefix: /
+      backend: http://registry.hanzo.svc.cluster.local:5000
+  s3.hanzo.ai:
+    - prefix: /
+      backend: http://s3.hanzo.svc.cluster.local:9000
+  s3-api.hanzo.ai:
+    - prefix: /
+      backend: http://s3.hanzo.svc.cluster.local:9000
+  mpc.hanzo.ai:
+    - prefix: /
+      backend: http://hanzo-mpc.hanzo.svc.cluster.local:8080
+  status.hanzo.ai:
+    - prefix: /
+      backend: http://status.hanzo.svc.cluster.local:80
+  visor.hanzo.ai:
+    - prefix: /
+      backend: http://visor.hanzo.svc.cluster.local:19000
+  analytics.hanzo.ai:
+    - prefix: /
+      backend: http://analytics.hanzo.svc.cluster.local:80
+  billing.hanzo.ai:
+    - prefix: /
+      backend: http://billing.hanzo.svc.cluster.local:80
+  pricing.hanzo.ai:
+    - prefix: /
+      backend: http://pricing.hanzo.svc.cluster.local:8080
+
+  # --- Partner IAM (white-label) ---
+  pars.id:
+    - prefix: /
+      backend: http://hanzo-login.hanzo.svc.cluster.local:80
+  lux.id:
+    - prefix: /
+      backend: http://hanzo-login.hanzo.svc.cluster.local:80
+  id.bootno.de:
+    - prefix: /
+      backend: http://iam.hanzo.svc.cluster.local:80
+  id.zoo.network:
+    - prefix: /
+      backend: http://iam.hanzo.svc.cluster.local:80
+
+  # --- Lux blockchain ---
+  api.lux.network:
+    - prefix: /
+      backend: http://luxd.lux-mainnet.svc.cluster.local:9650
+  rpc.lux.network:
+    - prefix: /
+      backend: http://luxd.lux-mainnet.svc.cluster.local:9650
+
+  # --- ZeroTrust ---
+  zt.hanzo.ai:
+    - prefix: /
+      backend: http://hanzo-zt-console.hanzo-zt.svc.cluster.local:80
+  zt-api.hanzo.ai:
+    - prefix: /
+      backend: http://hanzo-zt-controller.hanzo-zt.svc.cluster.local:443
+
+# --- Subdomain wildcard patterns ---
+subdomains:
+  lux-test: http://luxd.lux-testnet.svc.cluster.local:9640
+  lux-dev: http://luxd.lux-devnet.svc.cluster.local:9650
