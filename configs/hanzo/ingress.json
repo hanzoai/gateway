@@ -102,7 +102,7 @@
       ]
     },
     {
-      "host": "api.hanzo.space",
+      "host": "s3-api.hanzo.ai",
       "backends": [
         {
           "path": "/",
@@ -327,7 +327,7 @@
       ]
     },
     {
-      "host": "docs.hanzo.space",
+      "host": "docs.s3.hanzo.ai",
       "backends": [
         {
           "path": "/",
@@ -481,7 +481,7 @@
       ]
     },
     {
-      "host": "hanzo.space",
+      "host": "s3.hanzo.ai",
       "backends": [
         {
           "path": "/",
