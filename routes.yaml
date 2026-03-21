@@ -78,6 +78,16 @@ routes:
     - prefix: /
       backend: http://chat.hanzo.svc.cluster.local:80
 
+  base.hanzo.ai:
+    - prefix: /api/
+      backend: http://base.hanzo.svc.cluster.local:8090
+    - prefix: /_/
+      backend: http://base.hanzo.svc.cluster.local:8090
+    - prefix: /docs/
+      backend: http://docs-landing.hanzo.svc.cluster.local:3000
+    - prefix: /
+      backend: http://base-site.hanzo.svc.cluster.local:80
+
   # --- hanzo.ai services ---
   console.hanzo.ai:
     - prefix: /
