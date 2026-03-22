@@ -147,15 +147,6 @@
       ]
     },
     {
-      "host": "app.hanzo.bot",
-      "backends": [
-        {
-          "path": "/",
-          "url": "http://hanzo-playground.hanzo.svc.cluster.local:8080"
-        }
-      ]
-    },
-    {
       "host": "auth.hanzo.ai",
       "backends": [
         {
