@@ -49,7 +49,6 @@ func DefaultWidgetSecurityConfig() WidgetSecurityConfig {
 			"console.hanzo.ai",
 			"cloud.hanzo.ai",
 			"hanzo.bot",
-			"app.hanzo.bot",
 			"docs.hanzo.bot",
 			"localhost",
 		},
