@@ -136,7 +136,7 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 	var gotOrgHeader string
 	r.Use(middleware)
 	r.GET("/api/test", func(c *gin.Context) {
-		gotOrgHeader = c.Request.Header.Get("X-Hanzo-Org-Id")
+		gotOrgHeader = c.Request.Header.Get("X-IAM-Org-Id")
 		c.Status(http.StatusOK)
 	})
 
@@ -149,7 +149,7 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 		t.Errorf("expected 200 for optional auth without token, got %d", w.Code)
 	}
 	if gotOrgHeader != "" {
-		t.Errorf("expected no X-Hanzo-Org-Id header without token, got %q", gotOrgHeader)
+		t.Errorf("expected no X-IAM-Org-Id header without token, got %q", gotOrgHeader)
 	}
 }
 
