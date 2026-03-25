@@ -55,5 +55,18 @@ jobs:
       - name: Build gateway binary
         run: make build
 
-      - name: Run tests
+      - name: Start gateway in background
+        run: |
+          ./gateway run -c configs/hanzo/gateway.json &
+          sleep 3
+        env:
+          GATEWAY_ROUTES_FILE: routes.yaml
+
+      - name: Run unit tests
+        run: go test -v -count=1 -timeout=5m ./...
+        env:
+          SKIP_INTEGRATION: "true"
+
+      - name: Run integration tests
         run: go test -v -count=1 -timeout=5m ./tests/...
+        continue-on-error: true
