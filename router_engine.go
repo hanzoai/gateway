@@ -10,7 +10,6 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
@@ -266,15 +265,8 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 		opt.Logger.Warning("[SERVICE: Gateway] No host routing will be available")
 	}
 
-	// Register explicit /__health handler that returns a clean timestamp
-	// (without Go's monotonic clock suffix that leaks via default time.Time
-	// serialization). The root / and /health KrakenD endpoints proxy here.
-	engine.GET("/__health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-			"now":    time.Now().UTC().Round(0).Format(time.RFC3339),
-		})
-	})
+	// /__health is handled by KrakenD backend config (gateway.json).
+	// Do NOT register it here — duplicate route registration panics gin.
 
 	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
 	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
