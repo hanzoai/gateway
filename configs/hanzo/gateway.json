@@ -22,11 +22,57 @@
       "stdout": true
     },
     "security/cors": {
-      "allow_origins": ["https://hanzo.ai", "https://*.hanzo.ai", "https://hanzo.id", "https://zoo.id", "https://lux.id", "https://pars.id", "https://*.zoo.ngo", "https://*.lux.network"],
-      "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      "allow_headers": ["Origin", "Authorization", "Content-Type", "Accept", "X-Requested-With", "X-Org-Id", "X-Project-Id", "X-Request-ID"],
-      "expose_headers": ["Content-Length", "X-Request-ID"],
+      "allow_origins": [
+        "https://hanzo.ai",
+        "https://*.hanzo.ai",
+        "https://hanzo.id",
+        "https://zoo.id",
+        "https://lux.id",
+        "https://pars.id",
+        "https://*.zoo.ngo",
+        "https://*.lux.network"
+      ],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Requested-With",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-Request-ID"
+      ],
+      "expose_headers": [
+        "Content-Length",
+        "X-Request-ID"
+      ],
       "max_age": "12h"
+    },
+    "telemetry/opentelemetry": {
+      "service_name": "gateway",
+      "service_version": "2.12.1",
+      "trace_sample_rate": 0.1,
+      "metric_reporting_period": 30,
+      "exporters": {
+        "otlp": [
+          {
+            "name": "hanzo-o11y",
+            "host": "otel-collector.hanzo.svc",
+            "port": 4317,
+            "use_http": false,
+            "disable_metrics": false,
+            "disable_traces": false
+          }
+        ]
+      }
     }
   },
   "endpoints": [
