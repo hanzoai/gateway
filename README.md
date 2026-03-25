@@ -170,7 +170,7 @@ Client --> Gateway --> Cloud API --> IAM (hanzo.id)
                                     Return user context
 ```
 
-The gateway forwards all authentication headers (`Authorization`, `X-Hanzo-Key`, `X-Hanzo-Org`) to the Cloud API, which validates them against the IAM service at `hanzo.id`. The gateway itself does not perform token validation -- this is handled by the backend services.
+The gateway forwards all authentication headers (`Authorization`, `X-IAM-Key`, `X-IAM-Org`) to the Cloud API, which validates them against the IAM service at `hanzo.id`. The gateway itself does not perform token validation -- this is handled by the backend services.
 
 ### Header Forwarding
 
@@ -179,8 +179,8 @@ The gateway passes through all input headers by default (`"input_headers": ["*"]
 - `Authorization` -- Bearer token or API key
 - `Content-Type` -- Request body encoding
 - `Accept` -- Response format preference
-- `X-Hanzo-Key` -- Alternative API key header
-- `X-Hanzo-Org` -- Organization scope
+- `X-IAM-Key` -- Alternative API key header
+- `X-IAM-Org` -- Organization scope
 - `X-Request-ID` -- Client-provided request tracing ID
 
 ## Rate Limiting
