@@ -1,0 +1,41 @@
+{
+  "$schema": "https://www.krakend.io/schema/v3.json",
+  "version": 3,
+  "name": "Liquidity API Gateway",
+  "port": 8080,
+  "timeout": "120s",
+  "cache_ttl": "0s",
+  "output_encoding": "no-op",
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    },
+    "qos/ratelimit/router": {
+      "max_rate": 5000,
+      "client_max_rate": 100,
+      "strategy": "ip"
+    },
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[GATEWAY]",
+      "syslog": false,
+      "stdout": true
+    },
+    "security/cors": {
+      "allow_origins": [
+        "https://liquidity.io",
+        "https://*.liquidity.io",
+        "https://exchange.next.satschel.com",
+        "https://exchange.alpha.satschel.com",
+        "https://api.next.satschel.com",
+        "https://api.alpha.satschel.com",
+        "https://*.satschel.com"
+      ],
+      "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      "allow_headers": ["Origin", "Authorization", "Content-Type", "Accept", "X-Requested-With", "X-Org-Id", "X-Project-Id", "X-Request-ID"],
+      "expose_headers": ["Content-Length", "X-Request-ID"],
+      "max_age": "12h"
+    }
+  },
+  "endpoints": []
+}
