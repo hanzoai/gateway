@@ -505,6 +505,13 @@ func validateToken(rawToken string, cache *jwksCache, expectedIssuer string, exp
 	return nil, fmt.Errorf("no matching key found in JWKS")
 
 validated:
+	// Reject tokens with no issuer claim. An empty issuer would cause
+	// ValidateWithLeeway to skip issuer comparison entirely, allowing
+	// tokens from any (or no) issuer to pass validation.
+	if claims.Claims.Issuer == "" {
+		return nil, fmt.Errorf("invalid token: missing issuer")
+	}
+
 	// Validate standard claims: issuer, audience, and expiry.
 	// Issuer and audience are ALWAYS validated — a token missing these
 	// claims or carrying wrong values is rejected unconditionally.
@@ -527,10 +534,16 @@ validated:
 // Calling this FIRST in the middleware prevents header injection on every path:
 // public hosts, public paths, API key pass-through, no-token pass-through, and
 // disabled auth mode.
+//
+// We iterate all headers and strip any matching the X-IAM- prefix rather than
+// deleting a hardcoded list, so newly added X-IAM-* headers are automatically
+// protected against injection.
 func stripIdentityHeaders(r *http.Request) {
-	r.Header.Del("X-IAM-Org-Id")
-	r.Header.Del("X-IAM-User-Id")
-	r.Header.Del("X-IAM-User-Email")
+	for key := range r.Header {
+		if strings.HasPrefix(strings.ToUpper(key), "X-IAM-") {
+			r.Header.Del(key)
+		}
+	}
 }
 
 // isAPIKey returns true for opaque API keys that should bypass JWT validation.
