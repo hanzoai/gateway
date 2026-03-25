@@ -30,6 +30,9 @@ type AuthConfig struct {
 	// Expected JWT issuer (default: https://hanzo.id)
 	Issuer string
 
+	// Expected JWT audience (default: https://api.hanzo.ai)
+	Audience string
+
 	// Billing check endpoint (default: http://commerce.hanzo.svc.cluster.local:8001)
 	BillingURL string
 
@@ -246,6 +249,11 @@ func DefaultAuthConfig() AuthConfig {
 		issuer = "https://hanzo.id"
 	}
 
+	audience := os.Getenv("AUTH_AUDIENCE")
+	if audience == "" {
+		audience = "https://api.hanzo.ai"
+	}
+
 	billingURL := os.Getenv("AUTH_BILLING_URL")
 	if billingURL == "" {
 		billingURL = "http://commerce.hanzo.svc.cluster.local:8001"
@@ -300,6 +308,7 @@ func DefaultAuthConfig() AuthConfig {
 		Enabled:        enabled,
 		JWKSURL:        jwksURL,
 		Issuer:         issuer,
+		Audience:       audience,
 		BillingURL:     billingURL,
 		BillingToken:   billingToken,
 		BillingEnabled: billingEnabled,
@@ -325,9 +334,12 @@ func DefaultAuthConfig() AuthConfig {
 // Public endpoints (configurable allowlist) bypass all auth checks.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
-	// without any token validation or billing checks.
+	// without any token validation or billing checks. Still strip identity
+	// headers — even in dev/test, downstream services must not trust
+	// client-supplied identity.
 	if !cfg.Enabled {
 		return func(c *gin.Context) {
+			stripIdentityHeaders(c.Request)
 			c.Next()
 		}
 	}
@@ -342,6 +354,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		// SECURITY: Unconditionally strip client-supplied identity headers.
+		// Only the gateway is authorized to set these after JWT validation.
+		// This MUST be the first action before any bypass path (public hosts,
+		// public paths, API keys, no-token pass-through).
+		stripIdentityHeaders(c.Request)
+
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
 
@@ -387,11 +405,11 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		}
 
 		// Parse and validate JWT
-		claims, err := validateToken(token, cache, cfg.Issuer)
+		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audience)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",
-				"message": fmt.Sprintf("Invalid token: %s", err.Error()),
+				"message": "Invalid token",
 			})
 			return
 		}
@@ -432,7 +450,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 }
 
 // validateToken parses and validates a JWT token using the cached JWKS.
-func validateToken(rawToken string, cache *jwksCache, expectedIssuer string) (*hanzoJWTClaims, error) {
+func validateToken(rawToken string, cache *jwksCache, expectedIssuer string, expectedAudience string) (*hanzoJWTClaims, error) {
 	tok, err := jwt.ParseSigned(rawToken, []gojose.SignatureAlgorithm{
 		gojose.RS256, gojose.RS384, gojose.RS512,
 		gojose.ES256, gojose.ES384, gojose.ES512,
@@ -487,24 +505,32 @@ func validateToken(rawToken string, cache *jwksCache, expectedIssuer string) (*h
 	return nil, fmt.Errorf("no matching key found in JWKS")
 
 validated:
-	// Validate standard claims
+	// Validate standard claims: issuer, audience, and expiry.
+	// Issuer and audience are ALWAYS validated — a token missing these
+	// claims or carrying wrong values is rejected unconditionally.
 	expected := jwt.Expected{
 		Issuer: expectedIssuer,
 	}
-
-	// Only validate issuer if it's set in the token
-	if claims.Issuer != "" && expectedIssuer != "" {
-		if err := claims.Claims.ValidateWithLeeway(expected, 2*time.Minute); err != nil {
-			return nil, fmt.Errorf("token validation failed: %w", err)
-		}
+	if expectedAudience != "" {
+		expected.AnyAudience = jwt.Audience{expectedAudience}
 	}
 
-	// Check expiry
-	if claims.Expiry != nil && claims.Expiry.Time().Before(time.Now().Add(-2*time.Minute)) {
-		return nil, fmt.Errorf("token expired")
+	if err := claims.Claims.ValidateWithLeeway(expected, 2*time.Minute); err != nil {
+		return nil, fmt.Errorf("token validation failed: %w", err)
 	}
 
 	return &claims, nil
+}
+
+// stripIdentityHeaders removes all client-supplied X-IAM-* identity headers.
+// The gateway is the sole authority for setting these headers after JWT validation.
+// Calling this FIRST in the middleware prevents header injection on every path:
+// public hosts, public paths, API key pass-through, no-token pass-through, and
+// disabled auth mode.
+func stripIdentityHeaders(r *http.Request) {
+	r.Header.Del("X-IAM-Org-Id")
+	r.Header.Del("X-IAM-User-Id")
+	r.Header.Del("X-IAM-User-Email")
 }
 
 // isAPIKey returns true for opaque API keys that should bypass JWT validation.

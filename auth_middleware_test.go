@@ -294,6 +294,258 @@ func TestAuthMiddlewareDisabled(t *testing.T) {
 	}
 }
 
+// TestStripIdentityHeaders verifies the stripIdentityHeaders function directly.
+func TestStripIdentityHeaders(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-IAM-Org-Id", "attacker-org")
+	req.Header.Set("X-IAM-User-Id", "attacker-user")
+	req.Header.Set("X-IAM-User-Email", "attacker@evil.com")
+
+	stripIdentityHeaders(req)
+
+	for _, h := range []string{"X-IAM-Org-Id", "X-IAM-User-Id", "X-IAM-User-Email"} {
+		if v := req.Header.Get(h); v != "" {
+			t.Errorf("stripIdentityHeaders did not remove %s, got %q", h, v)
+		}
+	}
+}
+
+// TestHeaderInjectionPublicHost verifies that client-supplied X-IAM-* headers
+// are stripped when the request hits a public host bypass path.
+// This is a regression test for CVE: identity header injection.
+func TestHeaderInjectionPublicHost(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled:     true,
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{},
+		PublicHosts: []string{"hanzo.id"},
+		RequireAuth: false,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotOrg, gotUser, gotEmail string
+	r.Use(middleware)
+	r.GET("/api/anything", func(c *gin.Context) {
+		gotOrg = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUser = c.Request.Header.Get("X-IAM-User-Id")
+		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/anything", nil)
+	req.Host = "hanzo.id"
+	// Attacker injects identity headers
+	req.Header.Set("X-IAM-Org-Id", "admin")
+	req.Header.Set("X-IAM-User-Id", "root")
+	req.Header.Set("X-IAM-User-Email", "admin@hanzo.ai")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if gotOrg != "" {
+		t.Errorf("X-IAM-Org-Id should be stripped on public host, got %q", gotOrg)
+	}
+	if gotUser != "" {
+		t.Errorf("X-IAM-User-Id should be stripped on public host, got %q", gotUser)
+	}
+	if gotEmail != "" {
+		t.Errorf("X-IAM-User-Email should be stripped on public host, got %q", gotEmail)
+	}
+}
+
+// TestHeaderInjectionPublicPath verifies that client-supplied X-IAM-* headers
+// are stripped when the request hits a public path bypass.
+func TestHeaderInjectionPublicPath(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled:     true,
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{"/__health"},
+		PublicHosts: []string{},
+		RequireAuth: false,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotOrg string
+	r.Use(middleware)
+	r.GET("/__health", func(c *gin.Context) {
+		gotOrg = c.Request.Header.Get("X-IAM-Org-Id")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/__health", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("X-IAM-Org-Id", "forged-org")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if gotOrg != "" {
+		t.Errorf("X-IAM-Org-Id should be stripped on public path, got %q", gotOrg)
+	}
+}
+
+// TestHeaderInjectionNoToken verifies that client-supplied X-IAM-* headers
+// are stripped when no token is present and auth is optional.
+func TestHeaderInjectionNoToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled:     true,
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{},
+		PublicHosts: []string{},
+		RequireAuth: false,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotUser string
+	r.Use(middleware)
+	r.GET("/api/test", func(c *gin.Context) {
+		gotUser = c.Request.Header.Get("X-IAM-User-Id")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	// No Authorization header, but attacker injects identity
+	req.Header.Set("X-IAM-User-Id", "forged-admin")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if gotUser != "" {
+		t.Errorf("X-IAM-User-Id should be stripped with no token, got %q", gotUser)
+	}
+}
+
+// TestHeaderInjectionAPIKey verifies that client-supplied X-IAM-* headers
+// are stripped when an API key bypasses JWT validation.
+func TestHeaderInjectionAPIKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled:     true,
+		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		Issuer:      "https://hanzo.id",
+		PublicPaths: []string{},
+		PublicHosts: []string{},
+		RequireAuth: true,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotOrg, gotUser string
+	r.Use(middleware)
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		gotOrg = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUser = c.Request.Header.Get("X-IAM-User-Id")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer sk-ant-api03-cPXAHvR")
+	// Attacker also injects identity headers alongside API key
+	req.Header.Set("X-IAM-Org-Id", "forged-org")
+	req.Header.Set("X-IAM-User-Id", "forged-admin")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if gotOrg != "" {
+		t.Errorf("X-IAM-Org-Id should be stripped on API key path, got %q", gotOrg)
+	}
+	if gotUser != "" {
+		t.Errorf("X-IAM-User-Id should be stripped on API key path, got %q", gotUser)
+	}
+}
+
+// TestHeaderInjectionDisabledAuth verifies that client-supplied X-IAM-*
+// headers are stripped even when auth is entirely disabled.
+func TestHeaderInjectionDisabledAuth(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := AuthConfig{
+		Enabled: false,
+	}
+
+	middleware := NewAuthMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	var gotOrg, gotUser, gotEmail string
+	r.Use(middleware)
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrg = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUser = c.Request.Header.Get("X-IAM-User-Id")
+		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("X-IAM-Org-Id", "forged-org")
+	req.Header.Set("X-IAM-User-Id", "forged-admin")
+	req.Header.Set("X-IAM-User-Email", "admin@evil.com")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if gotOrg != "" {
+		t.Errorf("X-IAM-Org-Id should be stripped even when auth disabled, got %q", gotOrg)
+	}
+	if gotUser != "" {
+		t.Errorf("X-IAM-User-Id should be stripped even when auth disabled, got %q", gotUser)
+	}
+	if gotEmail != "" {
+		t.Errorf("X-IAM-User-Email should be stripped even when auth disabled, got %q", gotEmail)
+	}
+}
+
+// TestDefaultAuthConfigAudience verifies that the default config includes an audience.
+func TestDefaultAuthConfigAudience(t *testing.T) {
+	cfg := DefaultAuthConfig()
+	if cfg.Audience == "" {
+		t.Error("Audience should default to https://api.hanzo.ai")
+	}
+	if cfg.Audience != "https://api.hanzo.ai" {
+		t.Errorf("Audience = %q, want %q", cfg.Audience, "https://api.hanzo.ai")
+	}
+}
+
 func TestBillingCheckerFailOpen(t *testing.T) {
 	// Test with unreachable billing URL - should fail open
 	checker := newBillingChecker("http://127.0.0.1:1", "test-token") // unreachable port
