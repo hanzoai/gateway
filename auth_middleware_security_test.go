@@ -1,0 +1,1055 @@
+package gateway
+
+// Security regression tests for auth middleware.
+//
+// These tests exist to prevent reintroduction of auth bypass vulnerabilities.
+// They cover: X-IAM header injection, JWT issuer validation, and correct
+// identity header propagation on valid auth.
+//
+// Every test in this file must continue to pass before any merge to main.
+
+import (
+	"crypto/rand"
+	"crypto/rsa"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	gojose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+)
+
+// testJWKS holds a test RSA key pair and provides helpers for creating
+// signed JWTs and serving a JWKS endpoint.
+type testJWKS struct {
+	key    *rsa.PrivateKey
+	keyID  string
+	signer gojose.Signer
+}
+
+func newTestJWKS(t *testing.T) *testJWKS {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate RSA key: %v", err)
+	}
+
+	kid := "test-key-1"
+	signingKey := gojose.SigningKey{Algorithm: gojose.RS256, Key: key}
+	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid)
+	signer, err := gojose.NewSigner(signingKey, opts)
+	if err != nil {
+		t.Fatalf("failed to create signer: %v", err)
+	}
+
+	return &testJWKS{
+		key:    key,
+		keyID:  kid,
+		signer: signer,
+	}
+}
+
+// jwksJSON returns the JWKS as JSON bytes (public key only).
+func (tj *testJWKS) jwksJSON(t *testing.T) []byte {
+	t.Helper()
+	jwk := gojose.JSONWebKey{
+		Key:       &tj.key.PublicKey,
+		KeyID:     tj.keyID,
+		Algorithm: string(gojose.RS256),
+		Use:       "sig",
+	}
+	jwks := gojose.JSONWebKeySet{Keys: []gojose.JSONWebKey{jwk}}
+	data, err := json.Marshal(jwks)
+	if err != nil {
+		t.Fatalf("failed to marshal JWKS: %v", err)
+	}
+	return data
+}
+
+// serveJWKS starts an httptest.Server that serves the JWKS endpoint.
+// The caller must defer server.Close().
+func (tj *testJWKS) serveJWKS(t *testing.T) *httptest.Server {
+	t.Helper()
+	data := tj.jwksJSON(t)
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(data)
+	}))
+}
+
+// signToken creates a signed JWT string with the given claims.
+func (tj *testJWKS) signToken(t *testing.T, claims interface{}) string {
+	t.Helper()
+	raw, err := jwt.Signed(tj.signer).Claims(claims).Serialize()
+	if err != nil {
+		t.Fatalf("failed to sign token: %v", err)
+	}
+	return raw
+}
+
+// validClaims returns hanzoJWTClaims with valid issuer, audience, subject,
+// owner, and expiry for use in tests.
+func validClaims(issuer, audience string) hanzoJWTClaims {
+	now := time.Now()
+	return hanzoJWTClaims{
+		Claims: jwt.Claims{
+			Issuer:   issuer,
+			Subject:  "alice",
+			Audience: jwt.Audience{audience},
+			IssuedAt: jwt.NewNumericDate(now.Add(-1 * time.Minute)),
+			Expiry:   jwt.NewNumericDate(now.Add(10 * time.Minute)),
+		},
+		Owner: "hanzo",
+		Name:  "Alice",
+		Email: "alice@hanzo.ai",
+	}
+}
+
+// setupMiddlewareWithJWKS creates a gin engine with the auth middleware
+// wired to a test JWKS server. Returns the engine and test JWKS helper.
+// The caller must defer jwksServer.Close().
+func setupMiddlewareWithJWKS(t *testing.T, overrideCfg func(*AuthConfig)) (*gin.Engine, *testJWKS, *httptest.Server) {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+
+	cfg := AuthConfig{
+		Enabled:        true,
+		JWKSURL:        jwksServer.URL,
+		Issuer:         "https://hanzo.id",
+		Audience:       "https://api.hanzo.ai",
+		BillingEnabled: false, // Disable billing for security tests
+		PublicPaths:    []string{"/__health"},
+		PublicHosts:    []string{"hanzo.id"},
+		RequireAuth:    true,
+	}
+	if overrideCfg != nil {
+		overrideCfg(&cfg)
+	}
+
+	r := gin.New()
+	r.Use(NewAuthMiddleware(cfg))
+	return r, tj, jwksServer
+}
+
+// --- Test 1: X-IAM Header Injection Prevention on API Key Path ---
+
+func TestAPIKeyAuth_StripsIncomingXIAMHeaders(t *testing.T) {
+	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotOrgID, gotUserID, gotEmail string
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
+		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer sk-test-key-abcdef")
+	// Attacker injects forged identity headers
+	req.Header.Set("X-IAM-User-Id", "attacker")
+	req.Header.Set("X-IAM-Org-Id", "victim-org")
+	req.Header.Set("X-IAM-User-Email", "attacker@evil.com")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200 for API key passthrough, got %d", w.Code)
+	}
+	if gotOrgID != "" {
+		t.Errorf("SECURITY: X-IAM-Org-Id was NOT stripped on API key path, got %q", gotOrgID)
+	}
+	if gotUserID != "" {
+		t.Errorf("SECURITY: X-IAM-User-Id was NOT stripped on API key path, got %q", gotUserID)
+	}
+	if gotEmail != "" {
+		t.Errorf("SECURITY: X-IAM-User-Email was NOT stripped on API key path, got %q", gotEmail)
+	}
+}
+
+// --- Test 2: JWT Empty Issuer Rejection ---
+
+func TestJWTAuth_RejectsEmptyIssuer(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create JWT with empty issuer
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Claims.Issuer = "" // Empty issuer -- this MUST be rejected
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("SECURITY: empty issuer JWT should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("SECURITY: empty issuer JWT reached the backend handler -- auth bypass!")
+	}
+}
+
+// --- Test 3: JWT Missing Issuer Rejection ---
+
+func TestJWTAuth_RejectsMissingIssuer(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create a JWT with no issuer claim at all.
+	// We build claims manually using a map to ensure "iss" is completely absent.
+	now := time.Now()
+	claimsMap := map[string]interface{}{
+		"sub":   "alice",
+		"aud":   []string{"https://api.hanzo.ai"},
+		"iat":   now.Add(-1 * time.Minute).Unix(),
+		"exp":   now.Add(10 * time.Minute).Unix(),
+		"owner": "hanzo",
+		"name":  "Alice",
+		"email": "alice@hanzo.ai",
+		// No "iss" key at all
+	}
+	token := tj.signToken(t, claimsMap)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("SECURITY: missing issuer JWT should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("SECURITY: missing issuer JWT reached the backend handler -- auth bypass!")
+	}
+}
+
+// --- Test 4: Valid JWT Still Works ---
+
+func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotOrgID, gotUserID, gotEmail string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
+		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		c.Status(http.StatusOK)
+	})
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid JWT should get 200, got %d", w.Code)
+	}
+	if gotOrgID != "hanzo" {
+		t.Errorf("X-IAM-Org-Id = %q, want %q", gotOrgID, "hanzo")
+	}
+	if gotUserID != "alice" {
+		t.Errorf("X-IAM-User-Id = %q, want %q", gotUserID, "alice")
+	}
+	if gotEmail != "alice@hanzo.ai" {
+		t.Errorf("X-IAM-User-Email = %q, want %q", gotEmail, "alice@hanzo.ai")
+	}
+}
+
+// --- Test 5: X-IAM Headers Set Correctly on Valid Auth ---
+
+func TestValidAuth_SetsCorrectXIAMHeaders(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotOrgID, gotUserID, gotEmail string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
+		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		c.Status(http.StatusOK)
+	})
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Owner = "acme-corp"
+	claims.Claims.Subject = "bob"
+	claims.Email = "bob@acme-corp.com"
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+	// Attacker tries to override with forged headers alongside a valid JWT
+	req.Header.Set("X-IAM-Org-Id", "evil-org")
+	req.Header.Set("X-IAM-User-Id", "evil-admin")
+	req.Header.Set("X-IAM-User-Email", "admin@evil.com")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid JWT should get 200, got %d", w.Code)
+	}
+	// Headers MUST come from the validated JWT, NOT from the forged request headers
+	if gotOrgID != "acme-corp" {
+		t.Errorf("SECURITY: X-IAM-Org-Id = %q, want %q (from JWT owner claim)", gotOrgID, "acme-corp")
+	}
+	if gotUserID != "bob" {
+		t.Errorf("SECURITY: X-IAM-User-Id = %q, want %q (from JWT sub claim)", gotUserID, "bob")
+	}
+	if gotEmail != "bob@acme-corp.com" {
+		t.Errorf("SECURITY: X-IAM-User-Email = %q, want %q (from JWT email claim)", gotEmail, "bob@acme-corp.com")
+	}
+}
+
+// --- Test 6: No X-IAM Header Passthrough on Any Auth Path ---
+
+func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	// Build a valid token for the JWT path test
+	validToken := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai"))
+
+	forgedHeaders := map[string]string{
+		"X-IAM-Org-Id":     "forged-org",
+		"X-IAM-User-Id":    "forged-admin",
+		"X-IAM-User-Email": "forged@evil.com",
+		"X-Iam-Custom":     "forged-custom", // Mixed case to test case-insensitive stripping
+	}
+
+	tests := []struct {
+		name        string
+		authHeader  string // Authorization header value
+		host        string
+		path        string
+		requireAuth bool
+		expectCode  int
+	}{
+		{
+			name:        "API key (sk-*) with forged X-IAM headers",
+			authHeader:  "Bearer sk-live-test-key-12345",
+			host:        "api.hanzo.ai",
+			path:        "/v1/chat/completions",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "API key (hk-*) with forged X-IAM headers",
+			authHeader:  "Bearer hk-0d2eb9cfafd049389f2904cad770a9d8",
+			host:        "api.hanzo.ai",
+			path:        "/v1/chat/completions",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "API key (fw_*) with forged X-IAM headers",
+			authHeader:  "Bearer fw_test_fireworks_key",
+			host:        "api.hanzo.ai",
+			path:        "/v1/chat/completions",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "Widget key (hz_*) with forged X-IAM headers",
+			authHeader:  "Bearer hz_widget_public",
+			host:        "api.hanzo.ai",
+			path:        "/v1/chat/completions",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "Valid JWT with forged X-IAM headers",
+			authHeader:  "Bearer " + validToken,
+			host:        "api.hanzo.ai",
+			path:        "/api/test",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "No auth (optional) with forged X-IAM headers",
+			authHeader:  "",
+			host:        "api.hanzo.ai",
+			path:        "/api/test",
+			requireAuth: false,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "Public path with forged X-IAM headers",
+			authHeader:  "",
+			host:        "api.hanzo.ai",
+			path:        "/__health",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "Public host with forged X-IAM headers",
+			authHeader:  "",
+			host:        "hanzo.id",
+			path:        "/api/test",
+			requireAuth: true,
+			expectCode:  http.StatusOK,
+		},
+		{
+			name:        "Auth disabled with forged X-IAM headers",
+			authHeader:  "",
+			host:        "api.hanzo.ai",
+			path:        "/api/test",
+			requireAuth: false,
+			expectCode:  http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gin.SetMode(gin.TestMode)
+
+			// Special case: "auth disabled" test
+			enabled := true
+			if tt.name == "Auth disabled with forged X-IAM headers" {
+				enabled = false
+			}
+
+			cfg := AuthConfig{
+				Enabled:        enabled,
+				JWKSURL:        jwksServer.URL,
+				Issuer:         "https://hanzo.id",
+				Audience:       "https://api.hanzo.ai",
+				BillingEnabled: false,
+				PublicPaths:    []string{"/__health"},
+				PublicHosts:    []string{"hanzo.id"},
+				RequireAuth:    tt.requireAuth,
+			}
+
+			r := gin.New()
+			r.Use(NewAuthMiddleware(cfg))
+
+			var receivedHeaders map[string]string
+			handler := func(c *gin.Context) {
+				receivedHeaders = make(map[string]string)
+				for key := range forgedHeaders {
+					receivedHeaders[key] = c.Request.Header.Get(key)
+				}
+				c.Status(http.StatusOK)
+			}
+
+			r.GET(tt.path, handler)
+			r.POST(tt.path, handler)
+
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			if tt.path == "/v1/chat/completions" {
+				req = httptest.NewRequest(http.MethodPost, tt.path, nil)
+			}
+			req.Host = tt.host
+			if tt.authHeader != "" {
+				req.Header.Set("Authorization", tt.authHeader)
+			}
+			// Inject all forged headers
+			for k, v := range forgedHeaders {
+				req.Header.Set(k, v)
+			}
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != tt.expectCode {
+				t.Fatalf("expected status %d, got %d", tt.expectCode, w.Code)
+			}
+
+			// If the handler was reached, verify no forged X-IAM headers survived
+			if receivedHeaders != nil {
+				for key, forgedVal := range forgedHeaders {
+					got := receivedHeaders[key]
+					// For the valid JWT path, X-IAM headers are SET from the JWT
+					// claims. They must NOT match the forged values.
+					if got == forgedVal {
+						t.Errorf("SECURITY: forged header %s=%q was NOT stripped", key, forgedVal)
+					}
+				}
+			}
+		})
+	}
+}
+
+// --- Test 7: API Key Auth Doesn't Skip Validation ---
+
+func TestAPIKeyAuth_ValidatesKey(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// A request with a token that is NOT a recognized API key prefix and
+	// NOT a valid JWT should be rejected when auth is required.
+	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	invalidTokens := []struct {
+		name  string
+		token string
+	}{
+		{"random string", "not-a-valid-token"},
+		{"almost an API key", "sk"},
+		{"empty bearer", ""},
+		{"jwt-like but invalid", "eyJhbGciOiJSUzI1NiJ9.invalid.signature"},
+		{"api key prefix but mangled JWT attempt", "xx-fake-key"},
+	}
+
+	for _, tt := range invalidTokens {
+		t.Run(tt.name, func(t *testing.T) {
+			backendReached = false
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+			req.Host = "api.hanzo.ai"
+			if tt.token != "" {
+				req.Header.Set("Authorization", "Bearer "+tt.token)
+			}
+
+			r.ServeHTTP(w, req)
+
+			if tt.token == "" {
+				// No token at all with RequireAuth=true -> 401
+				if w.Code != http.StatusUnauthorized {
+					t.Errorf("empty token should get 401, got %d", w.Code)
+				}
+			} else {
+				// Invalid token (not API key, not valid JWT) -> 401
+				if w.Code != http.StatusUnauthorized {
+					t.Errorf("invalid token %q should get 401, got %d", tt.token, w.Code)
+				}
+			}
+
+			if backendReached {
+				t.Errorf("SECURITY: invalid token %q reached backend", tt.token)
+			}
+		})
+	}
+}
+
+// --- Test 8: JWT Wrong Issuer Rejection ---
+
+func TestJWTAuth_RejectsWrongIssuer(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create JWT with wrong issuer
+	claims := validClaims("https://evil-issuer.com", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("SECURITY: wrong issuer JWT should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("SECURITY: wrong issuer JWT reached the backend handler")
+	}
+}
+
+// --- Test 9: JWT Expired Token Rejection ---
+
+func TestJWTAuth_RejectsExpiredToken(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create expired JWT (expired 10 minutes ago, beyond the 2min leeway)
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Claims.Expiry = jwt.NewNumericDate(time.Now().Add(-10 * time.Minute))
+	claims.Claims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-20 * time.Minute))
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expired JWT should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("expired JWT reached the backend handler")
+	}
+}
+
+// --- Test 10: JWT Wrong Audience Rejection ---
+
+func TestJWTAuth_RejectsWrongAudience(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create JWT with wrong audience
+	claims := validClaims("https://hanzo.id", "https://wrong-audience.com")
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("wrong audience JWT should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("wrong audience JWT reached the backend handler")
+	}
+}
+
+// --- Test 11: JWT Signed With Wrong Key Rejection ---
+
+func TestJWTAuth_RejectsWrongSigningKey(t *testing.T) {
+	// Set up middleware with one key, sign token with a different key
+	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	// Create a DIFFERENT key to sign the token
+	attackerKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate attacker key: %v", err)
+	}
+	attackerSigningKey := gojose.SigningKey{Algorithm: gojose.RS256, Key: attackerKey}
+	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", "attacker-key")
+	attackerSigner, err := gojose.NewSigner(attackerSigningKey, opts)
+	if err != nil {
+		t.Fatalf("failed to create attacker signer: %v", err)
+	}
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	raw, err := jwt.Signed(attackerSigner).Claims(claims).Serialize()
+	if err != nil {
+		t.Fatalf("failed to sign with attacker key: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+raw)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("SECURITY: JWT signed with wrong key should get 401, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("SECURITY: JWT signed with wrong key reached the backend handler")
+	}
+}
+
+// --- Test 12: stripIdentityHeaders is case-insensitive ---
+
+func TestStripIdentityHeaders_CaseInsensitive(t *testing.T) {
+	// HTTP headers are case-insensitive per RFC 7230. An attacker might try
+	// alternate casings like "x-iam-org-id" or "X-Iam-Org-Id" to bypass
+	// stripping logic.
+	casings := []string{
+		"X-IAM-Org-Id",
+		"x-iam-org-id",
+		"X-Iam-Org-Id",
+		"x-IAM-ORG-ID",
+		"X-iam-User-Id",
+		"X-IAM-USER-EMAIL",
+		"x-iam-custom-header",
+	}
+
+	for _, header := range casings {
+		t.Run(header, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Header.Set(header, "forged-value")
+
+			stripIdentityHeaders(req)
+
+			if v := req.Header.Get(header); v != "" {
+				t.Errorf("SECURITY: header %q was NOT stripped (got %q)", header, v)
+			}
+		})
+	}
+}
+
+// --- Test 13: Non-X-IAM headers are preserved ---
+
+func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer some-token")
+	req.Header.Set("X-Request-Id", "req-123")
+	req.Header.Set("X-Forwarded-For", "1.2.3.4")
+	// This one should be stripped
+	req.Header.Set("X-IAM-Org-Id", "forged")
+
+	stripIdentityHeaders(req)
+
+	preserved := map[string]string{
+		"Content-Type":    "application/json",
+		"Authorization":   "Bearer some-token",
+		"X-Request-Id":    "req-123",
+		"X-Forwarded-For": "1.2.3.4",
+	}
+	for k, want := range preserved {
+		if got := req.Header.Get(k); got != want {
+			t.Errorf("header %s was modified: got %q, want %q", k, got, want)
+		}
+	}
+	if v := req.Header.Get("X-IAM-Org-Id"); v != "" {
+		t.Errorf("X-IAM-Org-Id should have been stripped, got %q", v)
+	}
+}
+
+// --- Test 14: Comprehensive forged header name variants ---
+
+func TestStripIdentityHeaders_AllXIAMVariants(t *testing.T) {
+	// An attacker might try any X-IAM-* header name, including ones we
+	// haven't thought of yet. The stripping logic must catch ALL of them.
+	attackerHeaders := []string{
+		"X-IAM-Org-Id",
+		"X-IAM-User-Id",
+		"X-IAM-User-Email",
+		"X-IAM-Role",
+		"X-IAM-Scope",
+		"X-IAM-Admin",
+		"X-IAM-Whatever-New-Header",
+		"X-IAM-",
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, h := range attackerHeaders {
+		req.Header.Set(h, "forged")
+	}
+
+	stripIdentityHeaders(req)
+
+	for _, h := range attackerHeaders {
+		if v := req.Header.Get(h); v != "" {
+			t.Errorf("SECURITY: header %q was NOT stripped", h)
+		}
+	}
+}
+
+// --- Test 15: validateToken rejects multiple issuer attack vectors ---
+
+func TestValidateToken_IssuerAttackVectors(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	cache := newJWKSCache(jwksServer.URL, 5*time.Minute)
+
+	tests := []struct {
+		name   string
+		issuer string
+	}{
+		{"empty issuer", ""},
+		{"whitespace issuer", " "},
+		{"wrong issuer", "https://evil.com"},
+		{"partial match issuer", "https://hanzo.id.evil.com"},
+		{"issuer with trailing slash", "https://hanzo.id/"},
+		{"issuer subdomain", "https://sub.hanzo.id"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := time.Now()
+			claims := map[string]interface{}{
+				"sub":   "alice",
+				"aud":   []string{"https://api.hanzo.ai"},
+				"iat":   now.Add(-1 * time.Minute).Unix(),
+				"exp":   now.Add(10 * time.Minute).Unix(),
+				"owner": "hanzo",
+				"email": "alice@hanzo.ai",
+			}
+			if tt.issuer != "" {
+				claims["iss"] = tt.issuer
+			}
+			// No "iss" at all for empty issuer test
+
+			token := tj.signToken(t, claims)
+			_, err := validateToken(token, cache, "https://hanzo.id", "https://api.hanzo.ai")
+			if err == nil {
+				t.Errorf("SECURITY: validateToken accepted issuer %q -- should have been rejected", tt.issuer)
+			}
+		})
+	}
+}
+
+// --- Test 16: Billing returns 402 when balance is zero ---
+
+func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	// Mock billing server that returns zero balance
+	billingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(billingResponse{
+			User:      "hanzo/alice",
+			Currency:  "usd",
+			Balance:   0,
+			Holds:     0,
+			Available: 0,
+		})
+	}))
+	defer billingServer.Close()
+
+	cfg := AuthConfig{
+		Enabled:        true,
+		JWKSURL:        jwksServer.URL,
+		Issuer:         "https://hanzo.id",
+		Audience:       "https://api.hanzo.ai",
+		BillingURL:     billingServer.URL,
+		BillingToken:   "test-token",
+		BillingEnabled: true,
+		PublicPaths:    []string{},
+		PublicHosts:    []string{},
+		RequireAuth:    true,
+	}
+
+	r := gin.New()
+	r.Use(NewAuthMiddleware(cfg))
+
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) {
+		backendReached = true
+		c.Status(http.StatusOK)
+	})
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusPaymentRequired {
+		t.Errorf("zero balance should get 402, got %d", w.Code)
+	}
+	if backendReached {
+		t.Error("request with zero balance should not reach backend")
+	}
+}
+
+// --- Test 17: Multiple X-IAM header values (multi-value attack) ---
+
+func TestStripIdentityHeaders_MultiValueAttack(t *testing.T) {
+	// HTTP allows multiple values for the same header. An attacker might
+	// add multiple X-IAM-Org-Id values hoping one survives stripping.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Add("X-IAM-Org-Id", "forged-1")
+	req.Header.Add("X-IAM-Org-Id", "forged-2")
+	req.Header.Add("X-IAM-User-Id", "admin")
+	req.Header.Add("X-IAM-User-Id", "root")
+
+	stripIdentityHeaders(req)
+
+	if vals := req.Header.Values("X-IAM-Org-Id"); len(vals) != 0 {
+		t.Errorf("SECURITY: X-IAM-Org-Id had %d values after stripping: %v", len(vals), vals)
+	}
+	if vals := req.Header.Values("X-IAM-User-Id"); len(vals) != 0 {
+		t.Errorf("SECURITY: X-IAM-User-Id had %d values after stripping: %v", len(vals), vals)
+	}
+}
+
+// --- Test 18: Cookie-based token with forged headers ---
+
+func TestCookieAuth_StripsForgedXIAMHeaders(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotOrgID, gotUserID string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
+		c.Status(http.StatusOK)
+	})
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Owner = "legit-org"
+	claims.Claims.Subject = "legit-user"
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	// Token via cookie instead of Authorization header
+	req.AddCookie(&http.Cookie{Name: "casdoor_access_token", Value: token})
+	// Attacker injects forged headers
+	req.Header.Set("X-IAM-Org-Id", "forged-org")
+	req.Header.Set("X-IAM-User-Id", "forged-user")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("cookie auth should get 200, got %d", w.Code)
+	}
+	// Must reflect JWT claims, not forged headers
+	if gotOrgID != "legit-org" {
+		t.Errorf("SECURITY: X-IAM-Org-Id = %q, want %q", gotOrgID, "legit-org")
+	}
+	if gotUserID != "legit-user" {
+		t.Errorf("SECURITY: X-IAM-User-Id = %q, want %q", gotUserID, "legit-user")
+	}
+}
+
+// --- Test 19: Publishable key (pk-*) with forged headers ---
+
+func TestPublishableKeyAuth_StripsForgedXIAMHeaders(t *testing.T) {
+	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotOrgID string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer pk-publishable-key-xyz")
+	req.Header.Set("X-IAM-Org-Id", "forged-org")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("pk- key should pass through, got %d", w.Code)
+	}
+	if gotOrgID != "" {
+		t.Errorf("SECURITY: X-IAM-Org-Id was NOT stripped on pk- key path, got %q", gotOrgID)
+	}
+}
+
+// --- Test 20: Concurrent header injection attempts ---
+
+func TestConcurrentHeaderInjection(t *testing.T) {
+	r, _, jwksServer := setupMiddlewareWithJWKS(t, func(cfg *AuthConfig) {
+		cfg.RequireAuth = false
+	})
+	defer jwksServer.Close()
+
+	var mu sync.Mutex
+	type result struct {
+		orgID  string
+		userID string
+	}
+	results := make([]result, 100)
+
+	r.GET("/api/test", func(c *gin.Context) {
+		// Capture what the backend sees
+		res := result{
+			orgID:  c.Request.Header.Get("X-IAM-Org-Id"),
+			userID: c.Request.Header.Get("X-IAM-User-Id"),
+		}
+		mu.Lock()
+		results = append(results, res)
+		mu.Unlock()
+		c.Status(http.StatusOK)
+	})
+
+	// Fire 100 concurrent requests with forged headers
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+			req.Host = "api.hanzo.ai"
+			req.Header.Set("X-IAM-Org-Id", fmt.Sprintf("forged-org-%d", n))
+			req.Header.Set("X-IAM-User-Id", fmt.Sprintf("forged-user-%d", n))
+
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Errorf("request %d: expected 200, got %d", n, w.Code)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	// Verify no forged headers made it through
+	mu.Lock()
+	defer mu.Unlock()
+	for i, res := range results {
+		if res.orgID != "" {
+			t.Errorf("SECURITY: request %d: forged X-IAM-Org-Id leaked: %q", i, res.orgID)
+		}
+		if res.userID != "" {
+			t.Errorf("SECURITY: request %d: forged X-IAM-User-Id leaked: %q", i, res.userID)
+		}
+	}
+}
+
