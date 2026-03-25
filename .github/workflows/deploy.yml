@@ -2,7 +2,7 @@ name: Build and Deploy Gateway
 
 on:
   push:
-    branches: [main]
+    branches: [main, test, dev]
     tags: ['v*']
   pull_request:
     branches: [main]
@@ -18,15 +18,17 @@ jobs:
   dispatch-to-universe:
     needs: docker
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/') || startsWith(github.ref, 'refs/tags/'))
     steps:
       - name: Compute image tag
         id: meta
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF#refs/tags/v}"
+          elif [[ "$GITHUB_REF" == refs/heads/* ]]; then
+            TAG="${GITHUB_REF#refs/heads/}"
           else
-            TAG="main"
+            TAG="${GITHUB_SHA}"
           fi
           echo "image=ghcr.io/hanzoai/gateway:${TAG}" >> "$GITHUB_OUTPUT"
 
