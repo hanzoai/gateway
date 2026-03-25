@@ -313,9 +313,9 @@ func DefaultAuthConfig() AuthConfig {
 // checks billing status, and injects identity headers for downstream services.
 //
 // Header injection:
-//   - X-Hanzo-Org-Id:     org slug from JWT "owner" claim
-//   - X-Hanzo-User-Id:    user ID from JWT "sub" claim
-//   - X-Hanzo-User-Email: email from JWT "email" claim
+//   - X-IAM-Org-Id:     org slug from JWT "owner" claim
+//   - X-IAM-User-Id:    user ID from JWT "sub" claim
+//   - X-IAM-User-Email: email from JWT "email" claim
 //
 // Billing:
 //   - Checks commerce service for positive balance
@@ -400,14 +400,11 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		userID := claims.Subject
 		userEmail := claims.Email
 
-		// Inject identity headers into the request for downstream services
-		c.Request.Header.Set("X-Hanzo-Org-Id", orgID)
-		c.Request.Header.Set("X-Hanzo-User-Id", userID)
-		c.Request.Header.Set("X-Hanzo-User-Email", userEmail)
-
-		// Also set the generic tenant headers for services that use those
-		c.Request.Header.Set("X-Org-ID", orgID)
-		c.Request.Header.Set("X-Actor-ID", userID)
+		// Inject IAM identity headers for downstream services.
+		// Generic X-IAM-* prefix — not vendor-specific, works across all orgs.
+		c.Request.Header.Set("X-IAM-Org-Id", orgID)
+		c.Request.Header.Set("X-IAM-User-Id", userID)
+		c.Request.Header.Set("X-IAM-User-Email", userEmail)
 
 		// Check billing status (fail-open)
 		// Uses userID (JWT subject) as the billing identity, which maps to
