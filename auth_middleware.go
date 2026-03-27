@@ -416,6 +416,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 
 		orgID := claims.Owner
 		userID := claims.Subject
+		// Casdoor leaves "sub" empty — fall back to preferred_username then name
+		if userID == "" {
+			userID = claims.PreferredUsername
+		}
+		if userID == "" {
+			userID = claims.Name
+		}
 		userEmail := claims.Email
 
 		// Inject identity headers for downstream services.
