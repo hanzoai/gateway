@@ -66,6 +66,10 @@ type hanzoJWTClaims struct {
 	PreferredUsername string `json:"preferred_username"`
 	// Email
 	Email string `json:"email"`
+	// Phone number (E.164 format from IAM)
+	Phone string `json:"phone"`
+	// OIDC standard phone_number claim
+	PhoneNumber string `json:"phone_number"`
 	// User type
 	Type string `json:"type"`
 }
@@ -324,9 +328,10 @@ func DefaultAuthConfig() AuthConfig {
 // checks billing status, and injects identity headers for downstream services.
 //
 // Header injection:
-//   - X-IAM-Org-Id:     org slug from JWT "owner" claim
-//   - X-IAM-User-Id:    user ID from JWT "sub" claim
-//   - X-IAM-User-Email: email from JWT "email" claim
+//   - X-Org-Id:       org slug from JWT "owner" claim
+//   - X-User-Id:      user ID from JWT "sub" (fallback: preferred_username, name)
+//   - X-User-Email:   email from JWT "email" claim
+//   - X-Phone-Number: phone from JWT "phone_number" or "phone" claim
 //
 // Billing:
 //   - Checks commerce service for positive balance
@@ -426,12 +431,20 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			userID = claims.Name
 		}
 		userEmail := claims.Email
+		// Phone: prefer OIDC phone_number, fall back to Casdoor's phone field
+		userPhone := claims.PhoneNumber
+		if userPhone == "" {
+			userPhone = claims.Phone
+		}
 
 		// Inject identity headers for downstream services.
 		// Standard X-User-Id / X-Org-Id — one way, no vendor prefix.
 		c.Request.Header.Set("X-Org-Id", orgID)
 		c.Request.Header.Set("X-User-Id", userID)
 		c.Request.Header.Set("X-User-Email", userEmail)
+		if userPhone != "" {
+			c.Request.Header.Set("X-Phone-Number", userPhone)
+		}
 
 		// Check billing status (fail-open)
 		// Uses userID (JWT subject) as the billing identity, which maps to
@@ -546,6 +559,7 @@ func stripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-User-Id")
 	r.Header.Del("X-Org-Id")
 	r.Header.Del("X-User-Email")
+	r.Header.Del("X-Phone-Number")
 	// Also strip legacy prefixed headers
 	for key := range r.Header {
 		upper := strings.ToUpper(key)
