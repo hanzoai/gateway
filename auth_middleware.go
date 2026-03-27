@@ -62,6 +62,8 @@ type hanzoJWTClaims struct {
 	Owner string `json:"owner"`
 	// User display name
 	Name string `json:"name"`
+	// Preferred username (Casdoor uses this when sub is empty)
+	PreferredUsername string `json:"preferred_username"`
 	// Email
 	Email string `json:"email"`
 	// User type
