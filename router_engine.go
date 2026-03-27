@@ -257,6 +257,9 @@ func hostProxyMiddleware() gin.HandlerFunc {
 
 // NewEngine creates a new gin engine with middlewares and routing.
 func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
+	// Disable lura's built-in /__health — KrakenD's healthcheck plugin handles it.
+	// Double registration panics gin's router.
+	opt.DisableHealthEndpoint = true
 	engine := luragin.NewEngine(cfg, opt)
 
 	// Load routes from config (KMS or file).
