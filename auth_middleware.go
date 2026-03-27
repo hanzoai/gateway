@@ -418,11 +418,11 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		userID := claims.Subject
 		userEmail := claims.Email
 
-		// Inject IAM identity headers for downstream services.
-		// Generic X-IAM-* prefix — not vendor-specific, works across all orgs.
-		c.Request.Header.Set("X-IAM-Org-Id", orgID)
-		c.Request.Header.Set("X-IAM-User-Id", userID)
-		c.Request.Header.Set("X-IAM-User-Email", userEmail)
+		// Inject identity headers for downstream services.
+		// Standard X-User-Id / X-Org-Id — one way, no vendor prefix.
+		c.Request.Header.Set("X-Org-Id", orgID)
+		c.Request.Header.Set("X-User-Id", userID)
+		c.Request.Header.Set("X-User-Email", userEmail)
 
 		// Check billing status (fail-open)
 		// Uses userID (JWT subject) as the billing identity, which maps to
@@ -529,18 +529,18 @@ validated:
 	return &claims, nil
 }
 
-// stripIdentityHeaders removes all client-supplied X-IAM-* identity headers.
-// The gateway is the sole authority for setting these headers after JWT validation.
-// Calling this FIRST in the middleware prevents header injection on every path:
-// public hosts, public paths, API key pass-through, no-token pass-through, and
-// disabled auth mode.
-//
-// We iterate all headers and strip any matching the X-IAM- prefix rather than
-// deleting a hardcoded list, so newly added X-IAM-* headers are automatically
-// protected against injection.
+// stripIdentityHeaders removes all client-supplied identity headers.
+// The gateway is the sole authority for setting these after JWT validation.
+// Prevents header injection on every path.
 func stripIdentityHeaders(r *http.Request) {
+	// Strip standard identity headers
+	r.Header.Del("X-User-Id")
+	r.Header.Del("X-Org-Id")
+	r.Header.Del("X-User-Email")
+	// Also strip legacy prefixed headers
 	for key := range r.Header {
-		if strings.HasPrefix(strings.ToUpper(key), "X-IAM-") {
+		upper := strings.ToUpper(key)
+		if strings.HasPrefix(upper, "X-IAM-") || strings.HasPrefix(upper, "X-HANZO-") {
 			r.Header.Del(key)
 		}
 	}
