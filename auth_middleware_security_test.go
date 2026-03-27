@@ -3,7 +3,7 @@ package gateway
 // Security regression tests for auth middleware.
 //
 // These tests exist to prevent reintroduction of auth bypass vulnerabilities.
-// They cover: X-IAM header injection, JWT issuer validation, and correct
+// They cover: X-Identity header injection, JWT issuer validation, and correct
 // identity header propagation on valid auth.
 //
 // Every test in this file must continue to pass before any merge to main.
@@ -139,17 +139,17 @@ func setupMiddlewareWithJWKS(t *testing.T, overrideCfg func(*AuthConfig)) (*gin.
 	return r, tj, jwksServer
 }
 
-// --- Test 1: X-IAM Header Injection Prevention on API Key Path ---
+// --- Test 1: X-Identity Header Injection Prevention on API Key Path ---
 
-func TestAPIKeyAuth_StripsIncomingXIAMHeaders(t *testing.T) {
+func TestAPIKeyAuth_StripsIncomingXIdentityHeaders(t *testing.T) {
 	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID, gotEmail string
 	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
-		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
-		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		gotOrgID = c.Request.Header.Get("X-Org-Id")
+		gotUserID = c.Request.Header.Get("X-User-Id")
+		gotEmail = c.Request.Header.Get("X-User-Email")
 		c.Status(http.StatusOK)
 	})
 
@@ -157,9 +157,9 @@ func TestAPIKeyAuth_StripsIncomingXIAMHeaders(t *testing.T) {
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer sk-test-key-abcdef")
 	// Attacker injects forged identity headers
-	req.Header.Set("X-IAM-User-Id", "attacker")
-	req.Header.Set("X-IAM-Org-Id", "victim-org")
-	req.Header.Set("X-IAM-User-Email", "attacker@evil.com")
+	req.Header.Set("X-User-Id", "attacker")
+	req.Header.Set("X-Org-Id", "victim-org")
+	req.Header.Set("X-User-Email", "attacker@evil.com")
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -168,13 +168,13 @@ func TestAPIKeyAuth_StripsIncomingXIAMHeaders(t *testing.T) {
 		t.Fatalf("expected 200 for API key passthrough, got %d", w.Code)
 	}
 	if gotOrgID != "" {
-		t.Errorf("SECURITY: X-IAM-Org-Id was NOT stripped on API key path, got %q", gotOrgID)
+		t.Errorf("SECURITY: X-Org-Id was NOT stripped on API key path, got %q", gotOrgID)
 	}
 	if gotUserID != "" {
-		t.Errorf("SECURITY: X-IAM-User-Id was NOT stripped on API key path, got %q", gotUserID)
+		t.Errorf("SECURITY: X-User-Id was NOT stripped on API key path, got %q", gotUserID)
 	}
 	if gotEmail != "" {
-		t.Errorf("SECURITY: X-IAM-User-Email was NOT stripped on API key path, got %q", gotEmail)
+		t.Errorf("SECURITY: X-User-Email was NOT stripped on API key path, got %q", gotEmail)
 	}
 }
 
@@ -260,9 +260,9 @@ func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
 
 	var gotOrgID, gotUserID, gotEmail string
 	r.GET("/api/test", func(c *gin.Context) {
-		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
-		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
-		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		gotOrgID = c.Request.Header.Get("X-Org-Id")
+		gotUserID = c.Request.Header.Get("X-User-Id")
+		gotEmail = c.Request.Header.Get("X-User-Email")
 		c.Status(http.StatusOK)
 	})
 
@@ -280,27 +280,27 @@ func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
 		t.Fatalf("valid JWT should get 200, got %d", w.Code)
 	}
 	if gotOrgID != "hanzo" {
-		t.Errorf("X-IAM-Org-Id = %q, want %q", gotOrgID, "hanzo")
+		t.Errorf("X-Org-Id = %q, want %q", gotOrgID, "hanzo")
 	}
 	if gotUserID != "alice" {
-		t.Errorf("X-IAM-User-Id = %q, want %q", gotUserID, "alice")
+		t.Errorf("X-User-Id = %q, want %q", gotUserID, "alice")
 	}
 	if gotEmail != "alice@hanzo.ai" {
-		t.Errorf("X-IAM-User-Email = %q, want %q", gotEmail, "alice@hanzo.ai")
+		t.Errorf("X-User-Email = %q, want %q", gotEmail, "alice@hanzo.ai")
 	}
 }
 
-// --- Test 5: X-IAM Headers Set Correctly on Valid Auth ---
+// --- Test 5: X-Identity Headers Set Correctly on Valid Auth ---
 
-func TestValidAuth_SetsCorrectXIAMHeaders(t *testing.T) {
+func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID, gotEmail string
 	r.GET("/api/test", func(c *gin.Context) {
-		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
-		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
-		gotEmail = c.Request.Header.Get("X-IAM-User-Email")
+		gotOrgID = c.Request.Header.Get("X-Org-Id")
+		gotUserID = c.Request.Header.Get("X-User-Id")
+		gotEmail = c.Request.Header.Get("X-User-Email")
 		c.Status(http.StatusOK)
 	})
 
@@ -314,9 +314,9 @@ func TestValidAuth_SetsCorrectXIAMHeaders(t *testing.T) {
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Attacker tries to override with forged headers alongside a valid JWT
-	req.Header.Set("X-IAM-Org-Id", "evil-org")
-	req.Header.Set("X-IAM-User-Id", "evil-admin")
-	req.Header.Set("X-IAM-User-Email", "admin@evil.com")
+	req.Header.Set("X-Org-Id", "evil-org")
+	req.Header.Set("X-User-Id", "evil-admin")
+	req.Header.Set("X-User-Email", "admin@evil.com")
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -326,19 +326,19 @@ func TestValidAuth_SetsCorrectXIAMHeaders(t *testing.T) {
 	}
 	// Headers MUST come from the validated JWT, NOT from the forged request headers
 	if gotOrgID != "acme-corp" {
-		t.Errorf("SECURITY: X-IAM-Org-Id = %q, want %q (from JWT owner claim)", gotOrgID, "acme-corp")
+		t.Errorf("SECURITY: X-Org-Id = %q, want %q (from JWT owner claim)", gotOrgID, "acme-corp")
 	}
 	if gotUserID != "bob" {
-		t.Errorf("SECURITY: X-IAM-User-Id = %q, want %q (from JWT sub claim)", gotUserID, "bob")
+		t.Errorf("SECURITY: X-User-Id = %q, want %q (from JWT sub claim)", gotUserID, "bob")
 	}
 	if gotEmail != "bob@acme-corp.com" {
-		t.Errorf("SECURITY: X-IAM-User-Email = %q, want %q (from JWT email claim)", gotEmail, "bob@acme-corp.com")
+		t.Errorf("SECURITY: X-User-Email = %q, want %q (from JWT email claim)", gotEmail, "bob@acme-corp.com")
 	}
 }
 
-// --- Test 6: No X-IAM Header Passthrough on Any Auth Path ---
+// --- Test 6: No X-Identity Header Passthrough on Any Auth Path ---
 
-func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
+func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
@@ -347,10 +347,10 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 	validToken := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai"))
 
 	forgedHeaders := map[string]string{
-		"X-IAM-Org-Id":     "forged-org",
-		"X-IAM-User-Id":    "forged-admin",
-		"X-IAM-User-Email": "forged@evil.com",
-		"X-Iam-Custom":     "forged-custom", // Mixed case to test case-insensitive stripping
+		"X-Org-Id":     "forged-org",
+		"X-User-Id":    "forged-admin",
+		"X-User-Email": "forged@evil.com",
+		"X-Hanzo-Custom":     "forged-custom", // Mixed case to test case-insensitive stripping
 	}
 
 	tests := []struct {
@@ -362,7 +362,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 		expectCode  int
 	}{
 		{
-			name:        "API key (sk-*) with forged X-IAM headers",
+			name:        "API key (sk-*) with forged X-Identity headers",
 			authHeader:  "Bearer sk-live-test-key-12345",
 			host:        "api.hanzo.ai",
 			path:        "/v1/chat/completions",
@@ -370,7 +370,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "API key (hk-*) with forged X-IAM headers",
+			name:        "API key (hk-*) with forged X-Identity headers",
 			authHeader:  "Bearer hk-0d2eb9cfafd049389f2904cad770a9d8",
 			host:        "api.hanzo.ai",
 			path:        "/v1/chat/completions",
@@ -378,7 +378,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "API key (fw_*) with forged X-IAM headers",
+			name:        "API key (fw_*) with forged X-Identity headers",
 			authHeader:  "Bearer fw_test_fireworks_key",
 			host:        "api.hanzo.ai",
 			path:        "/v1/chat/completions",
@@ -386,7 +386,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "Widget key (hz_*) with forged X-IAM headers",
+			name:        "Widget key (hz_*) with forged X-Identity headers",
 			authHeader:  "Bearer hz_widget_public",
 			host:        "api.hanzo.ai",
 			path:        "/v1/chat/completions",
@@ -394,7 +394,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "Valid JWT with forged X-IAM headers",
+			name:        "Valid JWT with forged X-Identity headers",
 			authHeader:  "Bearer " + validToken,
 			host:        "api.hanzo.ai",
 			path:        "/api/test",
@@ -402,7 +402,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "No auth (optional) with forged X-IAM headers",
+			name:        "No auth (optional) with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
 			path:        "/api/test",
@@ -410,7 +410,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "Public path with forged X-IAM headers",
+			name:        "Public path with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
 			path:        "/__health",
@@ -418,7 +418,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "Public host with forged X-IAM headers",
+			name:        "Public host with forged X-Identity headers",
 			authHeader:  "",
 			host:        "hanzo.id",
 			path:        "/api/test",
@@ -426,7 +426,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "Auth disabled with forged X-IAM headers",
+			name:        "Auth disabled with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
 			path:        "/api/test",
@@ -441,7 +441,7 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 
 			// Special case: "auth disabled" test
 			enabled := true
-			if tt.name == "Auth disabled with forged X-IAM headers" {
+			if tt.name == "Auth disabled with forged X-Identity headers" {
 				enabled = false
 			}
 
@@ -491,11 +491,11 @@ func TestAllAuthPaths_NoXIAMPassthrough(t *testing.T) {
 				t.Fatalf("expected status %d, got %d", tt.expectCode, w.Code)
 			}
 
-			// If the handler was reached, verify no forged X-IAM headers survived
+			// If the handler was reached, verify no forged X-Identity headers survived
 			if receivedHeaders != nil {
 				for key, forgedVal := range forgedHeaders {
 					got := receivedHeaders[key]
-					// For the valid JWT path, X-IAM headers are SET from the JWT
+					// For the valid JWT path, X-Identity headers are SET from the JWT
 					// claims. They must NOT match the forged values.
 					if got == forgedVal {
 						t.Errorf("SECURITY: forged header %s=%q was NOT stripped", key, forgedVal)
@@ -709,16 +709,16 @@ func TestJWTAuth_RejectsWrongSigningKey(t *testing.T) {
 
 func TestStripIdentityHeaders_CaseInsensitive(t *testing.T) {
 	// HTTP headers are case-insensitive per RFC 7230. An attacker might try
-	// alternate casings like "x-iam-org-id" or "X-Iam-Org-Id" to bypass
+	// alternate casings like "x-org-id" or "X-Org-Id" to bypass
 	// stripping logic.
 	casings := []string{
-		"X-IAM-Org-Id",
-		"x-iam-org-id",
-		"X-Iam-Org-Id",
-		"x-IAM-ORG-ID",
-		"X-iam-User-Id",
-		"X-IAM-USER-EMAIL",
-		"x-iam-custom-header",
+		"X-Org-Id",
+		"x-org-id",
+		"X-Org-Id",
+		"x-ORG-ID",
+		"x-user-id",
+		"X-USER-EMAIL",
+		"x-hanzo-custom-header",
 	}
 
 	for _, header := range casings {
@@ -735,7 +735,7 @@ func TestStripIdentityHeaders_CaseInsensitive(t *testing.T) {
 	}
 }
 
-// --- Test 13: Non-X-IAM headers are preserved ---
+// --- Test 13: Non-X-Identity headers are preserved ---
 
 func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -744,7 +744,7 @@ func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 	req.Header.Set("X-Request-Id", "req-123")
 	req.Header.Set("X-Forwarded-For", "1.2.3.4")
 	// This one should be stripped
-	req.Header.Set("X-IAM-Org-Id", "forged")
+	req.Header.Set("X-Org-Id", "forged")
 
 	stripIdentityHeaders(req)
 
@@ -759,25 +759,25 @@ func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 			t.Errorf("header %s was modified: got %q, want %q", k, got, want)
 		}
 	}
-	if v := req.Header.Get("X-IAM-Org-Id"); v != "" {
-		t.Errorf("X-IAM-Org-Id should have been stripped, got %q", v)
+	if v := req.Header.Get("X-Org-Id"); v != "" {
+		t.Errorf("X-Org-Id should have been stripped, got %q", v)
 	}
 }
 
 // --- Test 14: Comprehensive forged header name variants ---
 
-func TestStripIdentityHeaders_AllXIAMVariants(t *testing.T) {
-	// An attacker might try any X-IAM-* header name, including ones we
-	// haven't thought of yet. The stripping logic must catch ALL of them.
+func TestStripIdentityHeaders_AllVariants(t *testing.T) {
+	// The stripping logic removes: X-User-Id, X-Org-Id, X-User-Email,
+	// X-Phone-Number (standard), plus any X-IAM-* or X-HANZO-* legacy prefix.
 	attackerHeaders := []string{
-		"X-IAM-Org-Id",
-		"X-IAM-User-Id",
-		"X-IAM-User-Email",
-		"X-IAM-Role",
-		"X-IAM-Scope",
-		"X-IAM-Admin",
-		"X-IAM-Whatever-New-Header",
-		"X-IAM-",
+		"X-Org-Id",
+		"X-User-Id",
+		"X-User-Email",
+		"X-Phone-Number",
+		"X-Hanzo-Role",
+		"X-Hanzo-Scope",
+		"X-Hanzo-Admin",
+		"X-Hanzo-Whatever-New-Header",
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -902,37 +902,37 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 	}
 }
 
-// --- Test 17: Multiple X-IAM header values (multi-value attack) ---
+// --- Test 17: Multiple X-Identity header values (multi-value attack) ---
 
 func TestStripIdentityHeaders_MultiValueAttack(t *testing.T) {
 	// HTTP allows multiple values for the same header. An attacker might
-	// add multiple X-IAM-Org-Id values hoping one survives stripping.
+	// add multiple X-Org-Id values hoping one survives stripping.
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.Header.Add("X-IAM-Org-Id", "forged-1")
-	req.Header.Add("X-IAM-Org-Id", "forged-2")
-	req.Header.Add("X-IAM-User-Id", "admin")
-	req.Header.Add("X-IAM-User-Id", "root")
+	req.Header.Add("X-Org-Id", "forged-1")
+	req.Header.Add("X-Org-Id", "forged-2")
+	req.Header.Add("X-User-Id", "admin")
+	req.Header.Add("X-User-Id", "root")
 
 	stripIdentityHeaders(req)
 
-	if vals := req.Header.Values("X-IAM-Org-Id"); len(vals) != 0 {
-		t.Errorf("SECURITY: X-IAM-Org-Id had %d values after stripping: %v", len(vals), vals)
+	if vals := req.Header.Values("X-Org-Id"); len(vals) != 0 {
+		t.Errorf("SECURITY: X-Org-Id had %d values after stripping: %v", len(vals), vals)
 	}
-	if vals := req.Header.Values("X-IAM-User-Id"); len(vals) != 0 {
-		t.Errorf("SECURITY: X-IAM-User-Id had %d values after stripping: %v", len(vals), vals)
+	if vals := req.Header.Values("X-User-Id"); len(vals) != 0 {
+		t.Errorf("SECURITY: X-User-Id had %d values after stripping: %v", len(vals), vals)
 	}
 }
 
 // --- Test 18: Cookie-based token with forged headers ---
 
-func TestCookieAuth_StripsForgedXIAMHeaders(t *testing.T) {
+func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID string
 	r.GET("/api/test", func(c *gin.Context) {
-		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
-		gotUserID = c.Request.Header.Get("X-IAM-User-Id")
+		gotOrgID = c.Request.Header.Get("X-Org-Id")
+		gotUserID = c.Request.Header.Get("X-User-Id")
 		c.Status(http.StatusOK)
 	})
 
@@ -946,8 +946,8 @@ func TestCookieAuth_StripsForgedXIAMHeaders(t *testing.T) {
 	// Token via cookie instead of Authorization header
 	req.AddCookie(&http.Cookie{Name: "casdoor_access_token", Value: token})
 	// Attacker injects forged headers
-	req.Header.Set("X-IAM-Org-Id", "forged-org")
-	req.Header.Set("X-IAM-User-Id", "forged-user")
+	req.Header.Set("X-Org-Id", "forged-org")
+	req.Header.Set("X-User-Id", "forged-user")
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -957,29 +957,29 @@ func TestCookieAuth_StripsForgedXIAMHeaders(t *testing.T) {
 	}
 	// Must reflect JWT claims, not forged headers
 	if gotOrgID != "legit-org" {
-		t.Errorf("SECURITY: X-IAM-Org-Id = %q, want %q", gotOrgID, "legit-org")
+		t.Errorf("SECURITY: X-Org-Id = %q, want %q", gotOrgID, "legit-org")
 	}
 	if gotUserID != "legit-user" {
-		t.Errorf("SECURITY: X-IAM-User-Id = %q, want %q", gotUserID, "legit-user")
+		t.Errorf("SECURITY: X-User-Id = %q, want %q", gotUserID, "legit-user")
 	}
 }
 
 // --- Test 19: Publishable key (pk-*) with forged headers ---
 
-func TestPublishableKeyAuth_StripsForgedXIAMHeaders(t *testing.T) {
+func TestPublishableKeyAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	r, _, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
 	var gotOrgID string
 	r.GET("/api/test", func(c *gin.Context) {
-		gotOrgID = c.Request.Header.Get("X-IAM-Org-Id")
+		gotOrgID = c.Request.Header.Get("X-Org-Id")
 		c.Status(http.StatusOK)
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer pk-publishable-key-xyz")
-	req.Header.Set("X-IAM-Org-Id", "forged-org")
+	req.Header.Set("X-Org-Id", "forged-org")
 
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
@@ -988,7 +988,7 @@ func TestPublishableKeyAuth_StripsForgedXIAMHeaders(t *testing.T) {
 		t.Fatalf("pk- key should pass through, got %d", w.Code)
 	}
 	if gotOrgID != "" {
-		t.Errorf("SECURITY: X-IAM-Org-Id was NOT stripped on pk- key path, got %q", gotOrgID)
+		t.Errorf("SECURITY: X-Org-Id was NOT stripped on pk- key path, got %q", gotOrgID)
 	}
 }
 
@@ -1010,8 +1010,8 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 	r.GET("/api/test", func(c *gin.Context) {
 		// Capture what the backend sees
 		res := result{
-			orgID:  c.Request.Header.Get("X-IAM-Org-Id"),
-			userID: c.Request.Header.Get("X-IAM-User-Id"),
+			orgID:  c.Request.Header.Get("X-Org-Id"),
+			userID: c.Request.Header.Get("X-User-Id"),
 		}
 		mu.Lock()
 		results = append(results, res)
@@ -1027,8 +1027,8 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 			defer wg.Done()
 			req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 			req.Host = "api.hanzo.ai"
-			req.Header.Set("X-IAM-Org-Id", fmt.Sprintf("forged-org-%d", n))
-			req.Header.Set("X-IAM-User-Id", fmt.Sprintf("forged-user-%d", n))
+			req.Header.Set("X-Org-Id", fmt.Sprintf("forged-org-%d", n))
+			req.Header.Set("X-User-Id", fmt.Sprintf("forged-user-%d", n))
 
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
@@ -1045,10 +1045,10 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 	defer mu.Unlock()
 	for i, res := range results {
 		if res.orgID != "" {
-			t.Errorf("SECURITY: request %d: forged X-IAM-Org-Id leaked: %q", i, res.orgID)
+			t.Errorf("SECURITY: request %d: forged X-Org-Id leaked: %q", i, res.orgID)
 		}
 		if res.userID != "" {
-			t.Errorf("SECURITY: request %d: forged X-IAM-User-Id leaked: %q", i, res.userID)
+			t.Errorf("SECURITY: request %d: forged X-User-Id leaked: %q", i, res.userID)
 		}
 	}
 }
