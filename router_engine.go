@@ -275,8 +275,12 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 		opt.Logger.Warning("[SERVICE: Gateway] No host routing will be available")
 	}
 
-	// /__health is handled by KrakenD backend config (gateway.json).
-	// Do NOT register it here — duplicate route registration panics gin.
+	// Register /__health directly. Lura's built-in health is disabled
+	// (disable_health: true) to avoid duplicate-route panics, so we must
+	// provide the handler that /health (gateway.json) proxies to.
+	engine.GET("/__health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
 	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
