@@ -4,7 +4,7 @@ ARG ALPINE_VERSION=3.23
 
 # Stage 1: Build the gateway binary from source
 # Use BUILDPLATFORM so Go cross-compiles natively (no QEMU for compiler)
-FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
+FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 ARG TARGETOS TARGETARCH
 
