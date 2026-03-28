@@ -586,9 +586,12 @@ func isAPIKey(token string) bool {
 		strings.HasPrefix(token, "pk-")
 }
 
-// extractBearerToken extracts a Bearer token from the Authorization header.
+// extractBearerToken extracts a Bearer token from Authorization or X-Authorization headers.
 func extractBearerToken(r *http.Request) string {
 	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		auth = r.Header.Get("X-Authorization")
+	}
 	if auth == "" {
 		return ""
 	}
