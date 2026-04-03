@@ -72,6 +72,8 @@ type hanzoJWTClaims struct {
 	PhoneNumber string `json:"phone_number"`
 	// User type
 	Type string `json:"type"`
+	// IAM admin flag
+	IsAdmin bool `json:"isAdmin"`
 }
 
 // jwksCache caches JWKS keys with TTL-based refresh.
@@ -417,6 +419,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",
 				"message": "Invalid token",
+				"detail":  err.Error(),
 			})
 			return
 		}
@@ -444,6 +447,10 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		c.Request.Header.Set("X-User-Email", userEmail)
 		if userPhone != "" {
 			c.Request.Header.Set("X-Phone-Number", userPhone)
+		}
+		// Propagate isAdmin for downstream RBAC (broker compliance, etc.)
+		if claims.IsAdmin {
+			c.Request.Header.Set("X-User-IsAdmin", "true")
 		}
 
 		// Check billing status (fail-open)
@@ -560,6 +567,8 @@ func stripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-Org-Id")
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
+	r.Header.Del("X-User-IsAdmin")
+	r.Header.Del("X-User-Roles")
 	// Also strip legacy prefixed headers
 	for key := range r.Header {
 		upper := strings.ToUpper(key)
