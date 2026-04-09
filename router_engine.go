@@ -199,9 +199,39 @@ func hostProxyMiddleware() gin.HandlerFunc {
 	apiRewriteProxy := newRewriteProxy(cloudAPITarget, "/v1/", "/api/")
 	apiNoRewriteProxy := newRewriteProxy(cloudAPITarget, "/zap", "/api/zap")
 
+	// Allowed CORS origins for routes.yaml proxy (not KrakenD-managed).
+	corsOrigins := map[string]bool{
+		"https://exchange.dev.":  true,
+		"https://exchange.test.": true,
+		"https://exchange.":      true,
+		"https://superadmin.dev.":  true,
+		"https://superadmin.test.": true,
+		"https://superadmin.":      true,
+		"https://id.dev.":    true,
+		"https://id.test.":   true,
+		"https://id.":        true,
+		"http://localhost:3000":           true,
+		"http://localhost:3001":           true,
+		"http://localhost:3100":           true,
+	}
+
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
+
+		// CORS for routes.yaml-proxied requests.
+		origin := c.GetHeader("Origin")
+		if origin != "" && corsOrigins[origin] {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Request-ID")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Header("Access-Control-Max-Age", "86400")
+			if c.Request.Method == "OPTIONS" {
+				c.AbortWithStatus(204)
+				return
+			}
+		}
 
 		routes.mu.RLock()
 		redirects := routes.redirects
