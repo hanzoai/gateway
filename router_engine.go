@@ -151,7 +151,7 @@ func loadRoutesFromEnv() error {
 }
 
 // newProxy creates an httputil.ReverseProxy that preserves the original
-// Host header and supports WebSocket upgrade transparently.
+// Host header and strips backend CORS headers (gateway handles CORS).
 func newProxy(target *url.URL) *httputil.ReverseProxy {
 	p := httputil.NewSingleHostReverseProxy(target)
 	original := p.Director
@@ -159,7 +159,20 @@ func newProxy(target *url.URL) *httputil.ReverseProxy {
 		original(req)
 		req.Host = req.URL.Host
 	}
+	p.ModifyResponse = stripBackendCORS
 	return p
+}
+
+// stripBackendCORS removes CORS headers from backend responses.
+// The gateway middleware is the single source of CORS headers.
+func stripBackendCORS(resp *http.Response) error {
+	resp.Header.Del("Access-Control-Allow-Origin")
+	resp.Header.Del("Access-Control-Allow-Methods")
+	resp.Header.Del("Access-Control-Allow-Headers")
+	resp.Header.Del("Access-Control-Allow-Credentials")
+	resp.Header.Del("Access-Control-Max-Age")
+	resp.Header.Del("Access-Control-Expose-Headers")
+	return nil
 }
 
 // newRewriteProxy creates an httputil.ReverseProxy that rewrites path prefixes.
@@ -173,6 +186,7 @@ func newRewriteProxy(target *url.URL, oldPrefix, newPrefix string) *httputil.Rev
 		original(req)
 		req.Host = req.URL.Host
 	}
+	p.ModifyResponse = stripBackendCORS
 	return p
 }
 
