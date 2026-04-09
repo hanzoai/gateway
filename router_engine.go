@@ -213,53 +213,12 @@ func hostProxyMiddleware() gin.HandlerFunc {
 	apiRewriteProxy := newRewriteProxy(cloudAPITarget, "/v1/", "/api/")
 	apiNoRewriteProxy := newRewriteProxy(cloudAPITarget, "/zap", "/api/zap")
 
-	// Allowed CORS origins — covers all Liquidity frontends + localhost dev.
-	corsOrigins := map[string]bool{
-		// Production
-		"https://partner":          true,
-		"https://app.partner":      true,
-		"https://exchange.partner": true,
-		"https://exchange.example.internal": true,
-		"https://superadmin.example.internal": true,
-		"https://id.example.internal":         true,
-		// Testnet
-		"https://exchange.test.example.internal":  true,
-		"https://superadmin.test.example.internal": true,
-		"https://id.test.example.internal":         true,
-		// Devnet
-		"https://exchange.dev.example.internal":  true,
-		"https://superadmin.dev.example.internal": true,
-		"https://id.dev.example.internal":         true,
-		"https://swap.dev.example.internal":       true,
-		"https://api.dev.example.internal":        true,
-		// Localhost
-		"http://localhost:3000": true,
-		"http://localhost:3001": true,
-		"http://localhost:3100": true,
-		"http://localhost:5173": true,
-		"http://localhost:8080": true,
-		"http://127.0.0.1:3000": true,
-	}
-
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
 
-		// CORS for routes.yaml-proxied requests.
-		// Only set if not already handled by KrakenD CORS module (avoids duplicate headers).
-		origin := c.GetHeader("Origin")
-		if origin != "" && corsOrigins[origin] {
-			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-User-Email, X-Request-ID")
-			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-			c.Writer.Header().Set("Vary", "Origin")
-			if c.Request.Method == "OPTIONS" {
-				c.AbortWithStatus(204)
-				return
-			}
-		}
+		// CORS headers are set by corsPreflightMiddleware (runs before this).
+		// No CORS handling needed here.
 
 		routes.mu.RLock()
 		redirects := routes.redirects
@@ -340,6 +299,9 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
+	// returns 405/503 for OPTIONS on KrakenD-managed endpoints otherwise.
+	engine.Use(corsPreflightMiddleware())
 	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
 	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
 	engine.Use(hostProxyMiddleware())
@@ -406,4 +368,36 @@ type ginOptions struct {
 		Err404 interface{} `json:"404"`
 		Err405 interface{} `json:"405"`
 	} `json:"error_body"`
+}
+
+// corsPreflightMiddleware handles OPTIONS preflight requests globally.
+// Must run before any KrakenD routing to prevent 405/503 on preflight.
+func corsPreflightMiddleware() gin.HandlerFunc {
+	origins := map[string]bool{
+		"https://partner": true, "https://app.partner": true, "https://exchange.partner": true,
+		"https://exchange.example.internal": true, "https://superadmin.example.internal": true, "https://id.example.internal": true,
+		"https://exchange.test.example.internal": true, "https://superadmin.test.example.internal": true, "https://id.test.example.internal": true,
+		"https://exchange.dev.example.internal": true, "https://superadmin.dev.example.internal": true, "https://id.dev.example.internal": true,
+		"https://swap.dev.example.internal": true, "https://api.dev.example.internal": true,
+		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
+		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
+	}
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
+		if origin == "" || !origins[origin] {
+			c.Next()
+			return
+		}
+		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept")
+		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+		c.Writer.Header().Set("Vary", "Origin")
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
+			return
+		}
+		c.Next()
+	}
 }
