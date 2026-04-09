@@ -14,7 +14,7 @@ import (
 	asyncamqp "github.com/krakend/krakend-amqp/v2/async"
 	cel "github.com/krakend/krakend-cel/v2"
 	cmd "github.com/krakend/krakend-cobra/v2"
-	cors "github.com/krakend/krakend-cors/v2/gin"
+	_ "github.com/krakend/krakend-cors/v2/gin" // keep dep, CORS handled by hostProxyMiddleware
 	gelf "github.com/krakend/krakend-gelf/v2"
 	gologging "github.com/krakend/krakend-gologging/v2"
 	influxdb "github.com/krakend/krakend-influx/v2"
