@@ -199,20 +199,32 @@ func hostProxyMiddleware() gin.HandlerFunc {
 	apiRewriteProxy := newRewriteProxy(cloudAPITarget, "/v1/", "/api/")
 	apiNoRewriteProxy := newRewriteProxy(cloudAPITarget, "/zap", "/api/zap")
 
-	// Allowed CORS origins for routes.yaml proxy (not KrakenD-managed).
+	// Allowed CORS origins — covers all Liquidity frontends + localhost dev.
 	corsOrigins := map[string]bool{
-		"https://exchange.dev.":  true,
-		"https://exchange.test.": true,
-		"https://exchange.":      true,
-		"https://superadmin.dev.":  true,
+		// Production
+		"https://":          true,
+		"https://app.":      true,
+		"https://exchange.": true,
+		"https://exchange.": true,
+		"https://superadmin.": true,
+		"https://id.":         true,
+		// Testnet
+		"https://exchange.test.":  true,
 		"https://superadmin.test.": true,
-		"https://superadmin.":      true,
-		"https://id.dev.":    true,
-		"https://id.test.":   true,
-		"https://id.":        true,
-		"http://localhost:3000":           true,
-		"http://localhost:3001":           true,
-		"http://localhost:3100":           true,
+		"https://id.test.":         true,
+		// Devnet
+		"https://exchange.dev.":  true,
+		"https://superadmin.dev.": true,
+		"https://id.dev.":         true,
+		"https://swap.dev.":       true,
+		"https://api.dev.":        true,
+		// Localhost
+		"http://localhost:3000": true,
+		"http://localhost:3001": true,
+		"http://localhost:3100": true,
+		"http://localhost:5173": true,
+		"http://localhost:8080": true,
+		"http://127.0.0.1:3000": true,
 	}
 
 	return func(c *gin.Context) {
@@ -220,13 +232,15 @@ func hostProxyMiddleware() gin.HandlerFunc {
 		path := c.Request.URL.Path
 
 		// CORS for routes.yaml-proxied requests.
+		// Only set if not already handled by KrakenD CORS module (avoids duplicate headers).
 		origin := c.GetHeader("Origin")
 		if origin != "" && corsOrigins[origin] {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Credentials", "true")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Request-ID")
-			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-			c.Header("Access-Control-Max-Age", "86400")
+			c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-User-Email, X-Request-ID")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+			c.Writer.Header().Set("Access-Control-Max-Age", "86400")
+			c.Writer.Header().Set("Vary", "Origin")
 			if c.Request.Method == "OPTIONS" {
 				c.AbortWithStatus(204)
 				return
