@@ -284,6 +284,7 @@ func DefaultAuthConfig() AuthConfig {
 		// Default public paths
 		publicPaths = []string{
 			"/__health",
+			"/healthz",
 			"/__stats",
 			"/.well-known/",
 			"/favicon",
