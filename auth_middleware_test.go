@@ -71,7 +71,7 @@ func TestAuthMiddlewarePublicPaths(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     "https://hanzo.id/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
-		PublicPaths: []string{"/__health", "/.well-known/"},
+		PublicPaths: []string{"/healthz", "/.well-known/"},
 		PublicHosts: []string{"hanzo.id"},
 		RequireAuth: true, // Even with require=true, public paths should pass
 	}
@@ -84,7 +84,7 @@ func TestAuthMiddlewarePublicPaths(t *testing.T) {
 		host           string
 		expectedStatus int
 	}{
-		{"health check bypasses auth", "/__health", "api.hanzo.ai", http.StatusOK},
+		{"health check bypasses auth", "/healthz", "api.hanzo.ai", http.StatusOK},
 		{"well-known bypasses auth", "/.well-known/jwks", "api.hanzo.ai", http.StatusOK},
 		{"public host bypasses auth", "/api/anything", "hanzo.id", http.StatusOK},
 		{"non-public path requires auth", "/api/chat/completions", "api.hanzo.ai", http.StatusUnauthorized},
@@ -371,7 +371,7 @@ func TestHeaderInjectionPublicPath(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     "https://hanzo.id/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
-		PublicPaths: []string{"/__health"},
+		PublicPaths: []string{"/healthz"},
 		PublicHosts: []string{},
 		RequireAuth: false,
 	}
@@ -383,12 +383,12 @@ func TestHeaderInjectionPublicPath(t *testing.T) {
 
 	var gotOrg string
 	r.Use(middleware)
-	r.GET("/__health", func(c *gin.Context) {
+	r.GET("/healthz", func(c *gin.Context) {
 		gotOrg = c.Request.Header.Get("X-Org-Id")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/__health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("X-Org-Id", "forged-org")
 

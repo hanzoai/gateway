@@ -126,7 +126,7 @@ func setupMiddlewareWithJWKS(t *testing.T, overrideCfg func(*AuthConfig)) (*gin.
 		Issuer:         "https://hanzo.id",
 		Audience:       "https://api.hanzo.ai",
 		BillingEnabled: false, // Disable billing for security tests
-		PublicPaths:    []string{"/__health"},
+		PublicPaths:    []string{"/healthz"},
 		PublicHosts:    []string{"hanzo.id"},
 		RequireAuth:    true,
 	}
@@ -413,7 +413,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			name:        "Public path with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
-			path:        "/__health",
+			path:        "/healthz",
 			requireAuth: true,
 			expectCode:  http.StatusOK,
 		},
@@ -451,7 +451,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 				Issuer:         "https://hanzo.id",
 				Audience:       "https://api.hanzo.ai",
 				BillingEnabled: false,
-				PublicPaths:    []string{"/__health"},
+				PublicPaths:    []string{"/healthz"},
 				PublicHosts:    []string{"hanzo.id"},
 				RequireAuth:    tt.requireAuth,
 			}
