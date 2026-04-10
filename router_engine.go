@@ -298,6 +298,9 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	engine.GET("/__health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+	engine.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 
 	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
 	// returns 405/503 for OPTIONS on KrakenD-managed endpoints otherwise.
