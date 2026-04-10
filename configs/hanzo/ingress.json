@@ -1,6 +1,6 @@
 {
   "listen": ":8080",
-  "health_path": "/__health",
+  "health_path": "/healthz",
   "routes": [
     {
       "host": "ad.nexus",

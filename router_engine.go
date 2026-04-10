@@ -275,7 +275,6 @@ func hostProxyMiddleware() gin.HandlerFunc {
 // NewEngine creates a new gin engine with middlewares and routing.
 func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
 	// Inject disable_health into the service config JSON so lura's NewEngine
-	// skips its built-in /__health route (avoids duplicate registration panic).
 	// Must modify the raw JSON bytes because lura parses ExtraConfig from JSON,
 	// not from the map.
 	if cfg.ExtraConfig == nil {
@@ -292,12 +291,9 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 		opt.Logger.Warning("[SERVICE: Gateway] No host routing will be available")
 	}
 
-	// Register /__health directly. Lura's built-in health is disabled
+	// Register /healthz directly. Lura's built-in health is disabled
 	// (disable_health: true) to avoid duplicate-route panics, so we must
-	// provide the handler that /health (gateway.json) proxies to.
-	engine.GET("/__health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	// provide the platform-standard health endpoint.
 	engine.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
