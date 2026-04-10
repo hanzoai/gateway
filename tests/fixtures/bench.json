@@ -11,7 +11,7 @@
     "endpoints": [{
         "endpoint": "/test",
         "backend": [{
-            "url_pattern": "/__health"
+            "url_pattern": "/healthz"
         }]
     }]
 }
