@@ -167,7 +167,7 @@ func main() {
 		cfg.HealthPath = "/__health"
 	}
 
-	log.Printf("hanzo-ingress loading %d host routes", len(cfg.Routes))
+	log.Printf("ingress loading %d host routes", len(cfg.Routes))
 	rt := newRouter(&cfg)
 
 	mux := http.NewServeMux()
@@ -200,7 +200,7 @@ func main() {
 	}()
 
 	go func() {
-		log.Printf("hanzo-ingress listening on %s", cfg.Listen)
+		log.Printf("ingress listening on %s", cfg.Listen)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
@@ -210,5 +210,5 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer shutdownCancel()
 	srv.Shutdown(shutdownCtx)
-	log.Println("hanzo-ingress stopped")
+	log.Println("ingress stopped")
 }
