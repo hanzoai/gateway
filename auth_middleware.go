@@ -466,7 +466,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			if !hasBalance {
 				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 					"error":   "insufficient_balance",
-					"message": "Your account has insufficient balance. Please add funds at https://billing.hanzo.ai",
+					"message": "Your account has insufficient balance. Please add funds at the platform billing page",
 					"user":    billingUser,
 				})
 				return
