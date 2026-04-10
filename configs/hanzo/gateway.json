@@ -7842,7 +7842,7 @@
       "output_encoding": "json",
       "backend": [
         {
-          "url_pattern": "/__health",
+          "url_pattern": "/healthz",
           "host": [
             "http://localhost:8080"
           ],
@@ -7856,7 +7856,7 @@
       "output_encoding": "json",
       "backend": [
         {
-          "url_pattern": "/__health",
+          "url_pattern": "/healthz",
           "host": [
             "http://localhost:8080"
           ],
