@@ -1,7 +1,7 @@
 {
     "@comment": "Makes sure that the health endpoint contains three fields with the right types",
     "in": {
-        "url": "http://localhost:8080/__health"
+        "url": "http://localhost:8080/healthz"
     },
     "out": {
         "status_code": 200,
