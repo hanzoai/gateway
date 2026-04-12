@@ -9,14 +9,13 @@ High-performance API gateway for Hanzo AI services. Routes 147+ API endpoints ac
 
 ## Overview
 
-Hanzo Gateway is the unified API entry point for all Hanzo and Lux network traffic. It sits behind [Hanzo Ingress](https://github.com/hanzoai/ingress) (L7 reverse proxy) and routes requests to internal services with per-endpoint rate limiting, header forwarding, and circuit breaker protection.
-
-Two independent gateway instances serve production clusters:
+Hanzo Gateway is the unified API entry point for all Hanzo platform traffic. It sits behind [Hanzo Ingress](https://github.com/hanzoai/ingress) (L7 reverse proxy) and routes requests to internal services with per-endpoint rate limiting, header forwarding, and circuit breaker protection.
 
 | Cluster | Domain | Endpoints | Rate Limit (global) | Rate Limit (per IP) |
 |---------|--------|-----------|---------------------|---------------------|
 | **hanzo-k8s** | `api.hanzo.ai` | 133 | 5,000 req/s | 100 req/s |
-| **lux-k8s** | `api.lux.network` | 14 | 1,000 req/s | 100 req/s |
+
+The gateway can also be deployed independently by other organizations with their own configuration.
 
 For full documentation, see [docs.hanzo.ai/docs/services/gateway](https://docs.hanzo.ai/docs/services/gateway).
 
@@ -26,21 +25,21 @@ For full documentation, see [docs.hanzo.ai/docs/services/gateway](https://docs.h
                     Internet
                        |
               +--------+--------+
-              |                 |
-     Cloudflare (hanzo)   DO LB (lux)
-              |                 |
-     +--------+--------+  +----+----+
-     | Hanzo Ingress    |  | Lux LB  |
-     | (L7 TLS/routing) |  |         |
-     +--------+---------+  +----+----+
-              |                 |
-     +--------+---------+  +---+--------+
-     | Hanzo Gateway    |  | Lux Gateway |
-     | 133 endpoints    |  | 14 endpoints|
-     +---+----+----+----+  +---+---+----+
-         |    |    |            |   |
-      Cloud  IAM  Commerce   Luxd  Luxd
-      API         API       (main) (test)
+              |  Cloudflare CDN |
+              +--------+--------+
+                       |
+              +--------+---------+
+              | Hanzo Ingress    |
+              | (L7 TLS/routing) |
+              +--------+---------+
+                       |
+              +--------+---------+
+              | Hanzo Gateway    |
+              | 133 endpoints    |
+              +---+----+----+----+
+                  |    |    |
+               Cloud  IAM  Commerce
+               API         API
 ```
 
 ## API Endpoints
@@ -87,15 +86,6 @@ All platform routes are available at both `/{service}/*` and `/v1/{service}/*`.
 | `/web3/*` | web3 | Web3 and blockchain APIs |
 | `/pricing/*` | pricing | Model pricing and rate cards |
 | `/pricing/model/{name}` | pricing | Single model price lookup |
-
-### Blockchain Routes (`api.lux.network`)
-
-| Method | Path | Backend | Description |
-|--------|------|---------|-------------|
-| `POST` | `/ext/bc/C/rpc` | luxd:9630 | Mainnet EVM RPC |
-| `POST` | `/mainnet/ext/bc/C/rpc` | luxd:9630 | Mainnet EVM RPC (explicit) |
-| `POST` | `/testnet/ext/bc/C/rpc` | luxd:9640 | Testnet EVM RPC |
-| `POST` | `/devnet/ext/bc/C/rpc` | luxd:9650 | Devnet EVM RPC |
 
 ### Monitoring Endpoints
 
@@ -201,11 +191,11 @@ The gateway enforces rate limits at two levels: global (across all clients) and 
 }
 ```
 
-| Parameter | Description | Default (hanzo) | Default (lux) |
-|-----------|-------------|-----------------|----------------|
-| `max_rate` | Total requests/second across all clients | 5,000 | 1,000 |
-| `client_max_rate` | Requests/second per client IP | 100 | 100 |
-| `strategy` | Client identification method | `ip` | `ip` |
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `max_rate` | Total requests/second across all clients | 5,000 |
+| `client_max_rate` | Requests/second per client IP | 100 |
+| `strategy` | Client identification method | `ip` |
 
 ### Per-Endpoint Overrides
 
@@ -305,11 +295,8 @@ make validate
 ### Run Locally
 
 ```bash
-# Run with hanzo config
+# Run with default config
 ./gateway run -c configs/hanzo/gateway.json
-
-# Run with lux config
-./gateway run -c configs/lux/gateway.json
 ```
 
 ### Docker
@@ -320,12 +307,6 @@ docker run -p 8080:8080 ghcr.io/hanzoai/gateway:latest
 
 # Build from source
 make docker
-
-# Build with hanzo config baked in
-make docker-hanzo
-
-# Build with lux config baked in
-make docker-lux
 ```
 
 ### Docker Compose
@@ -356,7 +337,7 @@ docker compose up -d
 
 Hanzo Gateway runs on the `hanzo-k8s` DOKS cluster (`do-sfo3-hanzo-k8s`) in the `hanzo` namespace. Continuous deployment is handled by GitHub Actions -- every push to `main` builds a new image, applies the ConfigMap, and performs a rolling restart.
 
-### Deploy to Hanzo Cluster
+### Deploy
 
 ```bash
 # Apply config and restart pods
@@ -369,33 +350,17 @@ make status
 make logs-hanzo
 ```
 
-### Deploy to Lux Cluster
-
-```bash
-# Apply config and restart pods
-make deploy-lux
-
-# Tail logs
-make logs-lux
-```
-
-### Deploy to Both
-
-```bash
-make deploy
-```
-
 ### Infrastructure Details
 
-| Property | Hanzo Cluster | Lux Cluster |
-|----------|---------------|-------------|
-| **Image** | `ghcr.io/hanzoai/gateway:latest` | `ghcr.io/hanzoai/gateway:lux-latest` |
-| **Replicas** | 2 | 2 |
-| **Service type** | ClusterIP (behind Ingress) | LoadBalancer |
-| **Namespace** | `hanzo` | `lux-gateway` |
-| **K8s context** | `do-sfo3-hanzo-k8s` | `do-sfo3-lux-k8s` |
-| **Health check** | `GET /__health` :8080 | `GET /__health` :8080 |
-| **CI/CD** | GitHub Actions (deploy.yml) | GitHub Actions (deploy.yml) |
+| Property | Value |
+|----------|-------|
+| **Image** | `ghcr.io/hanzoai/gateway:latest` |
+| **Replicas** | 2 |
+| **Service type** | ClusterIP (behind Ingress) |
+| **Namespace** | `hanzo` |
+| **K8s context** | `do-sfo3-hanzo-k8s` |
+| **Health check** | `GET /__health` :8080 |
+| **CI/CD** | GitHub Actions (deploy.yml) |
 
 ### K8s Manifests
 
@@ -405,9 +370,6 @@ k8s/
     deployment.yaml     # Gateway deployment (2 replicas)
     service.yaml        # ClusterIP service
     ingress.yaml        # Ingress resource for api.hanzo.ai
-  lux/
-    deployment.yaml     # Gateway deployment (2 replicas)
-    service.yaml        # LoadBalancer service
 ```
 
 ## Configuration
@@ -416,13 +378,9 @@ All routing is defined in JSON configuration files. Each cluster has its own con
 
 ### Editing Routes
 
-1. Edit the appropriate config file:
+1. Edit the config file:
    ```bash
-   # Hanzo API routes
    $EDITOR configs/hanzo/gateway.json
-
-   # Lux blockchain routes
-   $EDITOR configs/lux/gateway.json
    ```
 
 2. Validate the config:
@@ -432,7 +390,7 @@ All routing is defined in JSON configuration files. Each cluster has its own con
 
 3. Deploy:
    ```bash
-   make deploy-hanzo   # or deploy-lux
+   make deploy-hanzo
    ```
 
 The Makefile creates a ConfigMap from the JSON file and triggers a rolling restart.
@@ -483,11 +441,8 @@ configs/
   hanzo/
     gateway.json        # Hanzo API Gateway config (133 endpoints)
     ingress.json        # Hanzo Ingress sidecar config
-  lux/
-    gateway.json        # Lux API Gateway config (14 endpoints)
 k8s/
   hanzo/                # K8s manifests for hanzo-k8s cluster
-  lux/                  # K8s manifests for lux-k8s cluster
 cmd/
   gateway/              # Gateway binary entry point
   ingress/              # Ingress sidecar binary entry point
@@ -500,8 +455,7 @@ Makefile                # Build, test, validate, deploy commands
 
 | Domain | Path | Target |
 |--------|------|--------|
-| `*.hanzo.ai` | Cloudflare | hanzo-k8s LB (`24.199.76.156`) -> Ingress -> Gateway |
-| `*.lux.network` | DO LB | lux-k8s LB (`134.199.141.71`) -> Gateway |
+| `*.hanzo.ai` | Cloudflare | hanzo-k8s LB -> Ingress -> Gateway |
 
 ## Related Projects
 
