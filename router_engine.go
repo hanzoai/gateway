@@ -285,6 +285,11 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	}
 	engine := luragin.NewEngine(cfg, opt)
 
+	// Disable gin's case-insensitive path redirect — triggers a panic in gin 1.9.1
+	// when routes have mixed static/param nodes (e.g., /v1/ats/assets/:id/quote).
+	// See: https://github.com/gin-gonic/gin/issues/3348
+	engine.RedirectFixedPath = false
+
 	// Load routes from config (KMS or file).
 	if err := loadRoutesFromEnv(); err != nil {
 		opt.Logger.Warning("[SERVICE: Gateway] Failed to load routes:", err)
@@ -297,6 +302,19 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	engine.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
+
+	// Panic recovery — must run FIRST so any downstream panic returns 500
+	// with CORS headers instead of crashing the connection (502 at ingress).
+	engine.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
+		// Ensure CORS headers so browser sees the error (not a CORS failure)
+		if origin := c.GetHeader("Origin"); origin != "" {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": "internal server error",
+		})
+	}))
 
 	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
 	// returns 405/503 for OPTIONS on KrakenD-managed endpoints otherwise.
