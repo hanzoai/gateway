@@ -393,8 +393,17 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 	origins := map[string]bool{
 		"https://liquidity.io": true, "https://app.liquidity.io": true, "https://exchange.liquidity.io": true,
 		"https://exchange.satschel.com": true, "https://superadmin.satschel.com": true, "https://id.satschel.com": true,
+		"https://bd.satschel.com": true, "https://ats.satschel.com": true, "https://ta.satschel.com": true,
 		"https://exchange.test.satschel.com": true, "https://superadmin.test.satschel.com": true, "https://id.test.satschel.com": true,
+		"https://bd.test.satschel.com": true, "https://ats.test.satschel.com": true, "https://ta.test.satschel.com": true,
 		"https://exchange.dev.satschel.com": true, "https://superadmin.dev.satschel.com": true, "https://id.dev.satschel.com": true,
+		// BD, ATS, and TA admin UIs are declared in KrakenD's security/cors
+		// config block but were missing from this Gin-level preflight map.
+		// Without them here, the middleware takes the c.Next() fallthrough
+		// path on OPTIONS requests, Gin sees no OPTIONS handler registered,
+		// and returns 405 with no CORS headers — which the browser surfaces
+		// as "preflight doesn't pass access control check".
+		"https://bd.dev.satschel.com": true, "https://ats.dev.satschel.com": true, "https://ta.dev.satschel.com": true,
 		"https://swap.dev.satschel.com": true, "https://api.dev.satschel.com": true,
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
