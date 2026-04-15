@@ -393,8 +393,17 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 	origins := map[string]bool{
 		"https://": true, "https://app.": true, "https://exchange.": true,
 		"https://exchange.": true, "https://superadmin.": true, "https://id.": true,
+		"https://bd.": true, "https://ats.": true, "https://ta.": true,
 		"https://exchange.test.": true, "https://superadmin.test.": true, "https://id.test.": true,
+		"https://bd.test.": true, "https://ats.test.": true, "https://ta.test.": true,
 		"https://exchange.dev.": true, "https://superadmin.dev.": true, "https://id.dev.": true,
+		// BD, ATS, and TA admin UIs are declared in KrakenD's security/cors
+		// config block but were missing from this Gin-level preflight map.
+		// Without them here, the middleware takes the c.Next() fallthrough
+		// path on OPTIONS requests, Gin sees no OPTIONS handler registered,
+		// and returns 405 with no CORS headers — which the browser surfaces
+		// as "preflight doesn't pass access control check".
+		"https://bd.dev.": true, "https://ats.dev.": true, "https://ta.dev.": true,
 		"https://swap.dev.": true, "https://api.dev.": true,
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
