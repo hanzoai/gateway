@@ -1,0 +1,10 @@
+.git
+*.md
+LICENSE
+.vscode/
+.idea/
+.env*
+testdata/
+*_test.go
+coverage/
+docs/
