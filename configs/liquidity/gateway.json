@@ -31,9 +31,30 @@
         "https://api.alpha.",
         "https://*."
       ],
-      "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      "allow_headers": ["Origin", "Authorization", "Content-Type", "Accept", "X-Requested-With", "X-Org-Id", "X-Project-Id", "X-Request-ID"],
-      "expose_headers": ["Content-Length", "X-Request-ID"],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "allow_headers": [
+        "Origin",
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Requested-With",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-Request-ID",
+        "X-User-Id",
+        "X-Roles"
+      ],
+      "expose_headers": [
+        "Content-Length",
+        "X-Request-ID"
+      ],
       "max_age": "12h"
     }
   },
