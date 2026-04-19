@@ -74,6 +74,35 @@ type hanzoJWTClaims struct {
 	Type string `json:"type"`
 	// IAM admin flag
 	IsAdmin bool `json:"isAdmin"`
+	// Roles array (Casdoor emits []*Role objects with name/displayName,
+	// or a plain []string — tolerate both and join names with commas).
+	Roles json.RawMessage `json:"roles"`
+}
+
+// extractRoleNames converts the raw "roles" claim (either []string or
+// []{"name":"..."}) into a comma-joined list of role names.
+// Returns "" if the claim is empty/absent or unparseable.
+func extractRoleNames(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	// Try []string first
+	var asStrings []string
+	if err := json.Unmarshal(raw, &asStrings); err == nil {
+		return strings.Join(asStrings, ",")
+	}
+	// Then []map[string]any (Casdoor Role objects)
+	var asObjects []map[string]any
+	if err := json.Unmarshal(raw, &asObjects); err == nil {
+		names := make([]string, 0, len(asObjects))
+		for _, o := range asObjects {
+			if n, ok := o["name"].(string); ok && n != "" {
+				names = append(names, n)
+			}
+		}
+		return strings.Join(names, ",")
+	}
+	return ""
 }
 
 // jwksCache caches JWKS keys with TTL-based refresh.
@@ -328,11 +357,15 @@ func DefaultAuthConfig() AuthConfig {
 // NewAuthMiddleware creates a gin middleware that validates IAM JWT tokens,
 // checks billing status, and injects identity headers for downstream services.
 //
-// Header injection:
-//   - X-Org-Id:       org slug from JWT "owner" claim
+// Canonical identity headers (the only 3 downstream services should rely on):
 //   - X-User-Id:      user ID from JWT "sub" (fallback: preferred_username, name)
+//   - X-Org-Id:       org slug from JWT "owner" claim
+//   - X-Roles:        comma-joined role names from JWT "roles" claim
+//
+// Auxiliary headers (derivatives of the JWT for convenience):
 //   - X-User-Email:   email from JWT "email" claim
 //   - X-Phone-Number: phone from JWT "phone_number" or "phone" claim
+//   - X-User-IsAdmin: "true" if the JWT asserts isAdmin
 //
 // Billing:
 //   - Checks commerce service for positive balance
@@ -439,10 +472,15 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			userPhone = claims.Phone
 		}
 
-		// Inject identity headers for downstream services.
-		// Standard X-User-Id / X-Org-Id — one way, no vendor prefix.
-		c.Request.Header.Set("X-Org-Id", orgID)
+		// Inject the canonical 3 identity headers for downstream services.
+		// X-User-Id <- sub, X-Org-Id <- owner, X-Roles <- roles (comma-joined).
+		// Auxiliary headers (email, phone, isAdmin) are strictly derivative
+		// of the JWT and may be consumed by services that need them.
 		c.Request.Header.Set("X-User-Id", userID)
+		c.Request.Header.Set("X-Org-Id", orgID)
+		if roles := extractRoleNames(claims.Roles); roles != "" {
+			c.Request.Header.Set("X-Roles", roles)
+		}
 		c.Request.Header.Set("X-User-Email", userEmail)
 		if userPhone != "" {
 			c.Request.Header.Set("X-Phone-Number", userPhone)
@@ -560,15 +598,28 @@ validated:
 // stripIdentityHeaders removes all client-supplied identity headers.
 // The gateway is the sole authority for setting these after JWT validation.
 // Prevents header injection on every path.
+//
+// Canonical identity headers (emitted post-JWT): X-User-Id, X-Org-Id, X-Roles.
+// Auxiliary headers emitted by the gateway: X-User-Email, X-Phone-Number,
+// X-User-IsAdmin. Everything else is legacy and MUST be stripped unconditionally.
 func stripIdentityHeaders(r *http.Request) {
-	// Strip standard identity headers
+	// Canonical identity headers — stripped before re-injection so a
+	// client-supplied value can never survive the middleware.
 	r.Header.Del("X-User-Id")
 	r.Header.Del("X-Org-Id")
+	r.Header.Del("X-Roles")
+	// Gateway-emitted auxiliaries.
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
 	r.Header.Del("X-User-IsAdmin")
-	r.Header.Del("X-User-Roles")
-	// Also strip legacy prefixed headers
+	// Non-canonical legacy identity headers — clients may not use these.
+	r.Header.Del("X-User-Role")  // singular legacy
+	r.Header.Del("X-User-Roles") // plural legacy (renamed to X-Roles)
+	r.Header.Del("X-User-Name")
+	r.Header.Del("X-Tenant-Id")
+	r.Header.Del("X-Tenant-ID")
+	r.Header.Del("X-Org") // bare legacy
+	// Strip every legacy vendor-prefixed header (X-IAM-*, X-HANZO-*).
 	for key := range r.Header {
 		upper := strings.ToUpper(key)
 		if strings.HasPrefix(upper, "X-IAM-") || strings.HasPrefix(upper, "X-HANZO-") {
