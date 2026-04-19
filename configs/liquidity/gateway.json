@@ -37,5 +37,118 @@
       "max_age": "12h"
     }
   },
-  "endpoints": []
+  "endpoints": [
+    {
+      "endpoint": "/v1/bd/onboarding/sessions",
+      "method": "POST",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/onboarding",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/onboarding/sessions/{id}",
+      "method": "GET",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/onboarding/{id}",
+          "method": "GET",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/onboarding/sessions/{id}/steps/identity",
+      "method": "PUT",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/onboarding/{id}/identity",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/onboarding/sessions/{id}/steps/screening",
+      "method": "PUT",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/onboarding/{id}/screen",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/onboarding/sessions/{id}/steps/submission",
+      "method": "PUT",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/onboarding/{id}/submit",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/compliance/applications",
+      "method": "POST",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/compliance/applications",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/compliance/applications/{id}",
+      "method": "GET",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/compliance/applications/{id}",
+          "method": "GET",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bd/compliance/applications/{id}/submit",
+      "method": "POST",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-User-Id", "X-User-Email", "X-Role", "X-Is-Admin", "X-Phone-Number", "X-User-IsAdmin"],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/bd/compliance/applications/{id}/submit",
+          "method": "POST",
+          "host": ["http://bd.liquidity.svc.cluster.local:8080"],
+          "encoding": "no-op"
+        }
+      ]
+    }
+  ]
 }
