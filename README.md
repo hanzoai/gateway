@@ -160,18 +160,30 @@ Client --> Gateway --> Cloud API --> IAM (hanzo.id)
                                     Return user context
 ```
 
-The gateway forwards all authentication headers (`Authorization`, `X-IAM-Key`, `X-IAM-Org`) to the Cloud API, which validates them against the IAM service at `hanzo.id`. The gateway itself does not perform token validation -- this is handled by the backend services.
+The gateway validates bearer JWTs against IAM (`hanzo.id`) using JWKS and re-emits the canonical 3 identity headers. Opaque API keys (`hk-`, `sk-`, `fw_`, `hz_`, `pk-`) pass through to the backend services for validation.
 
 ### Header Forwarding
 
-The gateway passes through all input headers by default (`"input_headers": ["*"]`), including:
+After JWT validation, the gateway emits exactly three canonical identity headers to downstream services and strips every other vendor/legacy variant on ingress:
+
+- `X-User-Id` -- user ID from JWT `sub` claim
+- `X-Org-Id` -- org slug from JWT `owner` claim
+- `X-Roles`  -- comma-joined role names from JWT `roles` claim
+
+Auxiliary headers emitted by the gateway (derivatives of the JWT):
+
+- `X-User-Email` -- email from JWT `email` claim
+- `X-Phone-Number` -- phone from JWT `phone_number`/`phone` claim
+- `X-User-IsAdmin` -- `"true"` when the JWT asserts `isAdmin`
+
+Standard passthrough headers:
 
 - `Authorization` -- Bearer token or API key
 - `Content-Type` -- Request body encoding
 - `Accept` -- Response format preference
-- `X-IAM-Key` -- Alternative API key header
-- `X-IAM-Org` -- Organization scope
 - `X-Request-ID` -- Client-provided request tracing ID
+
+Headers stripped unconditionally on ingress (never trusted from clients): `X-User-Id`, `X-Org-Id`, `X-Roles`, `X-User-Email`, `X-Phone-Number`, `X-User-IsAdmin`, `X-User-Role`, `X-User-Roles`, `X-User-Name`, `X-Tenant-Id`, `X-Org`, and every `X-IAM-*` / `X-HANZO-*` variant.
 
 ## Rate Limiting
 
