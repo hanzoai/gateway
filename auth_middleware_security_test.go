@@ -767,17 +767,34 @@ func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 // --- Test 14: Comprehensive forged header name variants ---
 
 func TestStripIdentityHeaders_AllVariants(t *testing.T) {
-	// The stripping logic removes: X-User-Id, X-Org-Id, X-User-Email,
-	// X-Phone-Number (standard), plus any X-IAM-* or X-HANZO-* legacy prefix.
+	// The canonical 3 identity headers are X-User-Id, X-Org-Id, X-Roles.
+	// Gateway-emitted auxiliaries: X-User-Email, X-Phone-Number, X-User-IsAdmin.
+	// Every other identity-like header (legacy + vendor-prefixed) MUST be stripped.
 	attackerHeaders := []string{
-		"X-Org-Id",
+		// Canonical 3 — attacker may not forge these
 		"X-User-Id",
+		"X-Org-Id",
+		"X-Roles",
+		// Gateway-emitted auxiliaries
 		"X-User-Email",
 		"X-Phone-Number",
+		"X-User-IsAdmin",
+		// Legacy non-canonical identity headers
+		"X-User-Role",  // singular
+		"X-User-Roles", // plural (renamed to X-Roles)
+		"X-User-Name",
+		"X-Tenant-Id",
+		"X-Tenant-ID",
+		"X-Org",
+		// Vendor-prefixed legacy headers
 		"X-Hanzo-Role",
 		"X-Hanzo-Scope",
 		"X-Hanzo-Admin",
 		"X-Hanzo-Whatever-New-Header",
+		"X-IAM-User-Id",
+		"X-IAM-Org-Id",
+		"X-IAM-Roles",
+		"X-IAM-User-Email",
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -791,6 +808,138 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		if v := req.Header.Get(h); v != "" {
 			t.Errorf("SECURITY: header %q was NOT stripped", h)
 		}
+	}
+}
+
+// --- Test 14b: Canonical 3 header emission from valid JWT ---
+
+func TestCanonicalHeaders_EmittedFromJWT(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	// Casdoor shape: roles as []{"name": "..."}
+	claims := map[string]interface{}{
+		"iss":     "https://hanzo.id",
+		"sub":     "alice",
+		"aud":     []string{"https://api.hanzo.ai"},
+		"iat":     now.Add(-1 * time.Minute).Unix(),
+		"exp":     now.Add(10 * time.Minute).Unix(),
+		"owner":   "hanzo",
+		"email":   "alice@hanzo.ai",
+		"isAdmin": true,
+		"roles": []map[string]string{
+			{"name": "admin"},
+			{"name": "operator"},
+		},
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var got struct {
+		userID   string
+		orgID    string
+		roles    string
+		email    string
+		isAdmin  string
+	}
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		got.userID = c.Request.Header.Get("X-User-Id")
+		got.orgID = c.Request.Header.Get("X-Org-Id")
+		got.roles = c.Request.Header.Get("X-Roles")
+		got.email = c.Request.Header.Get("X-User-Email")
+		got.isAdmin = c.Request.Header.Get("X-User-IsAdmin")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	if got.userID != "alice" {
+		t.Errorf("X-User-Id = %q, want %q", got.userID, "alice")
+	}
+	if got.orgID != "hanzo" {
+		t.Errorf("X-Org-Id = %q, want %q", got.orgID, "hanzo")
+	}
+	if got.roles != "admin,operator" {
+		t.Errorf("X-Roles = %q, want %q", got.roles, "admin,operator")
+	}
+	if got.email != "alice@hanzo.ai" {
+		t.Errorf("X-User-Email = %q, want %q", got.email, "alice@hanzo.ai")
+	}
+	if got.isAdmin != "true" {
+		t.Errorf("X-User-IsAdmin = %q, want %q", got.isAdmin, "true")
+	}
+}
+
+// --- Test 14c: Roles claim as plain []string also parses ---
+
+func TestCanonicalHeaders_RolesAsStringArray(t *testing.T) {
+	raw := []byte(`["admin","viewer"]`)
+	got := extractRoleNames(raw)
+	if got != "admin,viewer" {
+		t.Errorf("extractRoleNames = %q, want %q", got, "admin,viewer")
+	}
+}
+
+// --- Test 14d: Empty/absent roles -> no X-Roles header ---
+
+func TestCanonicalHeaders_NoRolesNoHeader(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":   "https://hanzo.id",
+		"sub":   "bob",
+		"aud":   []string{"https://api.hanzo.ai"},
+		"iat":   now.Add(-1 * time.Minute).Unix(),
+		"exp":   now.Add(10 * time.Minute).Unix(),
+		"owner": "acme",
+		// no roles claim
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotRoles string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		gotRoles = c.Request.Header.Get("X-Roles")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if gotRoles != "" {
+		t.Errorf("X-Roles = %q, want empty (no roles in JWT)", gotRoles)
 	}
 }
 
