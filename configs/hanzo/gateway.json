@@ -48,7 +48,9 @@
         "X-Requested-With",
         "X-Org-Id",
         "X-Project-Id",
-        "X-Request-ID"
+        "X-Request-ID",
+        "X-User-Id",
+        "X-Roles"
       ],
       "expose_headers": [
         "Content-Length",
@@ -237,7 +239,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -264,19 +268,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -291,7 +291,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -318,19 +320,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -345,7 +343,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -372,19 +372,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -399,7 +395,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -426,19 +424,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -453,7 +447,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -480,19 +476,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -507,7 +499,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -528,19 +522,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -555,7 +545,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -576,19 +568,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -907,7 +895,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -928,19 +918,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -955,7 +941,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -976,19 +964,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1003,7 +987,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1024,19 +1010,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1051,7 +1033,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1072,19 +1056,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1099,7 +1079,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1120,19 +1102,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1147,7 +1125,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1168,19 +1148,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1195,7 +1171,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1216,19 +1194,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1243,7 +1217,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1264,19 +1240,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1291,7 +1263,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -1309,19 +1283,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1345,7 +1315,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1366,19 +1338,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1393,7 +1361,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -1411,19 +1381,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1447,7 +1413,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -1465,19 +1433,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1501,7 +1465,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -1519,19 +1485,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1555,7 +1517,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "extra_config": {
@@ -1573,19 +1537,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1609,7 +1569,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1630,19 +1592,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1657,7 +1615,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1678,19 +1638,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1705,7 +1661,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1726,19 +1684,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1753,7 +1707,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1774,19 +1730,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1801,7 +1753,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1822,19 +1776,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1849,7 +1799,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1876,19 +1828,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1903,7 +1851,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1930,19 +1880,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -1957,7 +1903,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -1984,19 +1932,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2011,7 +1955,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2038,19 +1984,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2065,7 +2007,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2092,19 +2036,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2119,7 +2059,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2146,19 +2088,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2173,7 +2111,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2200,19 +2140,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2227,7 +2163,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2254,19 +2192,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2281,7 +2215,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2302,19 +2238,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2329,7 +2261,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2350,19 +2284,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2377,7 +2307,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2398,19 +2330,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2425,7 +2353,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2446,19 +2376,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2473,7 +2399,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2494,19 +2422,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2521,7 +2445,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2542,19 +2468,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2569,7 +2491,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2590,19 +2514,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2617,7 +2537,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2638,19 +2560,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2665,7 +2583,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2686,19 +2606,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2713,7 +2629,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2734,19 +2652,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2761,7 +2675,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2782,19 +2698,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2809,7 +2721,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2830,19 +2744,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2857,7 +2767,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2878,19 +2790,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2905,7 +2813,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2926,19 +2836,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -2953,7 +2859,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -2974,19 +2882,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3001,7 +2905,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3022,19 +2928,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3049,7 +2951,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3070,19 +2974,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3097,7 +2997,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3118,19 +3020,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3145,7 +3043,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3166,19 +3066,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3193,7 +3089,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3214,19 +3112,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3241,7 +3135,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3262,19 +3158,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3289,7 +3181,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3310,19 +3204,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3337,7 +3227,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3358,19 +3250,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3385,7 +3273,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3406,19 +3296,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3433,7 +3319,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3454,19 +3342,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3481,7 +3365,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3502,19 +3388,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3529,7 +3411,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3550,19 +3434,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3577,7 +3457,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3598,19 +3480,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3625,7 +3503,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3646,19 +3526,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3673,7 +3549,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3694,19 +3572,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3721,7 +3595,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3742,19 +3618,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3769,7 +3641,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3790,19 +3664,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3817,7 +3687,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3844,19 +3716,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3871,7 +3739,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3898,19 +3768,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3925,7 +3791,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -3952,19 +3820,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -3979,7 +3843,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4006,19 +3872,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4033,7 +3895,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4054,19 +3918,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4081,7 +3941,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4102,19 +3964,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4129,7 +3987,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4150,19 +4010,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4177,7 +4033,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4198,19 +4056,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4225,7 +4079,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4252,19 +4108,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4279,7 +4131,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4306,19 +4160,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4333,7 +4183,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4360,19 +4212,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4387,7 +4235,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4414,19 +4264,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4441,7 +4287,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4462,19 +4310,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4489,7 +4333,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4510,19 +4356,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4537,7 +4379,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4558,19 +4402,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4585,7 +4425,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4606,19 +4448,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4663,7 +4501,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4690,19 +4530,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4717,7 +4553,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4744,19 +4582,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4771,7 +4605,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4798,19 +4634,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4855,7 +4687,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4882,19 +4716,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4909,7 +4739,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4936,19 +4768,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -4963,7 +4791,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -4990,19 +4820,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5017,7 +4843,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5038,19 +4866,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5065,7 +4889,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5086,19 +4912,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5113,7 +4935,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5134,19 +4958,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5161,7 +4981,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5182,19 +5004,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5209,7 +5027,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5230,19 +5050,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5257,7 +5073,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5278,19 +5096,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5305,7 +5119,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5326,19 +5142,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5353,7 +5165,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5374,19 +5188,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5401,7 +5211,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5422,19 +5234,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5449,7 +5257,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5470,19 +5280,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5497,7 +5303,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5518,19 +5326,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5545,7 +5349,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5566,19 +5372,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5593,7 +5395,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5614,19 +5418,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5641,7 +5441,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5662,19 +5464,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5689,7 +5487,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5710,19 +5510,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5737,7 +5533,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5758,19 +5556,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5785,7 +5579,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5806,19 +5602,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5833,7 +5625,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5854,19 +5648,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5881,7 +5671,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5902,19 +5694,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5929,7 +5717,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5950,19 +5740,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -5977,7 +5763,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -5998,19 +5786,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6025,7 +5809,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6046,19 +5832,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6073,7 +5855,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6094,19 +5878,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6121,7 +5901,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6142,19 +5924,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6169,7 +5947,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6190,19 +5970,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6217,7 +5993,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6238,19 +6016,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6265,7 +6039,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6286,19 +6062,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6313,7 +6085,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6334,19 +6108,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6361,7 +6131,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6382,19 +6154,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6409,7 +6177,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6430,19 +6200,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6457,7 +6223,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6478,19 +6246,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6505,7 +6269,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6526,19 +6292,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6553,7 +6315,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6574,19 +6338,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6601,7 +6361,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6622,19 +6384,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6649,7 +6407,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6670,19 +6430,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6697,7 +6453,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6718,19 +6476,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6745,7 +6499,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6766,19 +6522,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6793,7 +6545,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6814,19 +6568,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6841,7 +6591,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6862,19 +6614,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6889,7 +6637,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6910,19 +6660,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6937,7 +6683,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -6958,19 +6706,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -6985,7 +6729,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7006,19 +6752,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7033,7 +6775,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7054,19 +6798,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7081,7 +6821,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7102,19 +6844,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7129,7 +6867,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7150,19 +6890,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7177,7 +6913,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7198,19 +6936,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7225,7 +6959,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7246,19 +6982,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7273,7 +7005,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7294,19 +7028,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7321,7 +7051,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7342,19 +7074,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7369,7 +7097,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7390,19 +7120,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7417,7 +7143,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7438,19 +7166,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7465,7 +7189,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7486,19 +7212,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7513,7 +7235,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7534,19 +7258,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7561,7 +7281,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7582,19 +7304,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7609,7 +7327,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7630,19 +7350,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7657,7 +7373,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7678,19 +7396,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7705,7 +7419,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7726,19 +7442,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7753,7 +7465,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7774,19 +7488,15 @@
           "propagate_claims": [
             [
               "sub",
-              "X-IAM-User-Id"
-            ],
-            [
-              "email",
-              "X-IAM-User-Email"
+              "X-User-Id"
             ],
             [
               "owner",
-              "X-IAM-Org-Id"
+              "X-Org-Id"
             ],
             [
               "roles",
-              "X-IAM-Roles"
+              "X-Roles"
             ]
           ]
         }
@@ -7873,7 +7583,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7892,10 +7604,18 @@
           "issuer": "https://hanzo.id",
           "disable_jwk_security": false,
           "propagate_claims": [
-            ["sub", "X-IAM-User-Id"],
-            ["email", "X-IAM-User-Email"],
-            ["owner", "X-IAM-Org-Id"],
-            ["roles", "X-IAM-Roles"]
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
           ]
         }
       }
@@ -7909,7 +7629,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7928,10 +7650,18 @@
           "issuer": "https://hanzo.id",
           "disable_jwk_security": false,
           "propagate_claims": [
-            ["sub", "X-IAM-User-Id"],
-            ["email", "X-IAM-User-Email"],
-            ["owner", "X-IAM-Org-Id"],
-            ["roles", "X-IAM-Roles"]
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
           ]
         }
       }
@@ -7945,7 +7675,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -7964,10 +7696,18 @@
           "issuer": "https://hanzo.id",
           "disable_jwk_security": false,
           "propagate_claims": [
-            ["sub", "X-IAM-User-Id"],
-            ["email", "X-IAM-User-Email"],
-            ["owner", "X-IAM-Org-Id"],
-            ["roles", "X-IAM-Roles"]
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
           ]
         }
       }
@@ -7981,7 +7721,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -8000,10 +7742,18 @@
           "issuer": "https://hanzo.id",
           "disable_jwk_security": false,
           "propagate_claims": [
-            ["sub", "X-IAM-User-Id"],
-            ["email", "X-IAM-User-Email"],
-            ["owner", "X-IAM-Org-Id"],
-            ["roles", "X-IAM-Roles"]
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
           ]
         }
       }
@@ -8017,7 +7767,9 @@
         "Accept",
         "X-Request-ID",
         "X-Org-Id",
-        "X-Project-Id"
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
       ],
       "output_encoding": "no-op",
       "backend": [
@@ -8036,10 +7788,18 @@
           "issuer": "https://hanzo.id",
           "disable_jwk_security": false,
           "propagate_claims": [
-            ["sub", "X-IAM-User-Id"],
-            ["email", "X-IAM-User-Email"],
-            ["owner", "X-IAM-Org-Id"],
-            ["roles", "X-IAM-Roles"]
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
           ]
         }
       }
