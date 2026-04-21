@@ -11,7 +11,7 @@
 		"body": "",
 		"header": {
 			"content-type": [""],
-			"X-Krakend-Completed": [""]
+			"X-Gateway-Completed": [""]
 		}
 	}
 }

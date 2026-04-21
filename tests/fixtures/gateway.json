@@ -1,6 +1,6 @@
 {
     "version": 3,
-    "$schema": "https://krakend.io/schema/krakend.json",
+    "$schema": "https://gateway.hanzo.ai/schema/v3.json",
     "name": "My lovely gateway",
     "port": 8080,
     "cache_ttl": "3600s",
@@ -238,7 +238,7 @@
                     "alg": "HS256",
                     "audience": ["http://api.example.com"],
                     "roles_key": "roles",
-                    "issuer": "https://krakend.io",
+                    "issuer": "https://gateway.hanzo.ai",
                     "roles": ["role_a", "role_b", "role_y"],
                     "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
                     "disable_jwk_security": true
@@ -557,7 +557,7 @@
                     "alg": "HS256",
                     "audience": ["http://api.example.com"],
                     "roles_key": "roles",
-                    "issuer": "https://krakend.io",
+                    "issuer": "https://gateway.hanzo.ai",
                     "roles": ["role_a", "role_c"],
                     "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
                     "disable_jwk_security": true
@@ -589,7 +589,7 @@
                     "alg": "HS256",
                     "audience": ["http://api.example.com"],
                     "roles_key": "roles",
-                    "issuer": "https://krakend.io",
+                    "issuer": "https://gateway.hanzo.ai",
                     "roles": ["role_a", "role_c"],
                     "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
                     "disable_jwk_security": true
@@ -612,7 +612,7 @@
                         "data": {
                             "access_token": {
                                 "aud": "http://api.example.com",
-                                "iss": "https://krakend.io",
+                                "iss": "https://gateway.hanzo.ai",
                                 "sub": "1234567890qwertyuio",
                                 "jti": "mnb23vcsrt756yuiomnbvcx98ertyuiop",
                                 "roles": ["role_y"],
