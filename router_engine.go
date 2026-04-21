@@ -191,7 +191,7 @@ func newRewriteProxy(target *url.URL, oldPrefix, newPrefix string) *httputil.Rev
 }
 
 // apiHanzoAIEndpoints lists the /v1/* path prefixes that route directly
-// to cloud-api, bypassing KrakenD JWT middleware.
+// to cloud-api, bypassing the gateway JWT middleware.
 var apiHanzoAIEndpoints = []string{
 	"/v1/chat",
 	"/v1/completions",
@@ -316,8 +316,14 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 		})
 	}))
 
+	// Branding: wrap the response writer so any residual upstream-SDK-emitted
+	// "X-KRAKEND*" headers are rewritten to our Hanzo-branded equivalents
+	// before the response reaches the client. Must run right after recovery
+	// so the wrapped writer is in place for every downstream handler.
+	engine.Use(BrandingMiddleware())
+
 	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
-	// returns 405/503 for OPTIONS on KrakenD-managed endpoints otherwise.
+	// returns 405/503 for OPTIONS on gateway-managed endpoints otherwise.
 	engine.Use(corsPreflightMiddleware())
 	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
 	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
@@ -363,7 +369,9 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 }
 
 func defaultHandler(c *gin.Context) {
-	c.Header(core.KrakendHeaderName, core.KrakendHeaderValue)
+	// BrandingMiddleware rewrites any X-KRAKEND* headers emitted upstream.
+	// We set the canonical Hanzo headers directly so there is no leak.
+	c.Header(PoweredByHeader, fmt.Sprintf("%s Version %s", BrandName, core.KrakendVersion))
 	c.Header(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
 }
 
@@ -388,7 +396,7 @@ type ginOptions struct {
 }
 
 // corsPreflightMiddleware handles OPTIONS preflight requests globally.
-// Must run before any KrakenD routing to prevent 405/503 on preflight.
+// Must run before any gateway routing to prevent 405/503 on preflight.
 func corsPreflightMiddleware() gin.HandlerFunc {
 	origins := map[string]bool{
 		"https://liquidity.io": true, "https://app.liquidity.io": true, "https://exchange.liquidity.io": true,
@@ -397,7 +405,7 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 		"https://exchange.test.satschel.com": true, "https://superadmin.test.satschel.com": true, "https://id.test.satschel.com": true,
 		"https://bd.test.satschel.com": true, "https://ats.test.satschel.com": true, "https://ta.test.satschel.com": true,
 		"https://exchange.dev.satschel.com": true, "https://superadmin.dev.satschel.com": true, "https://id.dev.satschel.com": true,
-		// BD, ATS, and TA admin UIs are declared in KrakenD's security/cors
+		// BD, ATS, and TA admin UIs are declared in the gateway security/cors
 		// config block but were missing from this Gin-level preflight map.
 		// Without them here, the middleware takes the c.Next() fallthrough
 		// path on OPTIONS requests, Gin sees no OPTIONS handler registered,
