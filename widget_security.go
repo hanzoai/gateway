@@ -3,6 +3,7 @@ package gateway
 import (
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -36,23 +37,58 @@ type WidgetSecurityConfig struct {
 }
 
 // DefaultWidgetSecurityConfig returns safe defaults.
+//
+// AllowedOrigins can be overridden via WIDGET_ALLOWED_ORIGINS env var
+// (comma-separated list of bare hostnames, no scheme/port). Subdomain
+// matches are automatic: "hanzo.ai" also allows "*.hanzo.ai".
 func DefaultWidgetSecurityConfig() WidgetSecurityConfig {
+	origins := defaultAllowedOrigins()
+	if env := os.Getenv("WIDGET_ALLOWED_ORIGINS"); env != "" {
+		origins = nil
+		for _, o := range strings.Split(env, ",") {
+			if o = strings.TrimSpace(o); o != "" {
+				origins = append(origins, o)
+			}
+		}
+	}
 	return WidgetSecurityConfig{
 		MaxRequestsPerIP:  10,
 		Window:            1 * time.Minute,
 		GlobalMaxRequests: 600,
-		AllowedOrigins: []string{
-			"hanzo.ai",
-			"www.hanzo.ai",
-			"docs.hanzo.ai",
-			"hanzo.chat",
-			"console.hanzo.ai",
-			"cloud.hanzo.ai",
-			"hanzo.bot",
-			"docs.hanzo.bot",
-			"localhost",
-		},
-		CleanupInterval: 5 * time.Minute,
+		AllowedOrigins:    origins,
+		CleanupInterval:   5 * time.Minute,
+	}
+}
+
+// defaultAllowedOrigins is the baked-in allowlist — covers every Hanzo/Lux/Zoo
+// property that embeds the public widget key. Subdomains are matched by suffix.
+func defaultAllowedOrigins() []string {
+	return []string{
+		// Hanzo
+		"hanzo.ai",
+		"hanzo.app",
+		"hanzo.chat",
+		"hanzo.bot",
+		"hanzo.id",
+		// Lux Network + subdomains
+		"lux.network",
+		"lux.financial",
+		"lux.finance",
+		"lux.market",
+		"lux.industries",
+		"lux.exchange",
+		"lux.blog",
+		"lux.chat",
+		"lux.id",
+		// Zoo
+		"zoo.ngo",
+		"zoo.network",
+		"zoo.id",
+		// Pars
+		"pars.network",
+		"pars.id",
+		// Local dev
+		"localhost",
 	}
 }
 
