@@ -5,11 +5,11 @@
 	},
 	"out": {
 		"status_code": 200,
-		"body": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6InNpbTIiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vYXBpLmV4YW1wbGUuY29tIiwiZXhwIjoxNzM1Njg5NjAwLCJpc3MiOiJodHRwczovL2tyYWtlbmQuaW8iLCJqdGkiOiJtbmIyM3Zjc3J0NzU2eXVpb21uYnZjeDk4ZXJ0eXVpb3AiLCJyb2xlcyI6WyJyb2xlX3kiXSwic3ViIjoiMTIzNDU2Nzg5MHF3ZXJ0eXVpbyJ9.zkfOW6Fsd0DzhYTXjc_SA3oOv2mG76JZTAvRaVibPNA\"}",
+		"body": "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsImtpZCI6InNpbTIiLCJ0eXAiOiJKV1QifQ.eyJhdWQiOiJodHRwOi8vYXBpLmV4YW1wbGUuY29tIiwiZXhwIjoxNzM1Njg5NjAwLCJpc3MiOiJodHRwczovL2dhdGV3YXkuaGFuem8uYWkiLCJqdGkiOiJtbmIyM3Zjc3J0NzU2eXVpb21uYnZjeDk4ZXJ0eXVpb3AiLCJyb2xlcyI6WyJyb2xlX3kiXSwic3ViIjoiMTIzNDU2Nzg5MHF3ZXJ0eXVpbyJ9.fSYyrbWfRIG_Z5xbV9Fnmt0EvDY7fz0_7_0UqjGS0cg\"}",
 		"header": {
 			"content-type": ["application/json; charset=utf-8"],
 			"Cache-Control": [""],
-			"X-Krakend-Completed": [""]
+			"X-Gateway-Completed": [""]
 		}
 	}
 }
