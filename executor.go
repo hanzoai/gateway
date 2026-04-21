@@ -305,7 +305,7 @@ type DefaultRunServerFactory struct{}
 
 func (*DefaultRunServerFactory) NewRunServer(l logging.Logger, next router.RunServerFunc) RunServer {
 	// CORS is handled by hostProxyMiddleware in router_engine.go.
-	// Skip KrakenD CORS wrapper to avoid duplicate headers.
+	// Skip the upstream CORS wrapper to avoid duplicate headers.
 	return RunServer(server.New(
 		l,
 		server.RunServer(next),

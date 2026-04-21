@@ -15,7 +15,7 @@
 		"header": {
 			"content-type": [""],
 			"Cache-Control": [""],
-			"X-Krakend-Completed": [""],
+			"X-Gateway-Completed": [""],
 			"Access-Control-Allow-Origin": [""],
 			"Access-Control-Allow-Methods": [""],
 			"Access-Control-Allow-Headers": [""]

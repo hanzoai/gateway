@@ -9,7 +9,7 @@
 		"header": {
 			"content-type": ["application/json; charset=utf-8"],
 			"Cache-Control": [""],
-			"X-Krakend-Completed": ["false"]
+			"X-Gateway-Completed": ["false"]
 		}
 	}
 }

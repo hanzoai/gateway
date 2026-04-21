@@ -12,7 +12,7 @@
 		"header": {
 			"content-type": [""],
 			"Cache-Control": [""],
-			"X-Krakend-Completed": [""]
+			"X-Gateway-Completed": [""]
 		}
 	}
 }
