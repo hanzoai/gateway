@@ -30,7 +30,7 @@
             "Cache-Control": [
                 "public, max-age=3600"
             ],
-            "X-Krakend-Completed": [
+            "X-Gateway-Completed": [
                 "true"
             ]
         }
