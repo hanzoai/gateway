@@ -79,6 +79,12 @@ func main() {
 	cmd.DefaultRoot = cmd.NewRoot(cmd.RootCommand, commandsToLoad...)
 	cmd.DefaultRoot.Cmd.CompletionOptions.DisableDefaultCmd = true
 
+	// Build the command tree eagerly so subcommands exist when rebrandCLI
+	// walks them. krakend-cobra's Root.Build is sync.Once-guarded, so calling
+	// it here and letting Execute call it again is a no-op on the second pass.
+	cmd.DefaultRoot.Build()
+	rebrandCLI()
+
 	cmd.Execute(cfg, gateway.NewExecutor(ctx))
 }
 
