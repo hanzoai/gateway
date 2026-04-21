@@ -3,7 +3,7 @@
 BIN_NAME := gateway
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
 MODULE := github.com/hanzoai/gateway
-VERSION := 2.12.1
+VERSION := 2.13.0
 SCHEMA_VERSION := $(shell echo "${VERSION}" | cut -d '.' -f 1,2)
 GIT_COMMIT := $(shell git rev-parse --short=7 HEAD)
 GOLANG_VERSION := 1.26.1

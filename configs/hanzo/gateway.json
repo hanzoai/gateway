@@ -60,7 +60,7 @@
     },
     "telemetry/opentelemetry": {
       "service_name": "gateway",
-      "service_version": "2.12.1",
+      "service_version": "2.13.0",
       "trace_sample_rate": 0.1,
       "metric_reporting_period": 30,
       "exporters": {
