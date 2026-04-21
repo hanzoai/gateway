@@ -1,5 +1,5 @@
 {
-  "$schema": "https://www.krakend.io/schema/v3.json",
+  "$schema": "https://gateway.hanzo.ai/schema/v3.json",
   "version": 3,
   "name": "Hanzo API Gateway",
   "port": 8080,
