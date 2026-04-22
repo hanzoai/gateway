@@ -75,6 +75,9 @@ func internalNewBackendFactory(ctx context.Context, requestExecutorFactory func(
 	// base-network: shard-aware routing over base/network-enabled services
 	// (ATS, BD, TA, IAM, KMS, AML). See base_network_backend.go.
 	backendFactory = BaseNetworkBackendFactory(logger, backendFactory)
+	// base_ha: leader-pin + round-robin routing over hanzoai/base-ha
+	// clusters (BaseApp CRD). See base_ha_backend.go.
+	backendFactory = BaseHABackendFactory(logger, backendFactory)
 	return func(remote *config.Backend) proxy.Proxy {
 		logger.Debug(fmt.Sprintf("[BACKEND: %s] Building the backend pipe", remote.URLPattern))
 		return backendFactory(remote)
