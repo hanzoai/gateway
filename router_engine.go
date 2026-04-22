@@ -175,6 +175,19 @@ func stripBackendCORS(resp *http.Response) error {
 	return nil
 }
 
+// newPassthroughProxy creates an httputil.ReverseProxy that forwards the
+// request path unchanged to the target host.
+func newPassthroughProxy(target *url.URL) *httputil.ReverseProxy {
+	p := httputil.NewSingleHostReverseProxy(target)
+	original := p.Director
+	p.Director = func(req *http.Request) {
+		original(req)
+		req.Host = req.URL.Host
+	}
+	p.ModifyResponse = stripBackendCORS
+	return p
+}
+
 // newRewriteProxy creates an httputil.ReverseProxy that rewrites path prefixes.
 func newRewriteProxy(target *url.URL, oldPrefix, newPrefix string) *httputil.ReverseProxy {
 	p := httputil.NewSingleHostReverseProxy(target)
@@ -208,10 +221,10 @@ var apiHanzoAIEndpoints = []string{
 // backend based on hostname and path prefix. Supports WebSocket upgrades
 // natively via httputil.ReverseProxy.
 func hostProxyMiddleware() gin.HandlerFunc {
-	// Pre-build api.hanzo.ai rewrite proxies.
+	// api.hanzo.ai routes /v1/* and /zap directly to cloud-api as-is.
+	// Cloud-api speaks /v1/* natively (no /api/ prefix), so no path rewrite.
 	cloudAPITarget, _ := url.Parse("http://cloud-api.hanzo.svc.cluster.local:8000")
-	apiRewriteProxy := newRewriteProxy(cloudAPITarget, "/v1/", "/api/")
-	apiNoRewriteProxy := newRewriteProxy(cloudAPITarget, "/zap", "/api/zap")
+	apiPassthroughProxy := newPassthroughProxy(cloudAPITarget)
 
 	return func(c *gin.Context) {
 		host := strings.Split(c.Request.Host, ":")[0]
@@ -233,15 +246,11 @@ func hostProxyMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// api.hanzo.ai: route AI endpoints directly to cloud-api.
+		// api.hanzo.ai: route AI endpoints directly to cloud-api (no rewrite).
 		if host == "api.hanzo.ai" {
 			for _, prefix := range apiHanzoAIEndpoints {
 				if strings.HasPrefix(path, prefix) {
-					if strings.HasPrefix(path, "/v1/") {
-						apiRewriteProxy.ServeHTTP(c.Writer, c.Request)
-					} else {
-						apiNoRewriteProxy.ServeHTTP(c.Writer, c.Request)
-					}
+					apiPassthroughProxy.ServeHTTP(c.Writer, c.Request)
 					c.Abort()
 					return
 				}
