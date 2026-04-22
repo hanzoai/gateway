@@ -72,6 +72,9 @@ func internalNewBackendFactory(ctx context.Context, requestExecutorFactory func(
 	backendFactory = otellura.BackendFactory(backendFactory)
 	// ZAP transport: zero-copy binary protocol for internal services
 	backendFactory = ZapBackendFactory(logger, backendFactory)
+	// base-network: shard-aware routing over base/network-enabled services
+	// (ATS, BD, TA, IAM, KMS, AML). See base_network_backend.go.
+	backendFactory = BaseNetworkBackendFactory(logger, backendFactory)
 	return func(remote *config.Backend) proxy.Proxy {
 		logger.Debug(fmt.Sprintf("[BACKEND: %s] Building the backend pipe", remote.URLPattern))
 		return backendFactory(remote)
