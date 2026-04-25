@@ -11,8 +11,8 @@ spec:
       port: 8080
       targetPort: 8080
     - name: zap
-      port: 9651
-      targetPort: 9651
+      port: 9999
+      targetPort: 9999
   type: ClusterIP
 ---
 apiVersion: v1
@@ -56,8 +56,8 @@ spec:
     app: gateway
   ports:
     - name: zap
-      port: 9651
-      targetPort: 9651
+      port: 9999
+      targetPort: 9999
       protocol: TCP
   type: LoadBalancer
   externalTrafficPolicy: Local
