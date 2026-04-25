@@ -45,13 +45,13 @@ spec:
             - name: ZAP_LISTENER_ENABLED
               value: "true"
             - name: ZAP_LISTENER_PORT
-              value: "9651"
+              value: "9999"
             - name: ZAP_TLS_CERT
               value: "/etc/tls/tls.crt"
             - name: ZAP_TLS_KEY
               value: "/etc/tls/tls.key"
             - name: ZAP_INTERNAL_ADDR
-              value: "127.0.0.1:9652"
+              value: "127.0.0.1:9999"
             # -- Billing enforcement via Commerce API --
             - name: AUTH_BILLING_URL
               value: "http://commerce.hanzo.svc.cluster.local:8001"
@@ -64,7 +64,7 @@ spec:
           ports:
             - containerPort: 8080
               name: http
-            - containerPort: 9651
+            - containerPort: 9999
               name: zap
           resources:
             requests:
