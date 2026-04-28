@@ -347,9 +347,10 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 	validToken := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai"))
 
 	forgedHeaders := map[string]string{
-		"X-Org-Id":     "forged-org",
-		"X-User-Id":    "forged-admin",
-		"X-User-Email": "forged@evil.com",
+		"X-Org-Id":           "forged-org",
+		"X-User-Id":          "forged-admin",
+		"X-User-Email":       "forged@evil.com",
+		"X-User-Permissions": "20", // Admin|Live attempted forgery
 		"X-Hanzo-Custom":     "forged-custom", // Mixed case to test case-insensitive stripping
 	}
 
@@ -771,10 +772,11 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 	// Gateway-emitted auxiliaries: X-User-Email, X-Phone-Number, X-User-IsAdmin.
 	// Every other identity-like header (legacy + vendor-prefixed) MUST be stripped.
 	attackerHeaders := []string{
-		// Canonical 3 — attacker may not forge these
+		// Canonical identity headers — attacker may not forge these
 		"X-User-Id",
 		"X-Org-Id",
 		"X-Roles",
+		"X-User-Permissions",
 		// Gateway-emitted auxiliaries
 		"X-User-Email",
 		"X-Phone-Number",
@@ -1199,6 +1201,436 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 		if res.userID != "" {
 			t.Errorf("SECURITY: request %d: forged X-User-Id leaked: %q", i, res.userID)
 		}
+	}
+}
+
+// --- Test 21: X-User-Permissions forged value is stripped (Red P0-1) ---
+//
+// Regression for Red P0-1 (2026-04-27): commerce trusts X-User-Permissions
+// as a base-10 bit.Field. Before this fix, gateway neither stripped a
+// client-supplied X-User-Permissions nor minted one from JWT. An attacker
+// could send `X-User-Permissions: 16` (Admin bit) with any valid token
+// and gain admin in commerce.
+func TestPermissions_ForgedHeaderStripped(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotPerms string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	// JWT has no permissions claim and isAdmin=false → no permissions
+	// should be minted. The forged header MUST NOT survive.
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+	// Attacker forges Admin|Live (16|4 = 20)
+	req.Header.Set("X-User-Permissions", "20")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	if gotPerms != "" {
+		t.Errorf("SECURITY: X-User-Permissions = %q, want empty (forged value must be stripped, JWT had no perms)", gotPerms)
+	}
+}
+
+// --- Test 22: X-User-Permissions minted from permissions claim ---
+
+func TestPermissions_MintedFromClaim(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	// Casdoor-shape: []*Permission with name fields
+	claims := map[string]interface{}{
+		"iss":   "https://hanzo.id",
+		"sub":   "alice",
+		"aud":   []string{"https://api.hanzo.ai"},
+		"iat":   now.Add(-1 * time.Minute).Unix(),
+		"exp":   now.Add(10 * time.Minute).Unix(),
+		"owner": "hanzo",
+		"permissions": []map[string]string{
+			{"name": "admin"},
+			{"name": "live"},
+		},
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotPerms string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	// Attacker overlays a forged value too — JWT must win.
+	req.Header.Set("X-User-Permissions", "999999")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	// Admin (1<<4 = 16) | Live (1<<2 = 4) = 20
+	if gotPerms != "20" {
+		t.Errorf("X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
+	}
+}
+
+// --- Test 23: X-User-Permissions minted from string array ---
+
+func TestPermissions_MintedFromStringArray(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":         "https://hanzo.id",
+		"sub":         "bob",
+		"aud":         []string{"https://api.hanzo.ai"},
+		"iat":         now.Add(-1 * time.Minute).Unix(),
+		"exp":         now.Add(10 * time.Minute).Unix(),
+		"owner":       "acme",
+		"permissions": []string{"live", "test"}, // 4 | 8 = 12
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotPerms string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	// Live (4) | Test (8) = 12
+	if gotPerms != "12" {
+		t.Errorf("X-User-Permissions = %q, want %q (Live|Test)", gotPerms, "12")
+	}
+}
+
+// --- Test 24: X-User-Permissions minted from numeric bit-field claim ---
+
+func TestPermissions_MintedFromNumericClaim(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":         "https://hanzo.id",
+		"sub":         "charlie",
+		"aud":         []string{"https://api.hanzo.ai"},
+		"iat":         now.Add(-1 * time.Minute).Unix(),
+		"exp":         now.Add(10 * time.Minute).Unix(),
+		"owner":       "acme",
+		"permissions": 64, // permission.Secret
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotPerms string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if gotPerms != "64" {
+		t.Errorf("X-User-Permissions = %q, want %q", gotPerms, "64")
+	}
+}
+
+// --- Test 25: isAdmin claim auto-mints Admin|Live ---
+
+func TestPermissions_IsAdminMintsAdminLive(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	// No "permissions" claim, but isAdmin=true → gateway mints Admin|Live.
+	claims := map[string]interface{}{
+		"iss":     "https://hanzo.id",
+		"sub":     "z",
+		"aud":     []string{"https://api.hanzo.ai"},
+		"iat":     now.Add(-1 * time.Minute).Unix(),
+		"exp":     now.Add(10 * time.Minute).Unix(),
+		"owner":   "hanzo",
+		"isAdmin": true,
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotIsAdmin, gotPerms string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		gotIsAdmin = c.Request.Header.Get("X-User-IsAdmin")
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	if gotIsAdmin != "true" {
+		t.Errorf("X-User-IsAdmin = %q, want %q", gotIsAdmin, "true")
+	}
+	// Admin (16) | Live (4) = 20
+	if gotPerms != "20" {
+		t.Errorf("X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
+	}
+}
+
+// --- Test 26: No permissions claim + non-admin → no header ---
+
+func TestPermissions_AbsentWhenNoneGranted(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":   "https://hanzo.id",
+		"sub":   "viewer",
+		"aud":   []string{"https://api.hanzo.ai"},
+		"iat":   now.Add(-1 * time.Minute).Unix(),
+		"exp":   now.Add(10 * time.Minute).Unix(),
+		"owner": "acme",
+		// no permissions, no isAdmin
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var sawHeader bool
+	var gotPerms string
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		_, sawHeader = c.Request.Header[http.CanonicalHeaderKey("X-User-Permissions")]
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	// Documented contract: header is absent (not "0") so commerce's
+	// parsePermissionsHeader returns bit.Field(0) — fail-closed.
+	if sawHeader {
+		t.Errorf("X-User-Permissions should be ABSENT for no-perms JWT, got %q", gotPerms)
+	}
+}
+
+// --- Test 27: Unknown permission name doesn't grant any bits ---
+
+func TestPermissions_UnknownNameIgnored(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":         "https://hanzo.id",
+		"sub":         "viewer",
+		"aud":         []string{"https://api.hanzo.ai"},
+		"iat":         now.Add(-1 * time.Minute).Unix(),
+		"exp":         now.Add(10 * time.Minute).Unix(),
+		"owner":       "acme",
+		"permissions": []string{"made-up-policy", "another-fake-one"},
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var gotPerms string
+	var sawHeader bool
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		_, sawHeader = c.Request.Header[http.CanonicalHeaderKey("X-User-Permissions")]
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	// All names unknown -> zero bits -> header omitted.
+	if sawHeader {
+		t.Errorf("X-User-Permissions = %q, want ABSENT (all names unknown)", gotPerms)
+	}
+}
+
+// --- Test 28: stripIdentityHeaders covers X-User-Permissions ---
+//
+// Direct unit test on stripIdentityHeaders so a regression in the strip
+// list shows up before any middleware-level test gets a chance to mask
+// it via mint-over.
+func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("X-User-Permissions", "20")
+
+	stripIdentityHeaders(req)
+
+	if v := req.Header.Get("X-User-Permissions"); v != "" {
+		t.Errorf("SECURITY: X-User-Permissions was NOT stripped (got %q)", v)
+	}
+}
+
+// --- Test 29: strip-list ⊇ mint-list contract test ---
+//
+// Red called this out as a gap (P0-1 audit): every header the gateway
+// mints downstream MUST also appear in the strip list. Otherwise a new
+// mint target added without a strip pair is forgeable. This test is the
+// canonical link between the two lists.
+func TestStripList_CoversAllMintedHeaders(t *testing.T) {
+	for _, h := range gatewayMintedIdentityHeaders {
+		t.Run(h, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Header.Set(h, "forged-"+h)
+
+			stripIdentityHeaders(req)
+
+			if v := req.Header.Get(h); v != "" {
+				t.Errorf("SECURITY: gateway mints %q but strip list does NOT cover it (got %q)", h, v)
+			}
+		})
+	}
+}
+
+// --- Test 30: Unparseable permissions claim fails closed ---
+
+func TestPermissions_UnparseableClaimFailsClosed(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	now := time.Now()
+	claims := map[string]interface{}{
+		"iss":         "https://hanzo.id",
+		"sub":         "weird",
+		"aud":         []string{"https://api.hanzo.ai"},
+		"iat":         now.Add(-1 * time.Minute).Unix(),
+		"exp":         now.Add(10 * time.Minute).Unix(),
+		"owner":       "acme",
+		"permissions": "not-a-list", // wrong shape entirely
+	}
+	token := tj.signToken(t, claims)
+
+	gin.SetMode(gin.TestMode)
+	var sawHeader bool
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled:     true,
+		JWKSURL:     jwksServer.URL,
+		Issuer:      "https://hanzo.id",
+		Audience:    "https://api.hanzo.ai",
+		RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		_, sawHeader = c.Request.Header[http.CanonicalHeaderKey("X-User-Permissions")]
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	// Attacker also forges a value
+	req.Header.Set("X-User-Permissions", "20")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", w.Code)
+	}
+	// Unparseable claim → no bits granted → header omitted (forged value
+	// already stripped on ingress).
+	if sawHeader {
+		t.Error("SECURITY: unparseable permissions claim must NOT mint a header")
 	}
 }
 

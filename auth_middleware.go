@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -77,6 +78,13 @@ type hanzoJWTClaims struct {
 	// Roles array (Casdoor emits []*Role objects with name/displayName,
 	// or a plain []string — tolerate both and join names with commas).
 	Roles json.RawMessage `json:"roles"`
+	// Permissions claim — three accepted shapes:
+	//   1. Pre-computed numeric bit-field: `42` (passed through verbatim)
+	//   2. Plain []string of permission/role names: `["admin", "live"]`
+	//   3. Casdoor []*Permission objects: `[{"name":"admin"}, {"name":"live"}]`
+	// Whichever shape arrives, the gateway converts it to a base-10 int
+	// matching commerce's util/permission/permission.go bit positions.
+	Permissions json.RawMessage `json:"permissions"`
 }
 
 // extractRoleNames converts the raw "roles" claim (either []string or
@@ -103,6 +111,134 @@ func extractRoleNames(raw json.RawMessage) string {
 		return strings.Join(names, ",")
 	}
 	return ""
+}
+
+// permissionBits is the canonical name → bit-position map. Values MUST
+// match commerce/util/permission/permission.go exactly; the iota order
+// there is the single source of truth. Only stable, well-known names
+// are translated — every other token (e.g. ad-hoc casbin policy names)
+// maps to zero. Lookups are case-insensitive.
+//
+// To extend: add a constant in commerce, then add the matching entry
+// here. Forwards-only — never re-number existing entries or downstream
+// services break.
+var permissionBits = map[string]int64{
+	"live":             1 << 2,  // 4
+	"test":             1 << 3,  // 8
+	"admin":            1 << 4,  // 16
+	"published":        1 << 5,  // 32
+	"secret":           1 << 6,  // 64
+	"authorize":        1 << 7,  // 128
+	"capture":          1 << 8,  // 256
+	"bundle":           1 << 9,
+	"campaign":         1 << 10,
+	"collection":       1 << 11,
+	"coupon":           1 << 12,
+	"form":             1 << 13,
+	"order":            1 << 14,
+	"organization":     1 << 15,
+	"payment":          1 << 16,
+	"plan":             1 << 17,
+	"product":          1 << 18,
+	"referral":         1 << 19,
+	"referrer":         1 << 20,
+	"store":            1 << 21,
+	"subscriber":       1 << 22,
+	"user":             1 << 23,
+	"variant":          1 << 24,
+	"readbundle":       1 << 25,
+	"readcampaign":     1 << 26,
+	"readcollection":   1 << 27,
+	"readcoupon":       1 << 28,
+	"readform":         1 << 29,
+	"readorder":        1 << 30,
+	"readorganization": 1 << 31,
+	"readpayment":      1 << 32,
+	"readplan":         1 << 33,
+	"readproduct":      1 << 34,
+	"readreferral":     1 << 35,
+	"readreferrer":     1 << 36,
+	"readstore":        1 << 37,
+	"readsubscriber":   1 << 38,
+	"readuser":         1 << 39,
+	"readvariant":      1 << 40,
+	"writebundle":      1 << 41,
+	"writecampaign":    1 << 42,
+	"writecollection":  1 << 43,
+	"writecoupon":      1 << 44,
+	"writeform":        1 << 45,
+	"writeorder":       1 << 46,
+	"writeorganization": 1 << 47,
+	"writepayment":     1 << 48,
+	"writeplan":        1 << 49,
+	"writeproduct":     1 << 50,
+	"writereferral":    1 << 51,
+	"writereferrer":    1 << 52,
+	"writestore":       1 << 53,
+	"writesubscriber":  1 << 54,
+	"writeuser":        1 << 55,
+	"writevariant":     1 << 56,
+	"return":           1 << 57,
+	"readreturn":       1 << 58,
+	"writereturn":      1 << 59,
+}
+
+// computePermissionsBitField turns the raw "permissions" claim into the
+// base-10 int64 carried by X-User-Permissions. Accepted shapes:
+//   - JSON number (already a bit-field)
+//   - []string of permission names
+//   - []{"name": "..."} Casdoor permission objects
+// The optional `extra` argument lets the caller OR-in additional bits
+// derived from other claims (e.g. isAdmin → Admin|Live). Unknown names
+// are dropped rather than failing the request — gateway is forwards-
+// compatible with new IAM permissions, but never grants more than the
+// JWT explicitly carries.
+//
+// Returns (bits, true) when bits > 0 — caller sets the header. Returns
+// (0, false) when nothing maps — caller OMITS the header. Commerce treats
+// absent and "0" identically (bit.Field(0)), but the gateway emits the
+// minimal canonical form: present iff non-zero.
+func computePermissionsBitField(raw json.RawMessage, extra int64) (int64, bool) {
+	bits := extra
+	if len(raw) == 0 {
+		return bits, bits != 0
+	}
+
+	// Shape 1: bare numeric bit-field. JSON unmarshals into int64 cleanly.
+	var asNumber int64
+	if err := json.Unmarshal(raw, &asNumber); err == nil {
+		if asNumber > 0 {
+			bits |= asNumber
+		}
+		return bits, bits != 0
+	}
+
+	// Shape 2: []string of permission/role names.
+	var asStrings []string
+	if err := json.Unmarshal(raw, &asStrings); err == nil {
+		for _, n := range asStrings {
+			if b, ok := permissionBits[strings.ToLower(strings.TrimSpace(n))]; ok {
+				bits |= b
+			}
+		}
+		return bits, bits != 0
+	}
+
+	// Shape 3: []map[string]any — Casdoor's []*Permission objects.
+	var asObjects []map[string]any
+	if err := json.Unmarshal(raw, &asObjects); err == nil {
+		for _, o := range asObjects {
+			if n, ok := o["name"].(string); ok {
+				if b, found := permissionBits[strings.ToLower(strings.TrimSpace(n))]; found {
+					bits |= b
+				}
+			}
+		}
+		return bits, bits != 0
+	}
+
+	// Unparseable claim — fail closed: do not propagate any bits.
+	return extra, extra != 0
 }
 
 // jwksCache caches JWKS keys with TTL-based refresh.
@@ -357,15 +493,22 @@ func DefaultAuthConfig() AuthConfig {
 // NewAuthMiddleware creates a gin middleware that validates IAM JWT tokens,
 // checks billing status, and injects identity headers for downstream services.
 //
-// Canonical identity headers (the only 3 downstream services should rely on):
-//   - X-User-Id:      user ID from JWT "sub" (fallback: preferred_username, name)
-//   - X-Org-Id:       org slug from JWT "owner" claim
-//   - X-Roles:        comma-joined role names from JWT "roles" claim
+// Canonical identity headers (the only ones downstream services should rely on):
+//   - X-User-Id:           user ID from JWT "sub" (fallback: preferred_username, name)
+//   - X-Org-Id:            org slug from JWT "owner" claim
+//   - X-Roles:             comma-joined role names from JWT "roles" claim
+//   - X-User-Permissions:  base-10 int64 bit-field derived from JWT permissions
+//                          + isAdmin (commerce treats absent/0 as no rights).
 //
 // Auxiliary headers (derivatives of the JWT for convenience):
 //   - X-User-Email:   email from JWT "email" claim
 //   - X-Phone-Number: phone from JWT "phone_number" or "phone" claim
 //   - X-User-IsAdmin: "true" if the JWT asserts isAdmin
+//
+// Trust boundary: all of the above are stripped on ingress (see
+// stripIdentityHeaders) and only re-set after the JWT is validated. A
+// client-supplied X-User-Permissions can NEVER reach a downstream
+// service — Red P0-1 (2026-04-27).
 //
 // Billing:
 //   - Checks commerce service for positive balance
@@ -472,10 +615,11 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			userPhone = claims.Phone
 		}
 
-		// Inject the canonical 3 identity headers for downstream services.
-		// X-User-Id <- sub, X-Org-Id <- owner, X-Roles <- roles (comma-joined).
-		// Auxiliary headers (email, phone, isAdmin) are strictly derivative
-		// of the JWT and may be consumed by services that need them.
+		// Inject the canonical identity headers for downstream services.
+		// X-User-Id <- sub, X-Org-Id <- owner, X-Roles <- roles (comma-joined),
+		// X-User-Permissions <- bit.Field derived from JWT permissions claim
+		// + isAdmin. Auxiliary headers (email, phone, isAdmin) are strictly
+		// derivative of the JWT and may be consumed by services that need them.
 		c.Request.Header.Set("X-User-Id", userID)
 		c.Request.Header.Set("X-Org-Id", orgID)
 		if roles := extractRoleNames(claims.Roles); roles != "" {
@@ -488,6 +632,19 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// Propagate isAdmin for downstream RBAC (broker compliance, etc.)
 		if claims.IsAdmin {
 			c.Request.Header.Set("X-User-IsAdmin", "true")
+		}
+
+		// Mint X-User-Permissions from the validated JWT. isAdmin implies
+		// the Admin|Live bits (commerce's permission.Admin|permission.Live);
+		// the explicit "permissions" claim is OR'd on top. Absent claim +
+		// non-admin user → header is omitted, which commerce parses as
+		// bit.Field(0) — fail-closed by design (commerce CLAUDE.md).
+		var extraBits int64
+		if claims.IsAdmin {
+			extraBits = permissionBits["admin"] | permissionBits["live"]
+		}
+		if bits, set := computePermissionsBitField(claims.Permissions, extraBits); set {
+			c.Request.Header.Set("X-User-Permissions", strconv.FormatInt(bits, 10))
 		}
 
 		// Check billing status (fail-open)
@@ -599,15 +756,18 @@ validated:
 // The gateway is the sole authority for setting these after JWT validation.
 // Prevents header injection on every path.
 //
-// Canonical identity headers (emitted post-JWT): X-User-Id, X-Org-Id, X-Roles.
-// Auxiliary headers emitted by the gateway: X-User-Email, X-Phone-Number,
-// X-User-IsAdmin. Everything else is legacy and MUST be stripped unconditionally.
+// Canonical identity headers (emitted post-JWT): X-User-Id, X-Org-Id, X-Roles,
+// X-User-Permissions. Auxiliary headers emitted by the gateway: X-User-Email,
+// X-Phone-Number, X-User-IsAdmin. Everything else is legacy and MUST be
+// stripped unconditionally. New mint-targets MUST be added here first — the
+// strip-list is the trust boundary.
 func stripIdentityHeaders(r *http.Request) {
 	// Canonical identity headers — stripped before re-injection so a
 	// client-supplied value can never survive the middleware.
 	r.Header.Del("X-User-Id")
 	r.Header.Del("X-Org-Id")
 	r.Header.Del("X-Roles")
+	r.Header.Del("X-User-Permissions") // bit.Field; commerce treats absent as 0
 	// Gateway-emitted auxiliaries.
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
@@ -626,6 +786,22 @@ func stripIdentityHeaders(r *http.Request) {
 			r.Header.Del(key)
 		}
 	}
+}
+
+// gatewayMintedIdentityHeaders is the authoritative list of identity
+// headers the gateway is allowed to emit downstream. Every entry here
+// MUST also appear in stripIdentityHeaders so a client cannot forge a
+// header the gateway later mints over (or forge one the gateway does
+// NOT mint, which would still be untrusted-but-present downstream).
+// The contract test in auth_middleware_security_test.go enforces this.
+var gatewayMintedIdentityHeaders = []string{
+	"X-User-Id",
+	"X-Org-Id",
+	"X-Roles",
+	"X-User-Permissions",
+	"X-User-Email",
+	"X-Phone-Number",
+	"X-User-IsAdmin",
 }
 
 // isAPIKey returns true for opaque API keys that should bypass JWT validation.
