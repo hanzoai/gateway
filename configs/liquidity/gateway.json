@@ -58,5 +58,28 @@
       "max_age": "12h"
     }
   },
-  "endpoints": []
+  "endpoints": [
+    {
+      "endpoint": "/v1/price",
+      "method": "GET",
+      "input_query_strings": ["symbol"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/price",
+        "host": ["http://pricing.liquidity.svc.cluster.local:8080"],
+        "encoding": "no-op"
+      }]
+    },
+    {
+      "endpoint": "/v1/price/bars",
+      "method": "GET",
+      "input_query_strings": ["symbol", "from", "to", "resolution"],
+      "output_encoding": "no-op",
+      "backend": [{
+        "url_pattern": "/price/bars",
+        "host": ["http://pricing.liquidity.svc.cluster.local:8080"],
+        "encoding": "no-op"
+      }]
+    }
+  ]
 }
