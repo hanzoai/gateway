@@ -213,6 +213,10 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		// Start the inbound ZAP listener (TLS 1.3+PQ) for external clients.
 		InitZapListenerFromEnv()
 		defer StopZapListener()
+		// The ZAP-HTTP listener is booted lazily by the RunServer chain
+		// (DefaultRunServerFactory.NewRunServer) once the fully-wrapped
+		// handler is available. Just ensure we shut it down on exit.
+		defer stopZapHTTPListener()
 
 		// setup the gateway router
 		routerFactory := router.NewFactory(router.Config{
@@ -306,10 +310,17 @@ type DefaultRunServerFactory struct{}
 func (*DefaultRunServerFactory) NewRunServer(l logging.Logger, next router.RunServerFunc) RunServer {
 	// CORS is handled by hostProxyMiddleware in router_engine.go.
 	// Skip the upstream CORS wrapper to avoid duplicate headers.
-	return RunServer(server.New(
+	httpRun := RunServer(server.New(
 		l,
 		server.RunServer(next),
 	))
+	// Boot the ZAP-HTTP listener once per process with the same fully
+	// composed handler that the HTTP listener serves. Additive: HTTP
+	// keeps serving regardless of ZAP-HTTP state.
+	return func(ctx context.Context, cfg config.ServiceConfig, handler http.Handler) error {
+		startZapHTTPListenerOnce(l, handler)
+		return httpRun(ctx, cfg, handler)
+	}
 }
 
 // LoggerBuilder is the default BuilderFactory implementation.
