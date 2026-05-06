@@ -35,13 +35,17 @@ require (
 	github.com/krakend/krakend-xml/v2 v2.2.0
 	github.com/luraproject/lura/v2 v2.12.1
 	github.com/luxfi/zap v0.1.0
+	github.com/prometheus/client_golang v1.20.2
 	github.com/spf13/cobra v1.8.1
+	github.com/spf13/pflag v1.0.5
 	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
+	github.com/zap-proto/http v0.0.0-20260506200741-fd6047874433
 	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	capnproto.org/go/capnp/v3 v3.0.1-alpha.2 // indirect
 	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.115.0 // indirect
 	cloud.google.com/go/auth v0.8.1 // indirect
@@ -107,6 +111,7 @@ require (
 	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect
+	github.com/colega/zeropool v0.0.0-20230505084239-6fb4a4f75381 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.4 // indirect
 	github.com/eapache/go-resiliency v1.6.0 // indirect
@@ -205,7 +210,6 @@ require (
 	github.com/philhofer/fwd v1.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.21 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
-	github.com/prometheus/client_golang v1.20.2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
@@ -220,9 +224,8 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/sony/gobreaker v0.5.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
-	github.com/tinylib/msgp v1.1.8 // indirect
+	github.com/tinylib/msgp v1.1.9 // indirect
 	github.com/tmthrgd/atomics v0.0.0-20190904060638-dc7a5fcc7e0d // indirect
 	github.com/tmthrgd/go-bitset v0.0.0-20190904054048-394d9a556c05 // indirect
 	github.com/tmthrgd/go-bitwise v0.0.0-20190904053232-1430ee983fca // indirect
@@ -268,7 +271,7 @@ require (
 	gocloud.dev/secrets/hashivault v0.39.0 // indirect
 	golang.org/x/arch v0.18.0 // indirect
 	golang.org/x/crypto v0.49.0 // indirect
-	golang.org/x/exp v0.0.0-20240409090435-93d18d7e34b8 // indirect
+	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8 // indirect
 	golang.org/x/mod v0.33.0 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
