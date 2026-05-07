@@ -61,7 +61,17 @@ func startZapHTTPListenerOnce(logger logging.Logger, handler http.Handler) {
 			logger.Info("[SERVICE: ZAP-HTTP] Listener disabled (KRAKEND_ZAP_LISTEN=off)")
 			return
 		}
-		srv := &zaphttp.Server{Addr: addr, Handler: handler}
+		// Wrap the handler so every ZAP-HTTP request logs a single
+		// line with method, path, and status. This is the on-the-wire
+		// proof that traffic arrived as a ZAP frame (not as a plain
+		// HTTP/1.1 socket fallback): only zap-proto/http-encoded
+		// frames make it through `zaphttp.Server` decoding.
+		wrapped := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			rec := &zapStatusRecorder{ResponseWriter: w, status: http.StatusOK}
+			handler.ServeHTTP(rec, r)
+			logger.Info("[ZAP-WIRE]", r.Method, r.URL.Path, rec.status)
+		})
+		srv := &zaphttp.Server{Addr: addr, Handler: wrapped}
 		defaultZapHTTPState.server.Store(srv)
 		go func() {
 			logger.Info("[SERVICE: ZAP-HTTP] Listening on", addr)
@@ -103,4 +113,30 @@ func stopZapHTTPListener() {
 func resetZapHTTPListenerForTest() {
 	stopZapHTTPListener()
 	defaultZapHTTPState = zapHTTPState{}
+}
+
+// zapStatusRecorder captures the HTTP status the handler wrote so the
+// `[ZAP-WIRE]` log line can include it. We don't buffer the body —
+// zap-proto/http already buffers internally, so this is just a status
+// observer.
+type zapStatusRecorder struct {
+	http.ResponseWriter
+	status int
+	wrote  bool
+}
+
+func (z *zapStatusRecorder) WriteHeader(code int) {
+	if !z.wrote {
+		z.status = code
+		z.wrote = true
+	}
+	z.ResponseWriter.WriteHeader(code)
+}
+
+func (z *zapStatusRecorder) Write(b []byte) (int, error) {
+	if !z.wrote {
+		z.status = http.StatusOK
+		z.wrote = true
+	}
+	return z.ResponseWriter.Write(b)
 }
