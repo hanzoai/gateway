@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: ingress
-          image: ghcr.io/hanzoai/gateway:latest
+          image: ghcr.io/hanzoai/gateway:2.14.1
           command: ["/usr/bin/ingress"]
           args: ["-c", "/etc/ingress/ingress.json"]
           ports:
