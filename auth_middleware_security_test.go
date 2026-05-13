@@ -1095,7 +1095,7 @@ func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "api.hanzo.ai"
 	// Token via cookie instead of Authorization header
-	req.AddCookie(&http.Cookie{Name: "casdoor_access_token", Value: token})
+	req.AddCookie(&http.Cookie{Name: "iam_access_token", Value: token})
 	// Attacker injects forged headers
 	req.Header.Set("X-Org-Id", "forged-org")
 	req.Header.Set("X-User-Id", "forged-user")
