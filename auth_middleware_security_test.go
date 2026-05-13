@@ -821,7 +821,7 @@ func TestCanonicalHeaders_EmittedFromJWT(t *testing.T) {
 	defer jwksServer.Close()
 
 	now := time.Now()
-	// Casdoor shape: roles as []{"name": "..."}
+	// Legacy shape: roles as []{"name": "..."}
 	claims := map[string]interface{}{
 		"iss":     "https://hanzo.id",
 		"sub":     "alice",
@@ -1251,7 +1251,7 @@ func TestPermissions_MintedFromClaim(t *testing.T) {
 	defer jwksServer.Close()
 
 	now := time.Now()
-	// Casdoor-shape: []*Permission with name fields
+	// Legacy shape: []*Permission with name fields
 	claims := map[string]interface{}{
 		"iss":   "https://hanzo.id",
 		"sub":   "alice",
