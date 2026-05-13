@@ -55,15 +55,15 @@ type AuthConfig struct {
 	RequireAuth bool
 }
 
-// hanzoJWTClaims represents the JWT claims from Casdoor/hanzo.id.
+// hanzoJWTClaims represents the JWT claims from Hanzo IAM (hanzo.id).
 type hanzoJWTClaims struct {
 	jwt.Claims
 
-	// Casdoor puts the org slug in "owner"
+	// IAM puts the org slug in "owner"
 	Owner string `json:"owner"`
 	// User display name
 	Name string `json:"name"`
-	// Preferred username (Casdoor uses this when sub is empty)
+	// Preferred username (IAM uses this when sub is empty)
 	PreferredUsername string `json:"preferred_username"`
 	// Email
 	Email string `json:"email"`
@@ -75,13 +75,13 @@ type hanzoJWTClaims struct {
 	Type string `json:"type"`
 	// IAM admin flag
 	IsAdmin bool `json:"isAdmin"`
-	// Roles array (Casdoor emits []*Role objects with name/displayName,
+	// Roles array (IAM emits []*Role objects with name/displayName,
 	// or a plain []string — tolerate both and join names with commas).
 	Roles json.RawMessage `json:"roles"`
 	// Permissions claim — three accepted shapes:
 	//   1. Pre-computed numeric bit-field: `42` (passed through verbatim)
 	//   2. Plain []string of permission/role names: `["admin", "live"]`
-	//   3. Casdoor []*Permission objects: `[{"name":"admin"}, {"name":"live"}]`
+	//   3. IAM []*Permission objects: `[{"name":"admin"}, {"name":"live"}]`
 	// Whichever shape arrives, the gateway converts it to a base-10 int
 	// matching commerce's util/permission/permission.go bit positions.
 	Permissions json.RawMessage `json:"permissions"`
@@ -99,7 +99,7 @@ func extractRoleNames(raw json.RawMessage) string {
 	if err := json.Unmarshal(raw, &asStrings); err == nil {
 		return strings.Join(asStrings, ",")
 	}
-	// Then []map[string]any (Casdoor Role objects)
+	// Then []map[string]any (IAM Role objects)
 	var asObjects []map[string]any
 	if err := json.Unmarshal(raw, &asObjects); err == nil {
 		names := make([]string, 0, len(asObjects))
@@ -187,7 +187,7 @@ var permissionBits = map[string]int64{
 // base-10 int64 carried by X-User-Permissions. Accepted shapes:
 //   - JSON number (already a bit-field)
 //   - []string of permission names
-//   - []{"name": "..."} Casdoor permission objects
+//   - []{"name": "..."} IAM permission objects
 // The optional `extra` argument lets the caller OR-in additional bits
 // derived from other claims (e.g. isAdmin → Admin|Live). Unknown names
 // are dropped rather than failing the request — gateway is forwards-
@@ -224,7 +224,7 @@ func computePermissionsBitField(raw json.RawMessage, extra int64) (int64, bool) 
 		return bits, bits != 0
 	}
 
-	// Shape 3: []map[string]any — Casdoor's []*Permission objects.
+	// Shape 3: []map[string]any — IAM []*Permission objects.
 	var asObjects []map[string]any
 	if err := json.Unmarshal(raw, &asObjects); err == nil {
 		for _, o := range asObjects {
@@ -601,7 +601,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 
 		orgID := claims.Owner
 		userID := claims.Subject
-		// Casdoor leaves "sub" empty — fall back to preferred_username then name
+		// IAM may leave "sub" empty — fall back to preferred_username then name
 		if userID == "" {
 			userID = claims.PreferredUsername
 		}
@@ -609,7 +609,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			userID = claims.Name
 		}
 		userEmail := claims.Email
-		// Phone: prefer OIDC phone_number, fall back to Casdoor's phone field
+		// Phone: prefer OIDC phone_number, fall back to IAM phone field
 		userPhone := claims.PhoneNumber
 		if userPhone == "" {
 			userPhone = claims.Phone
