@@ -43,11 +43,11 @@ func TestExtractTokenFromCookie(t *testing.T) {
 		value      string
 		expected   string
 	}{
-		{"casdoor cookie", "casdoor_access_token", "tok123", "tok123"},
+		{"iam cookie", "iam_access_token", "tok123", "tok123"},
 		{"access_token cookie", "access_token", "tok456", "tok456"},
 		{"hanzo_token cookie", "hanzo_token", "tok789", "tok789"},
 		{"unknown cookie", "random_cookie", "tokXYZ", ""},
-		{"empty cookie", "casdoor_access_token", "", ""},
+		{"empty cookie", "iam_access_token", "", ""},
 	}
 
 	for _, tt := range tests {

@@ -116,7 +116,7 @@ func extractRoleNames(raw json.RawMessage) string {
 // permissionBits is the canonical name → bit-position map. Values MUST
 // match commerce/util/permission/permission.go exactly; the iota order
 // there is the single source of truth. Only stable, well-known names
-// are translated — every other token (e.g. ad-hoc casbin policy names)
+// are translated — every other token (e.g. ad-hoc authz policy names)
 // maps to zero. Lookups are case-insensitive.
 //
 // To extend: add a constant in commerce, then add the matching entry
@@ -841,9 +841,8 @@ func extractBearerToken(r *http.Request) string {
 
 // extractTokenFromCookie extracts the access token from common cookie names.
 func extractTokenFromCookie(r *http.Request) string {
-	// Try common cookie names used by Casdoor
 	cookieNames := []string{
-		"casdoor_access_token",
+		"iam_access_token",
 		"access_token",
 		"hanzo_token",
 	}
