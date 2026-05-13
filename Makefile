@@ -5,8 +5,8 @@ OS := $(shell uname | tr '[:upper:]' '[:lower:]')
 MODULE := github.com/hanzoai/gateway
 VERSION := 2.13.0
 SCHEMA_VERSION := $(shell echo "${VERSION}" | cut -d '.' -f 1,2)
-GIT_COMMIT := $(shell git rev-parse --short=7 HEAD)
-GOLANG_VERSION := 1.26.1
+GIT_COMMIT = $(shell git rev-parse --short=7 HEAD 2>/dev/null)
+GOLANG_VERSION := 1.26.3
 ALPINE_VERSION := 3.23
 GLIBC_VERSION := $(shell sh find_glibc.sh 2>/dev/null || echo "unknown")
 
