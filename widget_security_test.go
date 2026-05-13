@@ -40,10 +40,55 @@ func TestExtractOriginHost(t *testing.T) {
 		{"docs.hanzo.ai", "docs.hanzo.ai"},
 		{"", ""},
 		{"https://evil.com:8080/path", "evil.com"},
+
+		// Case-insensitive: DNS hostnames are case-insensitive (RFC 4343).
+		// Allowlist entries are stored lower-case, so the extracted host must
+		// also be lower-cased or matching against "hanzo.ai" silently fails.
+		{"https://Hanzo.AI", "hanzo.ai"},
+		{"HTTPS://DOCS.HANZO.AI/path", "docs.hanzo.ai"},
+		{"DOCS.HANZO.AI", "docs.hanzo.ai"},
+
+		// Trailing FQDN dot: "hanzo.ai." is equivalent to "hanzo.ai" and
+		// must match the same allowlist entry.
+		{"https://hanzo.ai.", "hanzo.ai"},
+		{"https://docs.hanzo.ai./path", "docs.hanzo.ai"},
+
+		// IPv6 literals: bracketed-without-port should normalize to the same
+		// form returned by net.SplitHostPort for the port-bearing variant.
+		{"http://[::1]:8080/x", "::1"},
+		{"http://[::1]/x", "::1"},
+		{"http://[2001:db8::1]:443", "2001:db8::1"},
 	}
 	for _, tt := range tests {
 		if got := extractOriginHost(tt.input); got != tt.expected {
 			t.Errorf("extractOriginHost(%q) = %q, want %q", tt.input, got, tt.expected)
+		}
+	}
+}
+
+// Regression: a Hanzo property whose Origin header arrives with mixed case
+// (an unusual but spec-allowed browser/proxy behavior) was rejected as
+// "not authorized for origin: DOCS.HANZO.AI" because the allowlist map
+// key was the lower-case form. Verify the full pipeline accepts it now.
+func TestIsAllowedOriginCaseInsensitive(t *testing.T) {
+	allowed := widgetAllowedOrigins([]string{"hanzo.ai", "Hanzo.Bot"})
+
+	cases := []string{
+		"hanzo.ai",
+		"HANZO.AI",
+		"Hanzo.AI",
+		"docs.hanzo.ai",
+		"DOCS.HANZO.AI",
+		"app.hanzo.bot",
+		"APP.HANZO.BOT",
+	}
+	for _, host := range cases {
+		// extractOriginHost is the production entry point — it owns
+		// normalization. Feed the case-mixed value through it before the
+		// allowlist check, matching how NewWidgetSecurityMiddleware composes.
+		got := extractOriginHost(host)
+		if !isAllowedOrigin(got, allowed) {
+			t.Errorf("origin %q (normalized to %q) should be allowed", host, got)
 		}
 	}
 }
@@ -197,6 +242,35 @@ func TestWidgetSecurityMiddlewareOriginAllowed(t *testing.T) {
 
 	if w.Code != http.StatusOK {
 		t.Errorf("widget key with valid Origin should pass, got %d", w.Code)
+	}
+}
+
+func TestWidgetSecurityMiddlewareOriginMixedCase(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := DefaultWidgetSecurityConfig()
+	middleware := NewWidgetSecurityMiddleware(cfg)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+
+	r.Use(middleware)
+	r.POST("/v1/chat/completions", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	// Mixed-case Origin: hostnames are case-insensitive (RFC 4343), so an
+	// otherwise valid widget request from "https://Docs.Hanzo.AI" must not
+	// be rejected as forbidden.
+	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer hz_widget_public")
+	req.Header.Set("Origin", "https://Docs.Hanzo.AI")
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("widget key with mixed-case Origin should pass, got %d", w.Code)
 	}
 }
 

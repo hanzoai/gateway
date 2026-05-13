@@ -190,16 +190,24 @@ func isWidgetKey(token string) bool {
 }
 
 // widgetAllowedOrigins builds a set from the config slice for O(1) lookup.
+// Hosts are lower-cased so allowlist matching is case-insensitive (DNS
+// hostnames are case-insensitive per RFC 4343).
 func widgetAllowedOrigins(origins []string) map[string]bool {
 	m := make(map[string]bool, len(origins))
 	for _, o := range origins {
-		m[o] = true
+		m[strings.ToLower(o)] = true
 	}
 	return m
 }
 
 // extractOriginHost extracts the hostname from an Origin or Referer header.
 // Returns empty string if not parseable.
+//
+// The returned host is normalized for allowlist matching:
+//   - lower-cased (DNS hostnames are case-insensitive — RFC 4343),
+//   - any trailing FQDN dot is stripped ("hanzo.ai." → "hanzo.ai"),
+//   - IPv6 literals are returned without enclosing brackets ("[::1]" → "::1"),
+//     matching what net.SplitHostPort returns for the port-bearing form.
 func extractOriginHost(origin string) string {
 	if origin == "" {
 		return ""
@@ -212,13 +220,19 @@ func extractOriginHost(origin string) string {
 	if idx := strings.IndexByte(origin, '/'); idx >= 0 {
 		origin = origin[:idx]
 	}
-	// Strip port
+	// Strip port (also unwraps IPv6 brackets when a port is present).
 	host, _, err := net.SplitHostPort(origin)
 	if err != nil {
-		// No port, origin is the host
-		return origin
+		// No port — origin is the host. Drop IPv6 brackets if present so
+		// the bracketed and port-bearing forms normalize to the same value.
+		host = origin
+		if len(host) >= 2 && host[0] == '[' && host[len(host)-1] == ']' {
+			host = host[1 : len(host)-1]
+		}
 	}
-	return host
+	// Strip trailing FQDN dot.
+	host = strings.TrimSuffix(host, ".")
+	return strings.ToLower(host)
 }
 
 // NewWidgetSecurityMiddleware creates a gin middleware that enforces:
@@ -295,6 +309,10 @@ func NewWidgetSecurityMiddleware(cfg WidgetSecurityConfig) gin.HandlerFunc {
 
 // isAllowedOrigin checks if the origin host matches any allowed origin,
 // including subdomain matching (e.g., "foo.hanzo.ai" matches "hanzo.ai").
+//
+// `host` is expected to already be normalized (lower-cased, no trailing dot,
+// no IPv6 brackets) — typically via extractOriginHost. `allowed` is built by
+// widgetAllowedOrigins, which lower-cases on insert.
 func isAllowedOrigin(host string, allowed map[string]bool) bool {
 	// Exact match
 	if allowed[host] {
