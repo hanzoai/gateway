@@ -57,7 +57,7 @@ JWT validation, the gateway re-injects the headers from the validated claims.
 | X-User-Permissions  | `permissions`+`isAdmin` | base-10 int64 bit.Field            |
 
 **X-User-Permissions** is gateway-derived from the JWT `permissions` claim
-(any of: numeric bit-field, `[]string` of names, `[]{"name":"..."}` Casdoor
+(any of: numeric bit-field, `[]string` of names, `[]{"name":"..."}` upstream-IAM
 permission objects). Names are looked up in `permissionBits` (see
 `auth_middleware.go`); unknown names are dropped silently (forwards-compatible
 with new IAM permissions). If the JWT carries `isAdmin: true` the gateway also
