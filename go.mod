@@ -3,8 +3,8 @@ module github.com/hanzoai/gateway
 go 1.26.3
 
 require (
-	github.com/hanzoai/cloud v0.1.0
-	github.com/hanzoai/zip v0.1.1
+	github.com/hanzoai/cloud v0.1.1-0.20260519183759-098489930d01
+	github.com/hanzoai/zip v0.2.0
 )
 
 require (
