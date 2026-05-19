@@ -1,20 +1,9 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
 // cmd/gateway is the standalone Hanzo Gateway edge process per HIP-0110.
-//
-// One binary, three responsibilities:
-//
-//  1. Terminate the JSON/HTTP boundary on :8080 for every external client.
-//  2. Validate JWTs against IAM and mint the canonical identity header set
-//     (X-Org-Id, X-User-Id, X-User-IsAdmin, X-User-Permissions, X-Roles,
-//     X-User-Email, X-Phone-Number) per HIP-0026.
-//  3. Forward the validated request to cloud (HIP-0106) over ZAP, and
-//     route ZAP push frames from base back to the originating client as
-//     SSE/WebSocket bytes — no JSON re-marshaling on the reverse path.
-//
-// The gateway holds no per-tenant state. Per-replica memory is bounded by
-// open connection count plus the JWKS cache; horizontal scaling is a
-// replica-count knob with no sticky sessions.
+// Terminates JSON/HTTP at :8080, validates JWTs, mints HIP-0026 identity
+// headers, forwards every request to cloud/base over ZAP, and routes
+// reverse-push frames from base back to client SSE/WS sockets.
 package main
 
 import (
@@ -37,18 +26,11 @@ import (
 )
 
 const (
-	envListen       = "GATEWAY_LISTEN"
-	envHealthListen = "GATEWAY_HEALTH_LISTEN"
-	envCloudZAPAddr = "CLOUD_ZAP_ADDR"
-	envBaseZAPAddr  = "BASE_ZAP_ADDR"
-	envNodeID       = "GATEWAY_NODE_ID"
-
 	defaultListen       = ":8080"
 	defaultHealthListen = ":8081"
 	defaultCloudAddr    = "cloud:9090"
 	defaultBaseAddr     = "base:9091"
-
-	shutdownGrace = 30 * time.Second
+	shutdownGrace       = 30 * time.Second
 )
 
 func main() {
@@ -60,18 +42,14 @@ func main() {
 		logger.Error("backend dial failed", "err", err)
 		os.Exit(1)
 	}
-
 	app, err := gateway.BuildApp(gateway.RouterDeps{
-		Logger:    logger,
-		ZAPNode:   zapNode,
-		CloudAddr: cfg.CloudZAPAddr,
-		BaseAddr:  cfg.BaseZAPAddr,
+		Logger: logger, ZAPNode: zapNode,
+		CloudAddr: cfg.CloudZAPAddr, BaseAddr: cfg.BaseZAPAddr,
 	})
 	if err != nil {
 		logger.Error("BuildApp failed", "err", err)
 		os.Exit(1)
 	}
-
 	health := buildHealthApp()
 
 	ctx, stop := signal.NotifyContext(context.Background(),
@@ -79,18 +57,8 @@ func main() {
 	defer stop()
 
 	errCh := make(chan error, 2)
-	go func() {
-		logger.Info("public listener up", "addr", cfg.Listen)
-		if err := app.Listen(cfg.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- fmt.Errorf("public listen: %w", err)
-		}
-	}()
-	go func() {
-		logger.Info("health listener up", "addr", cfg.HealthListen)
-		if err := health.Listen(cfg.HealthListen); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errCh <- fmt.Errorf("health listen: %w", err)
-		}
-	}()
+	go listen(app, cfg.Listen, "public", logger, errCh)
+	go listen(health, cfg.HealthListen, "health", logger, errCh)
 
 	select {
 	case <-ctx.Done():
@@ -98,65 +66,60 @@ func main() {
 	case err := <-errCh:
 		logger.Error("listener exited", "err", err)
 	}
-
 	drainCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
-	if err := app.ShutdownWithContext(drainCtx); err != nil {
-		logger.Warn("public shutdown", "err", err)
-	}
-	if err := health.ShutdownWithContext(drainCtx); err != nil {
-		logger.Warn("health shutdown", "err", err)
-	}
+	_ = app.ShutdownWithContext(drainCtx)
+	_ = health.ShutdownWithContext(drainCtx)
 	zapNode.Stop()
 	logger.Info("gateway stopped")
 }
 
+func listen(app *zip.App, addr, name string, logger luxlog.Logger, errCh chan<- error) {
+	logger.Info(name+" listener up", "addr", addr)
+	if err := app.Listen(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		errCh <- fmt.Errorf("%s listen: %w", name, err)
+	}
+}
+
 type config struct {
-	Listen, HealthListen string
-	CloudZAPAddr, BaseZAPAddr, NodeID string
+	Listen, HealthListen, CloudZAPAddr, BaseZAPAddr, NodeID string
 }
 
 func loadConfig(logger luxlog.Logger) config {
 	cfg := config{
-		Listen:       envOr(envListen, defaultListen),
-		HealthListen: envOr(envHealthListen, defaultHealthListen),
-		CloudZAPAddr: envOr(envCloudZAPAddr, defaultCloudAddr),
-		BaseZAPAddr:  envOr(envBaseZAPAddr, defaultBaseAddr),
-		NodeID:       envOr(envNodeID, hostnameOr("gateway")),
+		Listen:       envOr("GATEWAY_LISTEN", defaultListen),
+		HealthListen: envOr("GATEWAY_HEALTH_LISTEN", defaultHealthListen),
+		CloudZAPAddr: envOr("CLOUD_ZAP_ADDR", defaultCloudAddr),
+		BaseZAPAddr:  envOr("BASE_ZAP_ADDR", defaultBaseAddr),
+		NodeID:       envOr("GATEWAY_NODE_ID", hostnameOr("gateway")),
 	}
 	logger.Info("config",
-		"listen", cfg.Listen,
-		"health", cfg.HealthListen,
-		"cloud_zap", cfg.CloudZAPAddr,
-		"base_zap", cfg.BaseZAPAddr,
-		"node_id", cfg.NodeID,
-	)
+		"listen", cfg.Listen, "health", cfg.HealthListen,
+		"cloud_zap", cfg.CloudZAPAddr, "base_zap", cfg.BaseZAPAddr,
+		"node_id", cfg.NodeID)
 	return cfg
 }
 
+// dialBackends opens one ZAP node and connects it to cloud and base.
+// Reverse-push frames travel back over the same conns (zaplib dispatches
+// any incoming MsgTypePush from any peer to the registered handler).
 func dialBackends(logger luxlog.Logger, cfg config) (*zaplib.Node, error) {
 	node := zaplib.NewNode(zaplib.NodeConfig{
-		NodeID:      cfg.NodeID,
-		Port:        0,
-		NoDiscovery: true,
-		Logger:      slog.Default(),
+		NodeID: cfg.NodeID, Port: 0, NoDiscovery: true,
+		Logger: slog.Default(),
 	})
 	if err := node.Start(); err != nil {
 		return nil, fmt.Errorf("zap node start: %w", err)
 	}
-	if err := node.ConnectDirect(cfg.CloudZAPAddr); err != nil {
-		node.Stop()
-		return nil, fmt.Errorf("dial cloud %s: %w", cfg.CloudZAPAddr, err)
-	}
-	if err := node.ConnectDirect(cfg.BaseZAPAddr); err != nil {
-		node.Stop()
-		return nil, fmt.Errorf("dial base %s: %w", cfg.BaseZAPAddr, err)
+	for name, addr := range map[string]string{"cloud": cfg.CloudZAPAddr, "base": cfg.BaseZAPAddr} {
+		if err := node.ConnectDirect(addr); err != nil {
+			node.Stop()
+			return nil, fmt.Errorf("dial %s %s: %w", name, addr, err)
+		}
 	}
 	node.Handle(gateway.MsgTypePush, gateway.HandleReversePush)
 	logger.Info("zap backends connected",
-		"cloud", cfg.CloudZAPAddr,
-		"base", cfg.BaseZAPAddr,
-	)
+		"cloud", cfg.CloudZAPAddr, "base", cfg.BaseZAPAddr)
 	return node, nil
 }
 
@@ -181,16 +144,16 @@ func buildHealthApp() *zip.App {
 	return app
 }
 
-func envOr(key, dflt string) string {
-	if v := os.Getenv(key); v != "" {
+func envOr(k, d string) string {
+	if v := os.Getenv(k); v != "" {
 		return v
 	}
-	return dflt
+	return d
 }
 
-func hostnameOr(dflt string) string {
+func hostnameOr(d string) string {
 	if h, err := os.Hostname(); err == nil && h != "" {
 		return h
 	}
-	return dflt
+	return d
 }
