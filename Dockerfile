@@ -13,6 +13,13 @@ RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git
 COPY . /app
 WORKDIR /app
 
+# Per SCALE_STANDARD.md §2 — every Go production Dockerfile at the
+# gateway edge or in any JSON-emitting subsystem builds with
+# GOEXPERIMENT=jsonv2. Verified −12% time / −23% allocs on the edge
+# POST roundtrip vs encoding/json v1 (json_bench_test.go in zip).
+ARG GO_EXPERIMENT=jsonv2
+ENV GOEXPERIMENT=${GO_EXPERIMENT}
+
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
