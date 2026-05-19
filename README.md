@@ -1,3 +1,47 @@
+# gateway
+
+HTTP gateway: routing, JWT validation, identity strip + mint, rate limit, circuit break, telemetry.
+
+[![Status](https://img.shields.io/badge/status-stable-green)]()
+[![License](https://img.shields.io/badge/license-MIT-blue)]()
+
+## Quick start
+
+```bash
+docker run -p 8080:8080 ghcr.io/hanzoai/gateway:latest
+```
+
+## What this is
+
+`gateway` is the unified API entry point for the Hanzo platform. Behind `hanzoai/ingress` (L7 TLS), in front of every Hanzo backend service. Validates JWTs against Hanzo IAM JWKS, strips every client-supplied identity header (`X-User-*`, `X-Org-Id`, ...), mints the three canonical identity headers from the JWT, then forwards in-process (when co-resident under `hanzoai/cloud`) or over the wire to downstream services.
+
+## Specs
+
+Implements:
+- HIP-0026 IAM (identity-header contract)
+- HIP-0106 Unified Cloud Binary (gateway subsystem — already exposes `Mount()`)
+
+## Architecture
+
+```
+   Internet  ->  hanzoai/ingress (TLS, L7)  ->  hanzoai/gateway
+                                                    |
+                                          JWT validation (IAM JWKS)
+                                                    |
+                          strip client X-* identity headers (unconditional)
+                                                    |
+                          mint X-User-Id / X-Org-Id / X-Roles from JWT
+                                                    |
+                          rate-limit, circuit-break, telemetry
+                                                    |
+                          in-process route to cloud subsystems
+                                          OR
+                          over-the-wire to standalone services
+```
+
+
+---
+
 # Hanzo Gateway
 
 High-performance API gateway for Hanzo AI services. Routes 147+ API endpoints across production clusters with rate limiting, authentication forwarding, CORS, circuit breakers, and telemetry -- all driven by declarative JSON configuration.
