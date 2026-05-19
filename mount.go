@@ -25,7 +25,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hanzoai/cloud/pkg/cloud"
+	"github.com/hanzoai/cloud"
 	gw "github.com/hanzoai/gateway"
 	"github.com/hanzoai/zip"
 )
