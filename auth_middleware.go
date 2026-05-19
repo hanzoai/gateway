@@ -422,9 +422,12 @@ func DefaultAuthConfig() AuthConfig {
 		issuer = "https://hanzo.id"
 	}
 
-	// AUTH_AUDIENCE is optional. When not set, audience validation is skipped
-	// (issuer + JWKS signature is sufficient when all apps share the same IAM).
+	// AUTH_AUDIENCE defaults to https://api.hanzo.ai when not set. Audience
+	// validation is ALWAYS enforced (auth_middleware.go:739).
 	audience := os.Getenv("AUTH_AUDIENCE")
+	if audience == "" {
+		audience = "https://api.hanzo.ai"
+	}
 
 	billingURL := os.Getenv("AUTH_BILLING_URL")
 	if billingURL == "" {
