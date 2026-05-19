@@ -24,7 +24,9 @@ import (
 	opencensus "github.com/krakend/krakend-opencensus/v2"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/datadog"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/influxdb"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/jaeger"
+	// jaeger exporter dropped: upstream uses an opencensus/Thrift API combo
+	// incompatible with current jaeger-client-go. Migration path is OTel
+	// (kotel below) + ZAP for inter-service.
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/ocagent"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/prometheus"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/stackdriver"

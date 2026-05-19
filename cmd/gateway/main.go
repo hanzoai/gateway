@@ -139,7 +139,8 @@ func buildHealthApp() *zip.App {
 	})
 	app.Get("/metrics", func(c *zip.Ctx) error {
 		c.SetHeader("Content-Type", "text/plain; version=0.0.4")
-		return c.SendString(http.StatusOK, "# gateway up\n")
+		c.Fiber().Status(http.StatusOK)
+		return c.Fiber().SendString("# gateway up\n")
 	})
 	return app
 }
