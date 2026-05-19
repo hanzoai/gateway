@@ -95,6 +95,7 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 		"auth.require", authCfg.RequireAuth,
 		"brand", deps.Brand,
 		"domain", deps.Domain,
+		"json_variant", zip.JSONVariant,
 	)
 	return nil
 }
