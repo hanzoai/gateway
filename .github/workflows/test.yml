@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  # Route gateway's in-process zip mount through encoding/json/v2.
+  # Same source either way; v1 fallback if the flag is unset.
+  GOEXPERIMENT: jsonv2
+
 jobs:
   go-vet:
     name: Go Vet
