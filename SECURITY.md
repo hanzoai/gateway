@@ -1,16 +1,17 @@
 # Security Policy
 
-Only the latest version of Hanzo Gateway is maintained.
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+Email security@hanzo.ai with details. Encrypt with our PGP key (fingerprint TBD).
 
-Please email security@hanzo.ai with your discovery.
+We respond within 48 hours. Critical issues receive same-day acknowledgment.
 
-As soon as we read and understand your finding we will provide an answer with next steps and possible timelines.
+## Scope
 
-We follow responsible disclosure practices:
+This policy covers code in this repository. For the broader Hanzo platform threat model, see [hanzoai/HIPs](https://github.com/hanzoai/HIPs).
 
-- Vulnerabilities are not published prior to a fix being released.
-- Exact details (exploits, proof-of-concept) are not divulged publicly.
+## Sandbox boundary
 
-Thank you for helping keep Hanzo Gateway and the open source community secure.
+`gateway` is the only Hanzo service that mints identity headers from JWTs — every client-supplied `X-User-*`, `X-Org-Id`, and `X-Roles` header is stripped unconditionally before processing. JWT validation runs against the Hanzo IAM JWKS endpoint, and rate limiting / circuit breakers isolate failures so a misbehaving client or downstream cannot affect other tenants.
+
+For runtime sandbox guarantees, see HIP-0105 (in-process extension runtimes).
