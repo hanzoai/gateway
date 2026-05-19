@@ -306,6 +306,4 @@ require (
 
 // HIP-0106 unified-binary contract — pin to local sibling repos so the
 // gateway Mount() signature evolves in lockstep with cloud + zip.
-replace github.com/hanzoai/cloud => ../cloud
 
-replace github.com/hanzoai/zip => ../zip
