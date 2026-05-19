@@ -13,10 +13,13 @@ RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git
 COPY . /app
 WORKDIR /app
 
+# GOEXPERIMENT=jsonv2 routes JSON paths exposed by the in-process
+# gateway mount (HIP-0106 cloud-binary surface in mount.go) through
+# stdlib encoding/json/v2 via hanzoai/zip. Same source either way.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
+    GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
+    GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
 
 # Stage 2: Runtime image
 FROM alpine:${ALPINE_VERSION}
