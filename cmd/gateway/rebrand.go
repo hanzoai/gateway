@@ -7,6 +7,12 @@
 // the help-template banner, the `version` subcommand output, and the lint
 // schema URL. The strings we override are package-level vars or mutable
 // fields on cobra.Command — no fork of krakend-cobra is required.
+//
+// LEGACY: only compiled alongside the legacy KrakenD entrypoint
+// (main_legacy.go). Removed when the legacy file is removed.
+
+//go:build legacy
+// +build legacy
 
 package main
 
