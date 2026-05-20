@@ -44,7 +44,7 @@ Implements:
 
 # Hanzo Gateway
 
-High-performance API gateway for Hanzo AI services. Routes 147+ API endpoints across production clusters with rate limiting, authentication forwarding, CORS, circuit breakers, and telemetry -- all driven by declarative JSON configuration.
+High-performance API gateway for Hanzo AI services. Routes 133 API endpoints across production clusters with rate limiting, authentication forwarding, CORS, circuit breakers, and telemetry -- all driven by declarative JSON configuration.
 
 [![CI](https://github.com/hanzoai/gateway/actions/workflows/deploy.yml/badge.svg)](https://github.com/hanzoai/gateway/actions/workflows/deploy.yml)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev)
