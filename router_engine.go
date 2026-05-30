@@ -407,23 +407,20 @@ type ginOptions struct {
 // corsPreflightMiddleware handles OPTIONS preflight requests globally.
 // Must run before any gateway routing to prevent 405/503 on preflight.
 func corsPreflightMiddleware() gin.HandlerFunc {
+	// CORS preflight origins. Localhost defaults are baked in for dev.
+	// Production origins must be supplied via the GATEWAY_CORS_ORIGINS env
+	// var (comma-separated) or the security/cors block in gateway config.
 	origins := map[string]bool{
-		"https://partner": true, "https://app.partner": true, "https://exchange.partner": true,
-		"https://exchange.example.internal": true, "https://superadmin.example.internal": true, "https://id.example.internal": true,
-		"https://bd.example.internal": true, "https://ats.example.internal": true, "https://ta.example.internal": true,
-		"https://exchange.test.example.internal": true, "https://superadmin.test.example.internal": true, "https://id.test.example.internal": true,
-		"https://bd.test.example.internal": true, "https://ats.test.example.internal": true, "https://ta.test.example.internal": true,
-		"https://exchange.dev.example.internal": true, "https://superadmin.dev.example.internal": true, "https://id.dev.example.internal": true,
-		// BD, ATS, and TA admin UIs are declared in the gateway security/cors
-		// config block but were missing from this Gin-level preflight map.
-		// Without them here, the middleware takes the c.Next() fallthrough
-		// path on OPTIONS requests, Gin sees no OPTIONS handler registered,
-		// and returns 405 with no CORS headers — which the browser surfaces
-		// as "preflight doesn't pass access control check".
-		"https://bd.dev.example.internal": true, "https://ats.dev.example.internal": true, "https://ta.dev.example.internal": true,
-		"https://swap.dev.example.internal": true, "https://api.dev.example.internal": true,
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
+	}
+	if extra := os.Getenv("GATEWAY_CORS_ORIGINS"); extra != "" {
+		for _, o := range strings.Split(extra, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				origins[o] = true
+			}
+		}
 	}
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
