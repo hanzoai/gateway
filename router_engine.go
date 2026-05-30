@@ -407,23 +407,20 @@ type ginOptions struct {
 // corsPreflightMiddleware handles OPTIONS preflight requests globally.
 // Must run before any gateway routing to prevent 405/503 on preflight.
 func corsPreflightMiddleware() gin.HandlerFunc {
+	// CORS preflight origins. Localhost defaults are baked in for dev.
+	// Production origins must be supplied via the GATEWAY_CORS_ORIGINS env
+	// var (comma-separated) or the security/cors block in gateway config.
 	origins := map[string]bool{
-		"https://": true, "https://app.": true, "https://exchange.": true,
-		"https://exchange.": true, "https://superadmin.": true, "https://id.": true,
-		"https://bd.": true, "https://ats.": true, "https://ta.": true,
-		"https://exchange.test.": true, "https://superadmin.test.": true, "https://id.test.": true,
-		"https://bd.test.": true, "https://ats.test.": true, "https://ta.test.": true,
-		"https://exchange.dev.": true, "https://superadmin.dev.": true, "https://id.dev.": true,
-		// BD, ATS, and TA admin UIs are declared in the gateway security/cors
-		// config block but were missing from this Gin-level preflight map.
-		// Without them here, the middleware takes the c.Next() fallthrough
-		// path on OPTIONS requests, Gin sees no OPTIONS handler registered,
-		// and returns 405 with no CORS headers — which the browser surfaces
-		// as "preflight doesn't pass access control check".
-		"https://bd.dev.": true, "https://ats.dev.": true, "https://ta.dev.": true,
-		"https://swap.dev.": true, "https://api.dev.": true,
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
+	}
+	if extra := os.Getenv("GATEWAY_CORS_ORIGINS"); extra != "" {
+		for _, o := range strings.Split(extra, ",") {
+			o = strings.TrimSpace(o)
+			if o != "" {
+				origins[o] = true
+			}
+		}
 	}
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
