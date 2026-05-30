@@ -120,7 +120,7 @@ func TestLiquidityOperatorConfig(t *testing.T) {
     "security/cors": {
       "allow_headers": ["Content-Type", "Authorization", "X-Org-Id", "X-Request-ID"],
       "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-      "allow_origins": ["https://exchange.test."],
+      "allow_origins": ["https://exchange.test.example.com"],
       "expose_headers": ["Content-Length"],
       "max_age": "12h"
     }
