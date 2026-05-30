@@ -1,134 +1,160 @@
-// Gateway sets up a complete Hanzo API Gateway ready to serve
+// Copyright © 2026 Hanzo AI. MIT License.
 
+// cmd/gateway is the standalone Hanzo Gateway edge process per HIP-0110.
+// Terminates JSON/HTTP at :8080, validates JWTs, mints HIP-0026 identity
+// headers, forwards every request to cloud/base over ZAP, and routes
+// reverse-push frames from base back to client SSE/WS sockets.
 package main
 
 import (
 	"context"
-	"embed"
-	"log"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
-	gateway "github.com/hanzoai/gateway"
-	cmd "github.com/krakend/krakend-cobra/v2"
-	flexibleconfig "github.com/krakend/krakend-flexibleconfig/v2"
-	koanf "github.com/krakend/krakend-koanf"
-	"github.com/luraproject/lura/v2/config"
+	luxlog "github.com/luxfi/log"
+	zaplib "github.com/luxfi/zap"
+
+	"github.com/hanzoai/gateway"
+	"github.com/hanzoai/zip"
+	"github.com/hanzoai/zip/middleware"
 )
 
 const (
-	fcPartials  = "FC_PARTIALS"
-	fcTemplates = "FC_TEMPLATES"
-	fcSettings  = "FC_SETTINGS"
-	fcPath      = "FC_OUT"
-	fcEnable    = "FC_ENABLE"
+	defaultListen       = ":8080"
+	defaultHealthListen = ":8081"
+	defaultCloudAddr    = "cloud:9090"
+	defaultBaseAddr     = "base:9091"
+	shutdownGrace       = 30 * time.Second
 )
 
-//go:embed schema
-var embedSchema embed.FS
-
 func main() {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	ctx, cancel := context.WithCancel(context.Background())
+	logger := luxlog.New("service", "gateway")
+	cfg := loadConfig(logger)
+
+	zapNode, err := dialBackends(logger, cfg)
+	if err != nil {
+		logger.Error("backend dial failed", "err", err)
+		os.Exit(1)
+	}
+	app, err := gateway.BuildApp(gateway.RouterDeps{
+		Logger: logger, ZAPNode: zapNode,
+		CloudAddr: cfg.CloudZAPAddr, BaseAddr: cfg.BaseZAPAddr,
+	})
+	if err != nil {
+		logger.Error("BuildApp failed", "err", err)
+		os.Exit(1)
+	}
+	health := buildHealthApp()
+
+	ctx, stop := signal.NotifyContext(context.Background(),
+		syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	errCh := make(chan error, 2)
+	go listen(app, cfg.Listen, "public", logger, errCh)
+	go listen(health, cfg.HealthListen, "health", logger, errCh)
+
+	select {
+	case <-ctx.Done():
+		logger.Info("shutdown signal received", "grace", shutdownGrace.String())
+	case err := <-errCh:
+		logger.Error("listener exited", "err", err)
+	}
+	drainCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
 	defer cancel()
-
-	go func() {
-		select {
-		case sig := <-sigs:
-			log.Println("Signal intercepted:", sig)
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-
-	gateway.RegisterEncoders()
-
-	for key, alias := range aliases {
-		config.ExtraConfigAlias[alias] = key
-	}
-
-	var cfg config.Parser
-	cfg = koanf.New()
-	if os.Getenv(fcEnable) != "" {
-		cfg = flexibleconfig.NewTemplateParser(flexibleconfig.Config{
-			Parser:    cfg,
-			Partials:  os.Getenv(fcPartials),
-			Settings:  os.Getenv(fcSettings),
-			Path:      os.Getenv(fcPath),
-			Templates: os.Getenv(fcTemplates),
-		})
-	}
-
-	var rawSchema string
-	schema, err := embedSchema.ReadFile("schema/schema.json")
-	if err == nil {
-		rawSchema = string(schema)
-	}
-
-	commandsToLoad := []cmd.Command{
-		cmd.RunCommand,
-		cmd.NewCheckCmd(rawSchema),
-		cmd.PluginCommand,
-		cmd.VersionCommand,
-		cmd.AuditCommand,
-		gateway.NewTestPluginCmd(),
-	}
-
-	cmd.DefaultRoot = cmd.NewRoot(cmd.RootCommand, commandsToLoad...)
-	cmd.DefaultRoot.Cmd.CompletionOptions.DisableDefaultCmd = true
-
-	// Build the command tree eagerly so subcommands exist when rebrandCLI
-	// walks them. krakend-cobra's Root.Build is sync.Once-guarded, so calling
-	// it here and letting Execute call it again is a no-op on the second pass.
-	cmd.DefaultRoot.Build()
-	rebrandCLI()
-
-	cmd.Execute(cfg, gateway.NewExecutor(ctx))
+	_ = app.ShutdownWithContext(drainCtx)
+	_ = health.ShutdownWithContext(drainCtx)
+	zapNode.Stop()
+	logger.Info("gateway stopped")
 }
 
-var aliases = map[string]string{
-	"github_com/devopsfaith/krakend/transport/http/server/handler":  "plugin/http-server",
-	"github.com/devopsfaith/krakend/transport/http/client/executor": "plugin/http-client",
-	"github.com/devopsfaith/krakend/proxy/plugin":                   "plugin/req-resp-modifier",
-	"github.com/devopsfaith/krakend/proxy":                          "proxy",
-	"github_com/luraproject/lura/router/gin":                        "router",
+func listen(app *zip.App, addr, name string, logger luxlog.Logger, errCh chan<- error) {
+	logger.Info(name+" listener up", "addr", addr)
+	if err := app.Listen(addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		errCh <- fmt.Errorf("%s listen: %w", name, err)
+	}
+}
 
-	"github.com/devopsfaith/krakend-httpcache":                "qos/http-cache",
-	"github.com/devopsfaith/krakend-circuitbreaker/gobreaker": "qos/circuit-breaker",
+type config struct {
+	Listen, HealthListen, CloudZAPAddr, BaseZAPAddr, NodeID string
+}
 
-	"github.com/devopsfaith/krakend-oauth2-clientcredentials": "auth/client-credentials",
-	"github.com/devopsfaith/krakend-jose/validator":           "auth/validator",
-	"github.com/devopsfaith/krakend-jose/signer":              "auth/signer",
-	"github_com/devopsfaith/bloomfilter":                      "auth/revoker",
+func loadConfig(logger luxlog.Logger) config {
+	cfg := config{
+		Listen:       envOr("GATEWAY_LISTEN", defaultListen),
+		HealthListen: envOr("GATEWAY_HEALTH_LISTEN", defaultHealthListen),
+		CloudZAPAddr: envOr("CLOUD_ZAP_ADDR", defaultCloudAddr),
+		BaseZAPAddr:  envOr("BASE_ZAP_ADDR", defaultBaseAddr),
+		NodeID:       envOr("GATEWAY_NODE_ID", hostnameOr("gateway")),
+	}
+	logger.Info("config",
+		"listen", cfg.Listen, "health", cfg.HealthListen,
+		"cloud_zap", cfg.CloudZAPAddr, "base_zap", cfg.BaseZAPAddr,
+		"node_id", cfg.NodeID)
+	return cfg
+}
 
-	"github_com/devopsfaith/krakend-botdetector": "security/bot-detector",
-	"github_com/devopsfaith/krakend-httpsecure":  "security/http",
-	"github_com/devopsfaith/krakend-cors":        "security/cors",
+// dialBackends opens one ZAP node and connects it to cloud and base.
+// Reverse-push frames travel back over the same conns (zaplib dispatches
+// any incoming MsgTypePush from any peer to the registered handler).
+func dialBackends(logger luxlog.Logger, cfg config) (*zaplib.Node, error) {
+	node := zaplib.NewNode(zaplib.NodeConfig{
+		NodeID: cfg.NodeID, Port: 0, NoDiscovery: true,
+		Logger: slog.Default(),
+	})
+	if err := node.Start(); err != nil {
+		return nil, fmt.Errorf("zap node start: %w", err)
+	}
+	for name, addr := range map[string]string{"cloud": cfg.CloudZAPAddr, "base": cfg.BaseZAPAddr} {
+		if err := node.ConnectDirect(addr); err != nil {
+			node.Stop()
+			return nil, fmt.Errorf("dial %s %s: %w", name, addr, err)
+		}
+	}
+	node.Handle(gateway.MsgTypePush, gateway.HandleReversePush)
+	logger.Info("zap backends connected",
+		"cloud", cfg.CloudZAPAddr, "base", cfg.BaseZAPAddr)
+	return node, nil
+}
 
-	"github.com/devopsfaith/krakend-cel":        "validation/cel",
-	"github.com/devopsfaith/krakend-jsonschema": "validation/json-schema",
+func buildHealthApp() *zip.App {
+	app := zip.New(zip.Config{
+		Logger:                luxlog.New("service", "gateway-health"),
+		ServerHeader:          "-",
+		DisableStartupMessage: true,
+		AppName:               "gateway-health",
+	})
+	app.Use(middleware.Recover())
+	app.Get("/healthz", func(c *zip.Ctx) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+	})
+	app.Get("/readyz", func(c *zip.Ctx) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
+	})
+	app.Get("/metrics", func(c *zip.Ctx) error {
+		c.SetHeader("Content-Type", "text/plain; version=0.0.4")
+		c.Fiber().Status(http.StatusOK)
+		return c.Fiber().SendString("# gateway up\n")
+	})
+	return app
+}
 
-	"github.com/devopsfaith/krakend-amqp/agent": "async/amqp",
+func envOr(k, d string) string {
+	if v := os.Getenv(k); v != "" {
+		return v
+	}
+	return d
+}
 
-	"github.com/devopsfaith/krakend-amqp/consume":                  "backend/amqp/consumer",
-	"github.com/devopsfaith/krakend-amqp/produce":                  "backend/amqp/producer",
-	"github.com/devopsfaith/krakend-lambda":                        "backend/lambda",
-	"github.com/devopsfaith/krakend-pubsub/publisher":              "backend/pubsub/publisher",
-	"github.com/devopsfaith/krakend-pubsub/subscriber":             "backend/pubsub/subscriber",
-	"github.com/devopsfaith/krakend/transport/http/client/graphql": "backend/graphql",
-	"github.com/devopsfaith/krakend/http":                          "backend/http",
-
-	"github_com/devopsfaith/krakend-gelf":       "telemetry/gelf",
-	"github_com/devopsfaith/krakend-gologging":  "telemetry/logging",
-	"github_com/devopsfaith/krakend-logstash":   "telemetry/logstash",
-	"github_com/devopsfaith/krakend-metrics":    "telemetry/metrics",
-	"github_com/letgoapp/krakend-influx":        "telemetry/influx",
-	"github_com/devopsfaith/krakend-opencensus": "telemetry/opencensus",
-
-	"github.com/devopsfaith/krakend-lua/router":        "modifier/lua-endpoint",
-	"github.com/devopsfaith/krakend-lua/proxy":         "modifier/lua-proxy",
-	"github.com/devopsfaith/krakend-lua/proxy/backend": "modifier/lua-backend",
-	"github.com/devopsfaith/krakend-martian":           "modifier/martian",
+func hostnameOr(d string) string {
+	if h, err := os.Hostname(); err == nil && h != "" {
+		return h
+	}
+	return d
 }
