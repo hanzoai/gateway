@@ -11,6 +11,26 @@ HTTP gateway: routing, JWT validation, identity strip + mint, rate limit, circui
 docker run -p 8080:8080 ghcr.io/hanzoai/gateway:latest
 ```
 
+## Build dependency: `GOEXPERIMENT=jsonv2`
+
+The HIP-0106 in-process gateway mount runs on `hanzoai/zip`, which
+routes every JSON path through stdlib `encoding/json/v2` when the
+binary is compiled with `GOEXPERIMENT=jsonv2`. Shipped Dockerfile +
+CI workflow set the flag; manual builds should do the same:
+
+```bash
+GOEXPERIMENT=jsonv2 make build
+```
+
+Without the experiment the binary still builds and runs - zip falls
+back to `encoding/json` v1. v2 is preferred for production: ~10%
+faster on the edge, ~25% fewer allocations per request. The mount
+startup log line `json_variant=encoding/json/v2` confirms it is
+active.
+
+No third-party JSON library is allowed in the Hanzo Go stack - stdlib
+only (HIP-0106 canonical Hanzo Go stack).
+
 ## What this is
 
 `gateway` is the unified API entry point for the Hanzo platform. Behind `hanzoai/ingress` (L7 TLS), in front of every Hanzo backend service. Validates JWTs against Hanzo IAM JWKS, strips every client-supplied identity header (`X-User-*`, `X-Org-Id`, ...), mints the three canonical identity headers from the JWT, then forwards in-process (when co-resident under `hanzoai/cloud`) or over the wire to downstream services.
