@@ -45,7 +45,7 @@ cd ~/work/liquidity/ats && go build .
 ```
 GATEWAY_PLUGINS=ats,bd,ta,kms
 GATEWAY_PLUGIN_DATA_DIR=/data
-IAM_ENDPOINT=https://iam.dev.
+IAM_ENDPOINT=https://iam.dev.<your-domain>
 ```
 
 ## Implementation Order
