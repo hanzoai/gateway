@@ -26,12 +26,29 @@ import (
 )
 
 const (
-	defaultListen       = ":8080"
-	defaultHealthListen = ":8081"
-	defaultCloudAddr    = "cloud:9090"
-	defaultBaseAddr     = "base:9091"
-	shutdownGrace       = 30 * time.Second
+	defaultListen        = ":8080"
+	defaultHealthListen  = ":8081"
+	defaultCloudAddr     = "cloud:9090"
+	defaultBaseAddr      = "base:9091"
+	defaultShutdownGrace = 30 * time.Second
 )
+
+// shutdownGraceFromEnv parses GATEWAY_SHUTDOWN_TIMEOUT (any duration string
+// accepted by time.ParseDuration, e.g. "45s", "2m"). Returns def when the
+// env var is unset, empty, or unparseable. Operators driving slow rollouts
+// (long-poll connections, large SSE backlogs) bump this above the default
+// 30s; aggressive autoscalers can drop it.
+func shutdownGraceFromEnv(def time.Duration) time.Duration {
+	v := os.Getenv("GATEWAY_SHUTDOWN_TIMEOUT")
+	if v == "" {
+		return def
+	}
+	d, err := time.ParseDuration(v)
+	if err != nil || d <= 0 {
+		return def
+	}
+	return d
+}
 
 func main() {
 	logger := luxlog.New("service", "gateway")
@@ -60,13 +77,14 @@ func main() {
 	go listen(app, cfg.Listen, "public", logger, errCh)
 	go listen(health, cfg.HealthListen, "health", logger, errCh)
 
+	grace := shutdownGraceFromEnv(defaultShutdownGrace)
 	select {
 	case <-ctx.Done():
-		logger.Info("shutdown signal received", "grace", shutdownGrace.String())
+		logger.Info("shutdown signal received", "grace", grace.String())
 	case err := <-errCh:
 		logger.Error("listener exited", "err", err)
 	}
-	drainCtx, cancel := context.WithTimeout(context.Background(), shutdownGrace)
+	drainCtx, cancel := context.WithTimeout(context.Background(), grace)
 	defer cancel()
 	_ = app.ShutdownWithContext(drainCtx)
 	_ = health.ShutdownWithContext(drainCtx)
