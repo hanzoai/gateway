@@ -127,21 +127,39 @@ func LoadRoutesFromFile(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read routes file %s: %w", path, err)
 	}
+	return loadRoutesFromYAML(data)
+}
+
+// loadRoutesFromYAML parses a YAML payload and installs the routes table.
+// Shared by LoadRoutesFromFile and the KMS code path so both go through one
+// validation/parse step.
+func loadRoutesFromYAML(data []byte) error {
 	var cfg RoutesConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return fmt.Errorf("failed to parse routes file %s: %w", path, err)
+		return fmt.Errorf("failed to parse routes yaml: %w", err)
 	}
 	return LoadRoutes(&cfg)
 }
 
 // loadRoutesFromEnv loads routes from KMS path or local file.
 // Priority: GATEWAY_ROUTES_KMS_PATH > GATEWAY_ROUTES_FILE > ./routes.yaml
+//
+// KMS path is delegated to the package-level kmsResolver. When
+// GATEWAY_KMS_ENDPOINT is set (plus IAM_CLIENT_ID/SECRET), the HTTP resolver
+// is wired automatically. Tests inject a stub via SetKMSResolver.
 func loadRoutesFromEnv() error {
-	// TODO: KMS integration — fetch routes from KMS secret path.
-	// if kmsPath := os.Getenv("GATEWAY_ROUTES_KMS_PATH"); kmsPath != "" {
-	//     data, err := kms.GetSecret(kmsPath)
-	//     ...
-	// }
+	initKMSResolverFromEnv()
+
+	if kmsPath := os.Getenv("GATEWAY_ROUTES_KMS_PATH"); kmsPath != "" {
+		data, err := kmsResolver.FetchRoutes(kmsPath)
+		if err != nil {
+			return fmt.Errorf("failed to fetch routes from KMS path %s: %w", kmsPath, err)
+		}
+		if err := loadRoutesFromYAML(data); err != nil {
+			return fmt.Errorf("kms routes payload invalid: %w", err)
+		}
+		return nil
+	}
 
 	filePath := os.Getenv("GATEWAY_ROUTES_FILE")
 	if filePath == "" {
