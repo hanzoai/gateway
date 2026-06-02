@@ -1,8 +1,5 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
-//go:build cloud
-// +build cloud
-
 // Package gateway exposes the HIP-0106 unified-binary mount surface for
 // the Hanzo Gateway. In the unified cloud binary the gateway acts as
 // the trust boundary: it validates JWTs, strips client-supplied
@@ -26,7 +23,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hanzoai/cloud"
-	gw "github.com/hanzoai/gateway"
 	"github.com/hanzoai/zip"
 )
 
@@ -61,7 +57,7 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 	// vs. co-resident deployments stay byte-identical on the trust
 	// boundary.
 	authCfg := authConfigFromEnv(deps)
-	authGin := gw.NewAuthMiddleware(authCfg)
+	authGin := NewAuthMiddleware(authCfg)
 
 	// Bridge gin.HandlerFunc → zip.Handler. We never .Next() at the gin
 	// layer: zip's c.Continue() drives the downstream chain after the
@@ -95,7 +91,6 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 		"auth.require", authCfg.RequireAuth,
 		"brand", deps.Brand,
 		"domain", deps.Domain,
-		"json_variant", zip.JSONVariant,
 	)
 	return nil
 }
@@ -128,8 +123,8 @@ func zipFromGin(h gin.HandlerFunc) zip.Handler {
 
 // authConfigFromEnv builds the gateway AuthConfig from env, applying
 // cloud-friendly defaults derived from deps when env is unset.
-func authConfigFromEnv(deps cloud.Deps) gw.AuthConfig {
-	cfg := gw.AuthConfig{
+func authConfigFromEnv(deps cloud.Deps) AuthConfig {
+	cfg := AuthConfig{
 		Enabled:        getenv("AUTH_ENABLED", "true") == "true",
 		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/.well-known/jwks"),
 		Issuer:         getenv("JWT_ISSUER", "https://hanzo.id"),
@@ -158,7 +153,7 @@ func loadRoutesBestEffort(logger interface {
 		// subsystems own their own routes via their Mount().
 		return nil
 	}
-	return gw.LoadRoutesFromFile(path)
+	return LoadRoutesFromFile(path)
 }
 
 func init() {
