@@ -22,7 +22,7 @@ spec:
         - name: registry-credentials
       containers:
         - name: gateway
-          image: ghcr.io/hanzoai/gateway:2.14.1-amd64
+          image: ghcr.io/hanzoai/gateway:v2.14.0
           imagePullPolicy: Always
           command: ["/usr/bin/gateway"]
           args: ["run", "-c", "/etc/gateway/gateway.json"]
