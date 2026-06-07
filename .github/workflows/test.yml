@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.26'
+          go-version: '1.26.4'
           cache-dependency-path: ./go.mod
 
       - name: Run go vet
@@ -33,7 +33,7 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.26'
+          go-version: '1.26.4'
           cache-dependency-path: ./go.mod
 
       - name: Build gateway binary
@@ -54,7 +54,7 @@ jobs:
 
       - uses: actions/setup-go@v4
         with:
-          go-version: '1.26'
+          go-version: '1.26.4'
           cache-dependency-path: ./go.mod
 
       - name: Build gateway binary
