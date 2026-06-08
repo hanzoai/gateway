@@ -22,15 +22,9 @@ import (
 	logstash "github.com/krakend/krakend-logstash/v2"
 	metrics "github.com/krakend/krakend-metrics/v2/gin"
 	opencensus "github.com/krakend/krakend-opencensus/v2"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/datadog"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/influxdb"
 	// jaeger exporter dropped: upstream uses an opencensus/Thrift API combo
 	// incompatible with current jaeger-client-go. Migration path is OTel
 	// (kotel below) + ZAP for inter-service.
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/ocagent"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/stackdriver"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/xray"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/zipkin"
 	kotel "github.com/krakend/krakend-otel"
 	otellura "github.com/krakend/krakend-otel/lura"
 	otelgin "github.com/krakend/krakend-otel/router/gin"
