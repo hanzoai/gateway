@@ -33,7 +33,7 @@ import (
 	"github.com/luraproject/lura/v2/config"
 	"github.com/luraproject/lura/v2/logging"
 	"github.com/luraproject/lura/v2/proxy"
-	"github.com/prometheus/client_golang/prometheus"
+	metric "github.com/luxfi/metric"
 )
 
 const BaseNetworkNamespace = "github.com/hanzoai/gateway/base-network"
@@ -246,15 +246,15 @@ func getMemberCache(host string, interval time.Duration, logger logging.Logger) 
 }
 
 var (
-	metricShardMismatches = prometheus.NewCounter(prometheus.CounterOpts{
+	metricShardMismatches = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_network_shard_mismatches_total",
 		Help: "Upstream 307s indicating stale shard→owner mapping.",
 	})
-	metricMemberPolls = prometheus.NewCounter(prometheus.CounterOpts{
+	metricMemberPolls = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_network_member_polls_total",
 		Help: "Total member-list poll attempts against base-network services.",
 	})
-	metric307 = prometheus.NewCounter(prometheus.CounterOpts{
+	metric307 = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_network_307_total",
 		Help: "Total 307 redirects followed once to a peer pod.",
 	})
@@ -263,13 +263,7 @@ var (
 
 func registerMetrics() {
 	metricsRegisterOnce.Do(func() {
-		for _, c := range []prometheus.Collector{metricShardMismatches, metricMemberPolls, metric307} {
-			if err := prometheus.Register(c); err != nil {
-				if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
-					panic(err)
-				}
-			}
-		}
+		// counters auto-register with luxfi/metric DefaultRegistry on creation
 	})
 }
 
