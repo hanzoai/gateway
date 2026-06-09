@@ -208,7 +208,7 @@ func buildHealthApp() *zip.App {
 		// This stub keeps the path live for scrapers when telemetry
 		// is off (dev/local).
 		c.SetHeader("Content-Type", "text/plain; version=0.0.4")
-		return c.SendString(http.StatusOK, "# gateway up\n")
+		return c.String(http.StatusOK, "# gateway up\n")
 	})
 	return app
 }
