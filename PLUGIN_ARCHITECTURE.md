@@ -5,17 +5,17 @@
 Gateway loads backend services as in-process Go plugins instead of reverse-proxying to separate containers.
 
 ```
-gateway --plugins=ats,bd,ta,kms serve
+gateway --plugins=svc-a,svc-b,kms serve
 ```
 
-Single binary serves: API gateway + ATS + BD + TA + KMS. Each plugin gets its own SQLite DB.
+Single binary serves: API gateway + each registered plugin. Each plugin gets its own SQLite DB.
 
 ## Interface
 
 ```go
 type BackendPlugin interface {
     Name() string
-    PathPrefix() string                    // e.g., "/v1/ats"
+    PathPrefix() string                    // e.g., "/v1/svc-a"
     Init(cfg PluginConfig) error           // bootstrap DB, migrations, hooks
     Handler() (http.Handler, error)        // return route handler
     Shutdown(ctx context.Context) error
@@ -24,7 +24,7 @@ type BackendPlugin interface {
 
 ## How It Works
 
-1. Base-powered services (ATS/BD/TA/KMS) expose `NewPlugin()` → `BackendPlugin`
+1. Base-powered services expose `NewPlugin()` → `BackendPlugin`
 2. Plugin `Init()` calls `core.NewBaseApp()` + `app.Bootstrap()` (no HTTP server)
 3. Plugin `Handler()` calls `apis.NewRouter(app)` → `router.BuildMux()` → `http.Handler`
 4. Gateway mounts via `gin.WrapH(http.StripPrefix(prefix, handler))`
@@ -34,16 +34,16 @@ type BackendPlugin interface {
 
 ```bash
 # Plugin mode (single binary)
-go build -tags "plugin_ats,plugin_bd,plugin_ta,plugin_kms" ./cmd/gateway
+go build -tags "plugin_svc_a,plugin_svc_b,plugin_kms" ./cmd/gateway
 
 # Standalone mode (separate containers, unchanged)
-cd ~/work/liquidity/ats && go build .
+cd path/to/service && go build .
 ```
 
 ## Config
 
 ```
-GATEWAY_PLUGINS=ats,bd,ta,kms
+GATEWAY_PLUGINS=svc-a,svc-b,kms
 GATEWAY_PLUGIN_DATA_DIR=/data
 IAM_ENDPOINT=https://iam.dev.<your-domain>
 ```
