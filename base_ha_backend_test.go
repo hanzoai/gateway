@@ -584,13 +584,13 @@ func TestBaseHAForwardsHeaders(t *testing.T) {
 	p := newBaseHAProxy(remote, up)
 	hdr := http.Header{
 		"X-User-Id": []string{"user-z"},
-		"X-Org-Id":  []string{"org-liquidity"},
+		"X-Org-Id":  []string{"org-hanzo"},
 		"X-Roles":   []string{"admin"},
 	}
 	if _, err := p(context.Background(), newHAProxyRequest(http.MethodPost, "/x", hdr, "{}")); err != nil {
 		t.Fatal(err)
 	}
-	for k, want := range map[string]string{"X-User-Id": "user-z", "X-Org-Id": "org-liquidity", "X-Roles": "admin"} {
+	for k, want := range map[string]string{"X-User-Id": "user-z", "X-Org-Id": "org-hanzo", "X-Roles": "admin"} {
 		if got := captured.Get(k); got != want {
 			t.Fatalf("header %s: want %q, got %q", k, want, got)
 		}
