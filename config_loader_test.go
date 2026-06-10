@@ -106,12 +106,12 @@ func TestPortFromEnvNonNumeric(t *testing.T) {
 	}
 }
 
-// TestLiquidityOperatorConfig — exact shape of the ConfigMap the Rust
-// operator (liquidity-operator) renders for LiquidGateway resources on
-// devnet/testnet/mainnet. Port is an int literal, no GATEWAY_ env vars
-// are projected onto the pod. Failure here means a v1.0.x bump broke
-// the contract with the operator-generated config.
-func TestLiquidityOperatorConfig(t *testing.T) {
+// TestOperatorGeneratedConfig — exact shape of the ConfigMap the Rust
+// operator renders for Gateway resources on devnet/testnet/mainnet.
+// Port is an int literal, no GATEWAY_ env vars are projected onto the
+// pod. Failure here means a v1.0.x bump broke the contract with the
+// operator-generated config.
+func TestOperatorGeneratedConfig(t *testing.T) {
 	body := `{
   "$schema": "https://www.krakend.io/schema/v2.7/gateway.json",
   "cache_ttl": "0s",
@@ -125,7 +125,7 @@ func TestLiquidityOperatorConfig(t *testing.T) {
       "max_age": "12h"
     }
   },
-  "name": "Liquidity Gateway - default",
+  "name": "Gateway - default",
   "port": 8080,
   "timeout": "30s",
   "version": 3
@@ -134,7 +134,7 @@ func TestLiquidityOperatorConfig(t *testing.T) {
 
 	cfg, err := koanf.New().Parse(path)
 	if err != nil {
-		t.Fatalf("Parse liquidity operator config: %v", err)
+		t.Fatalf("Parse operator-generated config: %v", err)
 	}
 	if cfg.Port != 8080 {
 		t.Fatalf("Port = %d, want 8080", cfg.Port)
