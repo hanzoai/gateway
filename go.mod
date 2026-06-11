@@ -41,7 +41,6 @@ require (
 	github.com/luraproject/lura/v2 v2.12.1
 	github.com/luxfi/log v1.4.3
 	github.com/luxfi/zap v0.1.0
-	github.com/prometheus/client_golang v1.20.2
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
@@ -198,6 +197,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/luxfi/mdns v0.1.0 // indirect
+	github.com/luxfi/metric v1.5.8
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.21 // indirect
 	github.com/miekg/dns v1.1.62 // indirect
