@@ -261,15 +261,14 @@ var (
 	metricsRegisterOnce sync.Once
 )
 
+// registerMetrics forces the package-level collectors to initialize. Under
+// luxfi/metric, metric.NewCounter both constructs and registers the collector
+// on metric.DefaultRegistry, so initialization is registration — no explicit
+// Register call is required (or available). The once-guard keeps the factory
+// call site idempotent and makes the registration point explicit.
 func registerMetrics() {
 	metricsRegisterOnce.Do(func() {
-		for _, c := range []metric.Collector{metricShardMismatches, metricMemberPolls, metric307} {
-			if err := metric.Register(c); err != nil {
-				if _, ok := err.(metric.AlreadyRegisteredError); !ok {
-					panic(err)
-				}
-			}
-		}
+		_ = []metric.Collector{metricShardMismatches, metricMemberPolls, metric307}
 	})
 }
 

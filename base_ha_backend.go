@@ -584,21 +584,20 @@ var (
 	baseHAMetricsOnce sync.Once
 )
 
+// registerBaseHAMetrics forces the package-level collectors to initialize.
+// Under luxfi/metric, metric.NewCounter both constructs and registers the
+// collector on metric.DefaultRegistry, so initialization is registration —
+// no explicit Register call is required (or available). The once-guard keeps
+// the factory call site idempotent and makes the registration point explicit.
 func registerBaseHAMetrics() {
 	baseHAMetricsOnce.Do(func() {
-		for _, c := range []metric.Collector{
+		_ = []metric.Collector{
 			metricLeaderPolls,
 			metricLeaderPollErrors,
 			metricLeaderChanges,
 			metricWriterFailures,
 			metricWriterFailuresFatal,
 			metricNoWriter,
-		} {
-			if err := metric.Register(c); err != nil {
-				if _, ok := err.(metric.AlreadyRegisteredError); !ok {
-					panic(err)
-				}
-			}
 		}
 	})
 }
