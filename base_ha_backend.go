@@ -46,7 +46,7 @@ import (
 	"github.com/luraproject/lura/v2/config"
 	"github.com/luraproject/lura/v2/logging"
 	"github.com/luraproject/lura/v2/proxy"
-	"github.com/prometheus/client_golang/prometheus"
+	metric "github.com/luxfi/metric"
 )
 
 // BaseHANamespace is the extra_config key for base_ha upstreams.
@@ -557,27 +557,27 @@ func clientPinKey(headers map[string][]string) string {
 
 // Prometheus metrics — guarded by once so tests can import without dupes.
 var (
-	metricLeaderPolls = prometheus.NewCounter(prometheus.CounterOpts{
+	metricLeaderPolls = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_leader_polls_total",
 		Help: "Total GET /_ha/leader polls issued.",
 	})
-	metricLeaderPollErrors = prometheus.NewCounter(prometheus.CounterOpts{
+	metricLeaderPollErrors = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_leader_poll_errors_total",
 		Help: "Leader poll failures (timeout, connection refused, non-200, decode error).",
 	})
-	metricLeaderChanges = prometheus.NewCounter(prometheus.CounterOpts{
+	metricLeaderChanges = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_leader_changes_total",
 		Help: "Observed writer changes (term increased).",
 	})
-	metricWriterFailures = prometheus.NewCounter(prometheus.CounterOpts{
+	metricWriterFailures = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_writer_failures_total",
 		Help: "Writer-targeted requests that returned 5xx or failed to connect and triggered a refresh+retry.",
 	})
-	metricWriterFailuresFatal = prometheus.NewCounter(prometheus.CounterOpts{
+	metricWriterFailuresFatal = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_writer_failures_fatal_total",
 		Help: "Writer-targeted requests that failed on the retry path.",
 	})
-	metricNoWriter = prometheus.NewCounter(prometheus.CounterOpts{
+	metricNoWriter = metric.NewCounter(metric.CounterOpts{
 		Name: "gateway_base_ha_no_writer_total",
 		Help: "Write requests rejected because no writer is known yet.",
 	})
@@ -586,7 +586,7 @@ var (
 
 func registerBaseHAMetrics() {
 	baseHAMetricsOnce.Do(func() {
-		for _, c := range []prometheus.Collector{
+		for _, c := range []metric.Collector{
 			metricLeaderPolls,
 			metricLeaderPollErrors,
 			metricLeaderChanges,
@@ -594,8 +594,8 @@ func registerBaseHAMetrics() {
 			metricWriterFailuresFatal,
 			metricNoWriter,
 		} {
-			if err := prometheus.Register(c); err != nil {
-				if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
+			if err := metric.Register(c); err != nil {
+				if _, ok := err.(metric.AlreadyRegisteredError); !ok {
 					panic(err)
 				}
 			}
