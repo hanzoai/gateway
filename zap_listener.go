@@ -31,10 +31,14 @@ var (
 // handles the ZAP handshake, message dispatch, and forwarding to cloud-api.
 func StartZapListener(cfg ZapListenerConfig) error {
 	if cfg.Port == 0 {
-		cfg.Port = 9651
+		// Canonical embedded-ZAP port is 9999 (matches zaphttp_listener.go,
+		// the zap repo, and every in-cluster backend). 9651 was a Lux-leak
+		// (9651 = Lux staking port). Real peer resolution is mDNS-dynamic per
+		// HIP-0069 — this fixed value is only the fallback when discovery is off.
+		cfg.Port = 9999
 	}
 	if cfg.InternalAddr == "" {
-		cfg.InternalAddr = "127.0.0.1:9652"
+		cfg.InternalAddr = "127.0.0.1:9999"
 	}
 
 	// Load TLS certificate.
@@ -116,7 +120,7 @@ func InitZapListenerFromEnv() {
 		return
 	}
 
-	port := 9651
+	port := 9999 // canonical embedded-ZAP port (was 9651 — Lux staking-port leak)
 	if p := os.Getenv("ZAP_LISTENER_PORT"); p != "" {
 		fmt.Sscanf(p, "%d", &port)
 	}

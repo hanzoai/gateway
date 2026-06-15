@@ -127,7 +127,10 @@ func ZapBackendFactory(logger logging.Logger, next proxy.BackendFactory) proxy.B
 			cfg.NodeID = "gateway"
 		}
 		if cfg.Port == 0 {
-			cfg.Port = 9651
+			// 9999 = canonical embedded-ZAP port. Peers are normally found via
+			// mDNS (_hanzo._tcp); this fixed port is the NoDiscovery fallback.
+			// Was 9651 — a Lux-leak (Lux staking port), removed per HIP-0069.
+			cfg.Port = 9999
 		}
 		if cfg.Timeout == 0 {
 			cfg.Timeout = 5000
