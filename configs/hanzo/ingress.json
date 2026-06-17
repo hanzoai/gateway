@@ -3,6 +3,16 @@
   "health_path": "/healthz",
   "routes": [
     {
+      "host": "goproxy.hanzo.ai",
+      "auth": true,
+      "backends": [
+        {
+          "path": "/",
+          "url": "http://goproxy.hanzo.svc.cluster.local:3000"
+        }
+      ]
+    },
+    {
       "host": "ad.nexus",
       "backends": [
         {
