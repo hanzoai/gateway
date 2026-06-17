@@ -18,6 +18,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/hanzoai/gateway/iamauth"
 )
 
 type PathBackend struct {
@@ -26,7 +28,14 @@ type PathBackend struct {
 }
 
 type HostRoute struct {
-	Host     string        `json:"host"`
+	Host string `json:"host"`
+	// Auth, when true, gates this host behind a valid Hanzo IAM token
+	// (Bearer or HTTP Basic password — the `go`/.netrc proxy path). The
+	// ingress validates via the shared iamauth package, strips any
+	// client-supplied identity headers, and injects the canonical X-User-*
+	// from the validated claims before proxying. This is the IAM edge for
+	// non-API hosts like goproxy.hanzo.ai.
+	Auth     bool          `json:"auth"`
 	Backends []PathBackend `json:"backends"`
 }
 
@@ -37,8 +46,10 @@ type Config struct {
 }
 
 type router struct {
-	mu     sync.RWMutex
-	routes map[string][]backendEntry
+	mu        sync.RWMutex
+	routes    map[string][]backendEntry
+	authHosts map[string]bool
+	validator *iamauth.Validator
 }
 
 type backendEntry struct {
@@ -48,10 +59,14 @@ type backendEntry struct {
 
 func newRouter(cfg *Config) *router {
 	r := &router{
-		routes: make(map[string][]backendEntry),
+		routes:    make(map[string][]backendEntry),
+		authHosts: make(map[string]bool),
 	}
 
 	for _, route := range cfg.Routes {
+		if route.Auth {
+			r.authHosts[route.Host] = true
+		}
 		var entries []backendEntry
 		for _, b := range route.Backends {
 			target, err := url.Parse(b.URL)
@@ -95,7 +110,21 @@ func newRouter(cfg *Config) *router {
 			})
 		}
 		r.routes[route.Host] = entries
-		log.Printf("  %s -> %d backends", route.Host, len(entries))
+		authNote := ""
+		if route.Auth {
+			authNote = " [IAM-gated]"
+		}
+		log.Printf("  %s -> %d backends%s", route.Host, len(entries), authNote)
+	}
+
+	// Build the IAM validator once if any host is gated. Config (JWKS URL,
+	// issuer, audience) comes from the same AUTH_* env the gateway uses, so
+	// the ingress and gateway trust the same IAM authority.
+	if len(r.authHosts) > 0 {
+		cfg := iamauth.ConfigFromEnv()
+		r.validator = iamauth.NewValidator(cfg)
+		log.Printf("ingress IAM auth enabled for %d host(s): issuer=%s audience=%s",
+			len(r.authHosts), cfg.Issuer, cfg.Audience)
 	}
 
 	return r
@@ -106,11 +135,33 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	r.mu.RLock()
 	entries, ok := r.routes[host]
+	authRequired := r.authHosts[host]
 	r.mu.RUnlock()
 
 	if !ok {
 		http.Error(w, "404 Not Found", http.StatusNotFound)
 		return
+	}
+
+	// IAM edge gate. Strip any client-supplied identity headers FIRST
+	// (trust boundary), validate the token, then inject the canonical
+	// identity from the claims. The credential header is removed before
+	// proxying so the IAM token never reaches the backend.
+	if authRequired {
+		iamauth.StripIdentityHeaders(req)
+		claims, err := r.validator.Validate(req)
+		if err != nil {
+			// Prompt Basic so the `go` module client attaches its
+			// ~/.netrc credential (login = email, password = IAM token).
+			w.Header().Set("WWW-Authenticate", `Basic realm="`+host+`"`)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			w.Write([]byte(`{"error":"unauthorized","message":"valid Hanzo IAM token required"}`))
+			return
+		}
+		iamauth.InjectIdentity(req, claims)
+		req.Header.Del("Authorization")
+		req.Header.Del("X-Authorization")
 	}
 
 	// Find longest matching path prefix

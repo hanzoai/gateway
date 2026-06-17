@@ -22,6 +22,17 @@ spec:
           image: ghcr.io/hanzoai/gateway:2.14.1
           command: ["/usr/bin/ingress"]
           args: ["-c", "/etc/ingress/ingress.json"]
+          env:
+            # IAM authority for hosts marked "auth": true in ingress.json
+            # (e.g. goproxy.hanzo.ai). Same JWKS / issuer / audience as the
+            # gateway so both trust one IAM. The in-code defaults already
+            # match these; set explicitly for operator clarity.
+            - name: AUTH_JWKS_URL
+              value: "https://hanzo.id/.well-known/jwks"
+            - name: AUTH_ISSUER
+              value: "https://hanzo.id"
+            - name: AUTH_AUDIENCE
+              value: "https://api.hanzo.ai"
           ports:
             - name: http
               containerPort: 8080
