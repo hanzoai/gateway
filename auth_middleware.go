@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"context"
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,11 +9,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
-	gojose "github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/gin-gonic/gin"
 )
 
@@ -55,37 +51,10 @@ type AuthConfig struct {
 	RequireAuth bool
 }
 
-// hanzoJWTClaims represents the JWT claims from Hanzo IAM (hanzo.id).
-type hanzoJWTClaims struct {
-	jwt.Claims
-
-	// IAM puts the org slug in "owner"
-	Owner string `json:"owner"`
-	// User display name
-	Name string `json:"name"`
-	// Preferred username (IAM uses this when sub is empty)
-	PreferredUsername string `json:"preferred_username"`
-	// Email
-	Email string `json:"email"`
-	// Phone number (E.164 format from IAM)
-	Phone string `json:"phone"`
-	// OIDC standard phone_number claim
-	PhoneNumber string `json:"phone_number"`
-	// User type
-	Type string `json:"type"`
-	// IAM admin flag
-	IsAdmin bool `json:"isAdmin"`
-	// Roles array (IAM emits []*Role objects with name/displayName,
-	// or a plain []string — tolerate both and join names with commas).
-	Roles json.RawMessage `json:"roles"`
-	// Permissions claim — three accepted shapes:
-	//   1. Pre-computed numeric bit-field: `42` (passed through verbatim)
-	//   2. Plain []string of permission/role names: `["admin", "live"]`
-	//   3. IAM []*Permission objects: `[{"name":"admin"}, {"name":"live"}]`
-	// Whichever shape arrives, the gateway converts it to a base-10 int
-	// matching commerce's util/permission/permission.go bit positions.
-	Permissions json.RawMessage `json:"permissions"`
-}
+// hanzoJWTClaims and the JWKS cache, token validation, extraction, and the
+// identity-header trust boundary now live in package iamauth (the single
+// edge-auth implementation shared with cmd/ingress). Thin shims preserving
+// the symbols this file and its tests use are in auth_compat.go.
 
 // extractRoleNames converts the raw "roles" claim (either []string or
 // []{"name":"..."}) into a comma-joined list of role names.
@@ -123,64 +92,64 @@ func extractRoleNames(raw json.RawMessage) string {
 // here. Forwards-only — never re-number existing entries or downstream
 // services break.
 var permissionBits = map[string]int64{
-	"live":             1 << 2,  // 4
-	"test":             1 << 3,  // 8
-	"admin":            1 << 4,  // 16
-	"published":        1 << 5,  // 32
-	"secret":           1 << 6,  // 64
-	"authorize":        1 << 7,  // 128
-	"capture":          1 << 8,  // 256
-	"bundle":           1 << 9,
-	"campaign":         1 << 10,
-	"collection":       1 << 11,
-	"coupon":           1 << 12,
-	"form":             1 << 13,
-	"order":            1 << 14,
-	"organization":     1 << 15,
-	"payment":          1 << 16,
-	"plan":             1 << 17,
-	"product":          1 << 18,
-	"referral":         1 << 19,
-	"referrer":         1 << 20,
-	"store":            1 << 21,
-	"subscriber":       1 << 22,
-	"user":             1 << 23,
-	"variant":          1 << 24,
-	"readbundle":       1 << 25,
-	"readcampaign":     1 << 26,
-	"readcollection":   1 << 27,
-	"readcoupon":       1 << 28,
-	"readform":         1 << 29,
-	"readorder":        1 << 30,
-	"readorganization": 1 << 31,
-	"readpayment":      1 << 32,
-	"readplan":         1 << 33,
-	"readproduct":      1 << 34,
-	"readreferral":     1 << 35,
-	"readreferrer":     1 << 36,
-	"readstore":        1 << 37,
-	"readsubscriber":   1 << 38,
-	"readuser":         1 << 39,
-	"readvariant":      1 << 40,
-	"writebundle":      1 << 41,
-	"writecampaign":    1 << 42,
-	"writecollection":  1 << 43,
-	"writecoupon":      1 << 44,
-	"writeform":        1 << 45,
-	"writeorder":       1 << 46,
+	"live":              1 << 2, // 4
+	"test":              1 << 3, // 8
+	"admin":             1 << 4, // 16
+	"published":         1 << 5, // 32
+	"secret":            1 << 6, // 64
+	"authorize":         1 << 7, // 128
+	"capture":           1 << 8, // 256
+	"bundle":            1 << 9,
+	"campaign":          1 << 10,
+	"collection":        1 << 11,
+	"coupon":            1 << 12,
+	"form":              1 << 13,
+	"order":             1 << 14,
+	"organization":      1 << 15,
+	"payment":           1 << 16,
+	"plan":              1 << 17,
+	"product":           1 << 18,
+	"referral":          1 << 19,
+	"referrer":          1 << 20,
+	"store":             1 << 21,
+	"subscriber":        1 << 22,
+	"user":              1 << 23,
+	"variant":           1 << 24,
+	"readbundle":        1 << 25,
+	"readcampaign":      1 << 26,
+	"readcollection":    1 << 27,
+	"readcoupon":        1 << 28,
+	"readform":          1 << 29,
+	"readorder":         1 << 30,
+	"readorganization":  1 << 31,
+	"readpayment":       1 << 32,
+	"readplan":          1 << 33,
+	"readproduct":       1 << 34,
+	"readreferral":      1 << 35,
+	"readreferrer":      1 << 36,
+	"readstore":         1 << 37,
+	"readsubscriber":    1 << 38,
+	"readuser":          1 << 39,
+	"readvariant":       1 << 40,
+	"writebundle":       1 << 41,
+	"writecampaign":     1 << 42,
+	"writecollection":   1 << 43,
+	"writecoupon":       1 << 44,
+	"writeform":         1 << 45,
+	"writeorder":        1 << 46,
 	"writeorganization": 1 << 47,
-	"writepayment":     1 << 48,
-	"writeplan":        1 << 49,
-	"writeproduct":     1 << 50,
-	"writereferral":    1 << 51,
-	"writereferrer":    1 << 52,
-	"writestore":       1 << 53,
-	"writesubscriber":  1 << 54,
-	"writeuser":        1 << 55,
-	"writevariant":     1 << 56,
-	"return":           1 << 57,
-	"readreturn":       1 << 58,
-	"writereturn":      1 << 59,
+	"writepayment":      1 << 48,
+	"writeplan":         1 << 49,
+	"writeproduct":      1 << 50,
+	"writereferral":     1 << 51,
+	"writereferrer":     1 << 52,
+	"writestore":        1 << 53,
+	"writesubscriber":   1 << 54,
+	"writeuser":         1 << 55,
+	"writevariant":      1 << 56,
+	"return":            1 << 57,
+	"readreturn":        1 << 58,
+	"writereturn":       1 << 59,
 }
 
 // computePermissionsBitField turns the raw "permissions" claim into the
@@ -188,6 +157,7 @@ var permissionBits = map[string]int64{
 //   - JSON number (already a bit-field)
 //   - []string of permission names
 //   - []{"name": "..."} IAM permission objects
+//
 // The optional `extra` argument lets the caller OR-in additional bits
 // derived from other claims (e.g. isAdmin → Admin|Live). Unknown names
 // are dropped rather than failing the request — gateway is forwards-
@@ -241,94 +211,12 @@ func computePermissionsBitField(raw json.RawMessage, extra int64) (int64, bool) 
 	return extra, extra != 0
 }
 
-// jwksCache caches JWKS keys with TTL-based refresh.
-type jwksCache struct {
-	mu        sync.RWMutex
-	keys      *gojose.JSONWebKeySet
-	fetchedAt time.Time
-	ttl       time.Duration
-	url       string
-	client    *http.Client
-}
-
-func newJWKSCache(url string, ttl time.Duration) *jwksCache {
-	return &jwksCache{
-		url: url,
-		ttl: ttl,
-		client: &http.Client{
-			Timeout: 10 * time.Second,
-		},
-	}
-}
-
-func (c *jwksCache) getKeys() (*gojose.JSONWebKeySet, error) {
-	c.mu.RLock()
-	if c.keys != nil && time.Since(c.fetchedAt) < c.ttl {
-		keys := c.keys
-		c.mu.RUnlock()
-		return keys, nil
-	}
-	c.mu.RUnlock()
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	// Double-check after acquiring write lock
-	if c.keys != nil && time.Since(c.fetchedAt) < c.ttl {
-		return c.keys, nil
-	}
-
-	keys, err := c.fetchJWKS()
-	if err != nil {
-		// If we have stale keys, return those rather than failing
-		if c.keys != nil {
-			return c.keys, nil
-		}
-		return nil, err
-	}
-
-	c.keys = keys
-	c.fetchedAt = time.Now()
-	return keys, nil
-}
-
-func (c *jwksCache) fetchJWKS() (*gojose.JSONWebKeySet, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("jwks: failed to create request: %w", err)
-	}
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("jwks: failed to fetch: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("jwks: unexpected status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20)) // 1MB limit
-	if err != nil {
-		return nil, fmt.Errorf("jwks: failed to read body: %w", err)
-	}
-
-	var jwks gojose.JSONWebKeySet
-	if err := json.Unmarshal(body, &jwks); err != nil {
-		return nil, fmt.Errorf("jwks: failed to parse: %w", err)
-	}
-
-	return &jwks, nil
-}
-
 // billingChecker checks user billing status against Commerce API.
 //
 // Commerce endpoints used:
-//   GET /api/v1/billing/balance?user={user}&currency=usd
-//     -> { "user": "...", "currency": "usd", "balance": 5000, "holds": 0, "available": 5000 }
+//
+//	GET /api/v1/billing/balance?user={user}&currency=usd
+//	  -> { "user": "...", "currency": "usd", "balance": 5000, "holds": 0, "available": 5000 }
 //
 // All amounts are in cents. available = balance - holds.
 // A user can proceed if available > 0.
@@ -501,7 +389,7 @@ func DefaultAuthConfig() AuthConfig {
 //   - X-Org-Id:            org slug from JWT "owner" claim
 //   - X-Roles:             comma-joined role names from JWT "roles" claim
 //   - X-User-Permissions:  base-10 int64 bit-field derived from JWT permissions
-//                          + isAdmin (commerce treats absent/0 as no rights).
+//   - isAdmin (commerce treats absent/0 as no rights).
 //
 // Auxiliary headers (derivatives of the JWT for convenience):
 //   - X-User-Email:   email from JWT "email" claim
@@ -675,186 +563,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	}
 }
 
-// validateToken parses and validates a JWT token using the cached JWKS.
-func validateToken(rawToken string, cache *jwksCache, expectedIssuer string, expectedAudience string) (*hanzoJWTClaims, error) {
-	tok, err := jwt.ParseSigned(rawToken, []gojose.SignatureAlgorithm{
-		gojose.RS256, gojose.RS384, gojose.RS512,
-		gojose.ES256, gojose.ES384, gojose.ES512,
-		gojose.PS256, gojose.PS384, gojose.PS512,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse JWT: %w", err)
-	}
-
-	keys, err := cache.getKeys()
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch JWKS: %w", err)
-	}
-
-	// Try each key from the JWKS that matches the token's key ID
-	var claims hanzoJWTClaims
-	var lastErr error
-
-	for _, header := range tok.Headers {
-		if header.KeyID != "" {
-			matchingKeys := keys.Key(header.KeyID)
-			for _, key := range matchingKeys {
-				pubKey := key.Key
-				if err := tok.Claims(pubKey, &claims); err == nil {
-					goto validated
-				} else {
-					lastErr = err
-				}
-			}
-		}
-	}
-
-	// If no key ID match, try all keys
-	for _, key := range keys.Keys {
-		if key.Use == "sig" || key.Use == "" {
-			pubKey := key.Key
-			// Only try RSA or EC public keys
-			switch pubKey.(type) {
-			case *rsa.PublicKey:
-				if err := tok.Claims(pubKey, &claims); err == nil {
-					goto validated
-				} else {
-					lastErr = err
-				}
-			}
-		}
-	}
-
-	if lastErr != nil {
-		return nil, fmt.Errorf("no matching key found: %w", lastErr)
-	}
-	return nil, fmt.Errorf("no matching key found in JWKS")
-
-validated:
-	// Reject tokens with no issuer claim. An empty issuer would cause
-	// ValidateWithLeeway to skip issuer comparison entirely, allowing
-	// tokens from any (or no) issuer to pass validation.
-	if claims.Claims.Issuer == "" {
-		return nil, fmt.Errorf("invalid token: missing issuer")
-	}
-
-	// Validate standard claims: issuer, audience, and expiry.
-	// Issuer and audience are ALWAYS validated — a token missing these
-	// claims or carrying wrong values is rejected unconditionally.
-	expected := jwt.Expected{
-		Issuer: expectedIssuer,
-	}
-	if expectedAudience != "" {
-		expected.AnyAudience = jwt.Audience{expectedAudience}
-	}
-
-	if err := claims.Claims.ValidateWithLeeway(expected, 2*time.Minute); err != nil {
-		return nil, fmt.Errorf("token validation failed: %w", err)
-	}
-
-	return &claims, nil
-}
-
-// stripIdentityHeaders removes all client-supplied identity headers.
-// The gateway is the sole authority for setting these after JWT validation.
-// Prevents header injection on every path.
-//
-// Canonical identity headers (emitted post-JWT): X-User-Id, X-Org-Id, X-Roles,
-// X-User-Permissions. Auxiliary headers emitted by the gateway: X-User-Email,
-// X-Phone-Number, X-User-IsAdmin. Everything else is legacy and MUST be
-// stripped unconditionally. New mint-targets MUST be added here first — the
-// strip-list is the trust boundary.
-func stripIdentityHeaders(r *http.Request) {
-	// Canonical identity headers — stripped before re-injection so a
-	// client-supplied value can never survive the middleware.
-	r.Header.Del("X-User-Id")
-	r.Header.Del("X-Org-Id")
-	r.Header.Del("X-Roles")
-	r.Header.Del("X-User-Permissions") // bit.Field; commerce treats absent as 0
-	// Gateway-emitted auxiliaries.
-	r.Header.Del("X-User-Email")
-	r.Header.Del("X-Phone-Number")
-	r.Header.Del("X-User-IsAdmin")
-	// Non-canonical legacy identity headers — clients may not use these.
-	r.Header.Del("X-User-Role")  // singular legacy
-	r.Header.Del("X-User-Roles") // plural legacy (renamed to X-Roles)
-	r.Header.Del("X-User-Name")
-	r.Header.Del("X-Tenant-Id")
-	r.Header.Del("X-Tenant-ID")
-	r.Header.Del("X-Org") // bare legacy
-	// Strip every legacy vendor-prefixed header (X-IAM-*, X-HANZO-*).
-	for key := range r.Header {
-		upper := strings.ToUpper(key)
-		if strings.HasPrefix(upper, "X-IAM-") || strings.HasPrefix(upper, "X-HANZO-") {
-			r.Header.Del(key)
-		}
-	}
-}
-
-// gatewayMintedIdentityHeaders is the authoritative list of identity
-// headers the gateway is allowed to emit downstream. Every entry here
-// MUST also appear in stripIdentityHeaders so a client cannot forge a
-// header the gateway later mints over (or forge one the gateway does
-// NOT mint, which would still be untrusted-but-present downstream).
-// The contract test in auth_middleware_security_test.go enforces this.
-var gatewayMintedIdentityHeaders = []string{
-	"X-User-Id",
-	"X-Org-Id",
-	"X-Roles",
-	"X-User-Permissions",
-	"X-User-Email",
-	"X-Phone-Number",
-	"X-User-IsAdmin",
-}
-
-// isAPIKey returns true for opaque API keys that should bypass JWT validation.
-// These are validated by the backend services (cloud-api via IAM).
-//
-// Recognized prefixes:
-//   - hk-  Hanzo IAM API keys
-//   - sk-  Provider keys (OpenAI, Anthropic, etc.)
-//   - fw_  Fireworks keys
-//   - hz_  Hanzo widget keys (validated by cloud-api)
-//   - pk-  Publishable/read-only keys
-func isAPIKey(token string) bool {
-	return strings.HasPrefix(token, "hk-") ||
-		strings.HasPrefix(token, "sk-") ||
-		strings.HasPrefix(token, "fw_") ||
-		strings.HasPrefix(token, "hz_") ||
-		strings.HasPrefix(token, "pk-")
-}
-
-// extractBearerToken extracts a Bearer token from Authorization or X-Authorization headers.
-func extractBearerToken(r *http.Request) string {
-	auth := r.Header.Get("Authorization")
-	if auth == "" {
-		auth = r.Header.Get("X-Authorization")
-	}
-	if auth == "" {
-		return ""
-	}
-
-	parts := strings.SplitN(auth, " ", 2)
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return ""
-	}
-
-	return strings.TrimSpace(parts[1])
-}
-
-// extractTokenFromCookie extracts the access token from common cookie names.
-func extractTokenFromCookie(r *http.Request) string {
-	cookieNames := []string{
-		"iam_access_token",
-		"access_token",
-		"hanzo_token",
-	}
-
-	for _, name := range cookieNames {
-		if cookie, err := r.Cookie(name); err == nil && cookie.Value != "" {
-			return cookie.Value
-		}
-	}
-
-	return ""
-}
+// validateToken, the JWKS cache, the identity-header trust boundary,
+// isAPIKey, and the token extractors now live in package iamauth — the one
+// edge-auth implementation shared with cmd/ingress. The thin shims that keep
+// this file's symbols stable are in auth_compat.go.
