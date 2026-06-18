@@ -19,6 +19,10 @@ jobs:
     with:
       image: ghcr.io/hanzoai/gateway
       platforms: "linux/amd64"
+      # ARC v0.14 routes by scale-set NAME, not labels. The default
+      # ["self-hosted","linux","amd64"] matches the offline evo runners and
+      # queues forever. Target the scalable hanzoai ARC pool by name.
+      runner-amd64: '["hanzo-build-linux-amd64"]'
     secrets: inherit
 
   dispatch-to-universe:
