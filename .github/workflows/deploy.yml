@@ -19,6 +19,7 @@ jobs:
     with:
       image: ghcr.io/hanzoai/gateway
       platforms: "linux/amd64"
+      runner-amd64: '["hanzo-build-linux-amd64"]'
     secrets: inherit
 
   dispatch-to-universe:
