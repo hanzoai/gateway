@@ -215,7 +215,7 @@ func computePermissionsBitField(raw json.RawMessage, extra int64) (int64, bool) 
 //
 // Commerce endpoints used:
 //
-//	GET /api/v1/billing/balance?user={user}&currency=usd
+//	GET /v1/billing/balance?user={user}&currency=usd
 //	  -> { "user": "...", "currency": "usd", "balance": 5000, "holds": 0, "available": 5000 }
 //
 // All amounts are in cents. available = balance - holds.
@@ -259,7 +259,7 @@ func (b *billingChecker) checkBalance(userID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	u := fmt.Sprintf("%s/api/v1/billing/balance?user=%s&currency=usd", b.baseURL, userID)
+	u := fmt.Sprintf("%s/v1/billing/balance?user=%s&currency=usd", b.baseURL, userID)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return true, err // Fail-open
