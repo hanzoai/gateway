@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -244,50 +245,59 @@ func newBillingChecker(baseURL, token string) *billingChecker {
 	}
 }
 
-// checkBalance returns true if the user has positive available balance or if
-// the check fails (fail-open). The user identifier is the IAM user ID
-// (e.g., "hanzo/alice" or the JWT subject).
+// checkBalance reports whether the user has positive available balance.
 //
-// FAIL-OPEN: If Commerce is unreachable, returns an error, or returns a
-// non-200 status, the request is ALLOWED through. We never block users
-// due to billing infrastructure failures.
+// Contract — the caller distinguishes three states:
+//
+//	(true,  nil) commerce confirmed available > 0   → allow.
+//	(false, nil) commerce confirmed available <= 0  → deny 402 (out of funds).
+//	(false, err) balance could not be determined    → deny 503 (fail-closed).
+//
+// FAIL-CLOSED is deliberate: this is a paid, no-free product, so we never
+// serve AI to a user whose balance we cannot verify. The only allow-without-
+// proof case is when no billing URL is configured at all (not enforced).
+//
+// The user identifier is the IAM "org/sub" (e.g. "hanzo/alice").
 func (b *billingChecker) checkBalance(userID string) (bool, error) {
 	if b.baseURL == "" {
-		return true, nil // No billing configured, allow through
+		return true, nil // Billing not configured -> not enforced.
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	u := fmt.Sprintf("%s/v1/billing/balance?user=%s&currency=usd", b.baseURL, userID)
+	// Commerce mounts its API under /v1 (commerce mount.go: Router.Group("/v1")
+	// -> billing.Route -> GET /balance), NOT /api/v1. A wrong prefix 404s and,
+	// fail-closed, denies every request — keep this in lockstep with commerce.
+	u := fmt.Sprintf("%s/v1/billing/balance?user=%s&currency=usd", b.baseURL, url.QueryEscape(userID))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
-		return true, err // Fail-open
+		return false, err
 	}
 
-	// Authenticate with Commerce service token
+	// Authenticate with the Commerce service token (admin-scoped S2S).
 	if b.token != "" {
 		req.Header.Set("Authorization", "Bearer "+b.token)
 	}
 
 	resp, err := b.client.Do(req)
 	if err != nil {
-		return true, err // Fail-open: billing service unreachable
+		return false, err // Commerce unreachable -> deny.
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return true, nil // Fail-open: billing service error
+		return false, fmt.Errorf("commerce billing status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
 	if err != nil {
-		return true, err // Fail-open
+		return false, err
 	}
 
 	var result billingResponse
 	if err := json.Unmarshal(body, &result); err != nil {
-		return true, err // Fail-open
+		return false, err
 	}
 
 	return result.Available > 0, nil
@@ -538,8 +548,8 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			c.Request.Header.Set("X-User-Permissions", strconv.FormatInt(bits, 10))
 		}
 
-		// Check billing status (fail-open)
-		// Uses userID (JWT subject) as the billing identity, which maps to
+		// Check billing status (fail-closed — see checkBalance).
+		// Uses the IAM "org/sub" as the billing identity, which maps to
 		// Commerce's user-scoped balance tracking.
 		if cfg.BillingEnabled && userID != "" {
 			// Construct the Commerce user identifier: org/username
@@ -548,8 +558,20 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 				billingUser = orgID + "/" + userID
 			}
 
-			hasBalance, _ := billing.checkBalance(billingUser)
-			if !hasBalance {
+			hasBalance, balErr := billing.checkBalance(billingUser)
+			switch {
+			case hasBalance:
+				// allowed
+			case balErr != nil:
+				// Could not verify balance. Deny (no free), but signal an
+				// outage rather than wrongly telling a paying user they are
+				// out of funds.
+				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+					"error":   "billing_unavailable",
+					"message": "Billing is temporarily unavailable. Please retry shortly.",
+				})
+				return
+			default:
 				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
 					"error":   "insufficient_balance",
 					"message": "Your account has insufficient balance. Please add funds at the platform billing page",
