@@ -258,20 +258,7 @@ var (
 		Name: "gateway_base_network_307_total",
 		Help: "Total 307 redirects followed once to a peer pod.",
 	})
-	metricsRegisterOnce sync.Once
 )
-
-func registerMetrics() {
-	metricsRegisterOnce.Do(func() {
-		for _, c := range []metric.Collector{metricShardMismatches, metricMemberPolls, metric307} {
-			if err := metric.Register(c); err != nil {
-				if _, ok := err.(metric.AlreadyRegisteredError); !ok {
-					panic(err)
-				}
-			}
-		}
-	})
-}
 
 func writeMethod(m string) bool {
 	switch strings.ToUpper(m) {
@@ -284,7 +271,6 @@ func writeMethod(m string) bool {
 // BaseNetworkBackendFactory wraps `next` and intercepts backends carrying a
 // BaseNetworkNamespace extra_config block. All others fall through.
 func BaseNetworkBackendFactory(logger logging.Logger, next proxy.BackendFactory) proxy.BackendFactory {
-	registerMetrics()
 	return func(remote *config.Backend) proxy.Proxy {
 		raw, ok := remote.ExtraConfig[BaseNetworkNamespace]
 		if !ok {

@@ -20,8 +20,16 @@ WORKDIR /app
 ARG GO_EXPERIMENT=jsonv2
 ENV GOEXPERIMENT=${GO_EXPERIMENT}
 
+# Private cross-repo modules (hanzoai/cloud, hanzoai/zip, luxfi/*) are fetched
+# directly via authenticated git, bypassing the public proxy + checksum DB.
+ENV GOPRIVATE=github.com/hanzoai/*,github.com/luxfi/*
+
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=secret,id=gh_token \
+    if [ -s /run/secrets/gh_token ]; then \
+      git config --global url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf "https://github.com/"; \
+    fi && \
     GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
     GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
 
