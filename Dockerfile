@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG GOLANG_VERSION=1.26.3
+ARG GOLANG_VERSION=1.26.4
 ARG ALPINE_VERSION=3.23
 
 # Stage 1: Build the gateway binary from source
