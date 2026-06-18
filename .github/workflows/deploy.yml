@@ -46,17 +46,6 @@ jobs:
           tags: |
             type=sha,prefix=sha-,suffix=-amd64,format=short
             type=ref,event=tag
-      - name: Debug gh_token availability (length only, never the value)
-        env:
-          T: ${{ secrets.GH_PAT }}
-        run: |
-          echo "GH_PAT length: ${#T}"
-          if [ -n "$T" ]; then
-            git ls-remote "https://x-access-token:${T}@github.com/luxfi/zap" HEAD >/dev/null 2>&1 \
-              && echo "RUNNER-CAN-READ-luxfi" || echo "RUNNER-CANNOT-READ-luxfi"
-          else
-            echo "GH_PAT-IS-EMPTY"
-          fi
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
