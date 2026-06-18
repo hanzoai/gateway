@@ -349,7 +349,6 @@ func (u *baseHAUpstream) markWrite(clientKey string) {
 // BaseHABackendFactory wraps the next BackendFactory with base_ha routing.
 // Backends without BaseHANamespace in their extra_config fall through.
 func BaseHABackendFactory(logger logging.Logger, next proxy.BackendFactory) proxy.BackendFactory {
-	registerBaseHAMetrics()
 	return func(remote *config.Backend) proxy.Proxy {
 		raw, ok := remote.ExtraConfig[BaseHANamespace]
 		if !ok {
@@ -581,24 +580,9 @@ var (
 		Name: "gateway_base_ha_no_writer_total",
 		Help: "Write requests rejected because no writer is known yet.",
 	})
-	baseHAMetricsOnce sync.Once
 )
 
-func registerBaseHAMetrics() {
-	baseHAMetricsOnce.Do(func() {
-		for _, c := range []metric.Collector{
-			metricLeaderPolls,
-			metricLeaderPollErrors,
-			metricLeaderChanges,
-			metricWriterFailures,
-			metricWriterFailuresFatal,
-			metricNoWriter,
-		} {
-			if err := metric.Register(c); err != nil {
-				if _, ok := err.(metric.AlreadyRegisteredError); !ok {
-					panic(err)
-				}
-			}
-		}
-	})
-}
+// Metrics above are registered on luxfi/metric's DefaultRegistry at
+// construction (NewCounter create-and-registers), so no explicit
+// registration pass is needed — unlike prometheus/client_golang's
+// two-step create-then-Register.
