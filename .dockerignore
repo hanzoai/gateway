@@ -15,3 +15,4 @@ docs/
 *.pem
 *.key
 *.crt
+vendor/

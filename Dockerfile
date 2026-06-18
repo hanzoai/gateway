@@ -4,7 +4,7 @@ ARG ALPINE_VERSION=3.23
 
 # Stage 1: Build the gateway binary from source
 # Use BUILDPLATFORM so Go cross-compiles natively (no QEMU for compiler)
-FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
+FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 ARG TARGETOS TARGETARCH
 
@@ -30,8 +30,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     if [ -s /run/secrets/gh_token ]; then \
       git config --global url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf "https://github.com/"; \
     fi && \
-    GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
-    GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
+    CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
+    CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
 
 # Stage 2: Runtime image
 FROM alpine:${ALPINE_VERSION}
