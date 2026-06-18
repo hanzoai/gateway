@@ -22,7 +22,7 @@ ENV GOEXPERIMENT=${GO_EXPERIMENT}
 
 # Private cross-repo modules (hanzoai/cloud, hanzoai/zip, luxfi/*) are fetched
 # directly via authenticated git, bypassing the public proxy + checksum DB.
-ENV GOPRIVATE=github.com/hanzoai/*,github.com/luxfi/*
+ENV GOPRIVATE=github.com/hanzoai/*,github.com/luxfi/*,github.com/zap-proto/*
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
