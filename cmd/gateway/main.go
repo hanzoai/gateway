@@ -1,20 +1,33 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
+//go:build !legacy
+// +build !legacy
+
 // cmd/gateway is the standalone Hanzo Gateway edge process per HIP-0110.
+//
+// The gateway is a pure ZAP→ZAP relay. The production chain is:
+//
+//	ingress (TLS + HTTP→ZAP)  →  gateway (this: relay)  →  cloud/base
 //
 // One binary, three responsibilities:
 //
-//  1. Terminate the JSON/HTTP boundary on :8080 for every external client.
-//  2. Validate JWTs against IAM and mint the canonical identity header set
-//     (X-Org-Id, X-User-Id, X-User-IsAdmin, X-User-Permissions, X-Roles,
-//     X-User-Email, X-Phone-Number) per HIP-0026.
-//  3. Forward the validated request to cloud (HIP-0106) over ZAP, and
-//     route ZAP push frames from base back to the originating client as
-//     SSE/WebSocket bytes — no JSON re-marshaling on the reverse path.
+//  1. Stand up an outbound ZAP node and connect it to cloud (HIP-0106) and
+//     base, learning each peer's NodeID for routing.
+//  2. Register the canonical relay (gateway.RegisterRelay → luxfi/zap
+//     forward.Relay): authenticate every inbound Forward ENVELOPE — validate
+//     the IAM JWT in its headers, inject the resolved identity (X-Org-Id,
+//     X-User-Id, X-User-IsAdmin, X-User-Permissions) onto the envelope — and
+//     forward to the picked backend, streaming the Response back verbatim.
+//     The gate never reads the request body; billing is deferred to
+//     cloud-api's own balance gate.
+//  3. Route ZAP push frames from the backend back to the originating client
+//     (SSE / WebSocket) via forward's reverse-push handler.
 //
-// The gateway holds no per-tenant state. Per-replica memory is bounded by
-// open connection count plus the JWKS cache; horizontal scaling is a
-// replica-count knob with no sticky sessions.
+// Ingress terminates client HTTP; the gateway's own :8080 is a liveness HTTP
+// surface only (gateway.BuildApp), and :8081 is the k8s health listener. The
+// gateway holds no per-tenant state — per-replica memory is bounded by open
+// connection count plus the JWKS cache; scaling is a replica-count knob with
+// no sticky sessions.
 package main
 
 import (
@@ -71,9 +84,25 @@ func main() {
 	logger := luxlog.New("service", "gateway")
 	cfg := loadConfig(logger)
 
-	zapNode, err := dialBackends(logger, cfg)
+	zapNode, basePeerID, cloudPeerID, err := dialBackends(logger, cfg)
 	if err != nil {
 		logger.Error("backend dial failed", "err", err)
+		os.Exit(1)
+	}
+
+	// The relay is the gateway's real work: it lives on the ZAP node, not
+	// on an HTTP router. It authenticates each inbound Forward envelope,
+	// injects identity, and forwards to base/cloud over ZAP. Billing is
+	// deferred to cloud-api's own balance gate (HIP-0110).
+	if err := gateway.RegisterRelay(gateway.RelayDeps{
+		Logger:      logger,
+		Node:        zapNode,
+		BasePeerID:  basePeerID,
+		CloudPeerID: cloudPeerID,
+		Auth:        gateway.DefaultAuthConfig(),
+	}); err != nil {
+		logger.Error("RegisterRelay failed", "err", err)
+		zapNode.Stop()
 		os.Exit(1)
 	}
 
@@ -155,35 +184,38 @@ func loadConfig(logger luxlog.Logger) config {
 	return cfg
 }
 
-// dialBackends constructs the gateway's outbound ZAP node and connects
-// it to cloud and base. The Node also serves as the receiver for reverse
-// push frames from base — gateway.HandleReversePush owns the routing
-// table for ConnID → client conn lookups.
-func dialBackends(logger luxlog.Logger, cfg config) (*zaplib.Node, error) {
-	node := zaplib.NewNode(zaplib.NodeConfig{
+// dialBackends constructs the gateway's outbound ZAP node and connects it
+// to cloud and base, returning the handshake-learned NodeID of each peer.
+// Those NodeIDs are what the relay's PeerPicker returns so node.Call can
+// resolve them against these connections. The reverse-push handler that
+// routes backend→gateway frames over the same conns is installed by
+// gateway.RegisterRelay, not here.
+func dialBackends(logger luxlog.Logger, cfg config) (node *zaplib.Node, basePeerID, cloudPeerID string, err error) {
+	node = zaplib.NewNode(zaplib.NodeConfig{
 		NodeID:      cfg.NodeID,
 		Port:        0, // ephemeral; gateway dials out, push flows back over same conn
 		NoDiscovery: true,
 		Logger:      slog.Default(),
 	})
-	if err := node.Start(); err != nil {
-		return nil, fmt.Errorf("zap node start: %w", err)
+	if err = node.Start(); err != nil {
+		return nil, "", "", fmt.Errorf("zap node start: %w", err)
 	}
-	if err := node.ConnectDirect(cfg.CloudZAPAddr); err != nil {
+	cloudPeerID, err = node.ConnectDirectID(cfg.CloudZAPAddr)
+	if err != nil {
 		node.Stop()
-		return nil, fmt.Errorf("dial cloud %s: %w", cfg.CloudZAPAddr, err)
+		return nil, "", "", fmt.Errorf("dial cloud %s: %w", cfg.CloudZAPAddr, err)
 	}
-	if err := node.ConnectDirect(cfg.BaseZAPAddr); err != nil {
+	basePeerID, err = node.ConnectDirectID(cfg.BaseZAPAddr)
+	if err != nil {
 		node.Stop()
-		return nil, fmt.Errorf("dial base %s: %w", cfg.BaseZAPAddr, err)
+		return nil, "", "", fmt.Errorf("dial base %s: %w", cfg.BaseZAPAddr, err)
 	}
 
-	node.Handle(gateway.MsgTypePush, gateway.HandleReversePush)
 	logger.Info("zap backends connected",
-		"cloud", cfg.CloudZAPAddr,
-		"base", cfg.BaseZAPAddr,
+		"cloud", cfg.CloudZAPAddr, "cloud_peer", cloudPeerID,
+		"base", cfg.BaseZAPAddr, "base_peer", basePeerID,
 	)
-	return node, nil
+	return node, basePeerID, cloudPeerID, nil
 }
 
 // buildHealthApp is the k8s liveness+readiness+metrics listener.

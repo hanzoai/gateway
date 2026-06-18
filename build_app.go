@@ -1,25 +1,35 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
-// build_app.go is the gateway router entrypoint per HIP-0110.
-// gateway.BuildApp returns the public *zip.App that cmd/gateway/main
-// wires onto :8080. Auth middleware (JWT validate + identity-header
-// mint) is wired by feat/own-auth-middleware in
-// github.com/hanzoai/gateway/middleware and added to this Use chain
-// when that branch lands. The catch-all ZAP forwarder lives in
-// forwarder.go on this branch.
+// build_app.go wires the gateway edge per HIP-0110.
+//
+// The gateway is a pure ZAP→ZAP relay: ingress terminates TLS+HTTP and
+// speaks ZAP to the gateway; the gateway authenticates on the Forward
+// ENVELOPE, injects identity, and forwards to cloud/base over ZAP. The
+// relay therefore lives on the ZAP node (RegisterRelay), not on an HTTP
+// router — there is no per-request HTTP handling at the gateway anymore.
+//
+// BuildApp still returns a tiny *zip.App so cmd/gateway/main can keep its
+// :8080 listener as a process/liveness surface (ingress owns real client
+// HTTP). It carries no forwarder and no auth middleware — those moved onto
+// the node. RegisterRelay is the real entrypoint.
 package gateway
 
 import (
 	"errors"
 	"net/http"
-	"strings"
+	"time"
 
 	luxlog "github.com/luxfi/log"
 	zaplib "github.com/luxfi/zap"
+	"github.com/luxfi/zap/forward"
 
 	"github.com/hanzoai/zip"
 	"github.com/hanzoai/zip/middleware"
 )
+
+// jwksTTL is the signing-key cache lifetime for the relay gate. Matches the
+// edge cache used elsewhere; keys refresh past this, stale-on-error.
+const jwksTTL = 5 * time.Minute
 
 // RouterDeps is the set of dependencies BuildApp needs.
 type RouterDeps struct {
@@ -29,7 +39,60 @@ type RouterDeps struct {
 	BaseAddr  string
 }
 
-// BuildApp returns the public *zip.App for the gateway's :8080 port.
+// RelayDeps is what RegisterRelay needs to stand up the ZAP relay on a node.
+type RelayDeps struct {
+	Logger luxlog.Logger
+	Node   *zaplib.Node
+	// BasePeerID / CloudPeerID are the handshake-learned NodeIDs of the
+	// already-connected base and cloud peers (from ConnectDirectID at dial
+	// time). pickPeer returns these for node.Call to resolve.
+	BasePeerID  string
+	CloudPeerID string
+	// Auth is the IAM JWT validation config for the relay gate. Use
+	// DefaultAuthConfig() to read it from the environment.
+	Auth AuthConfig
+}
+
+// RegisterRelay installs the canonical HIP-0110 relay on deps.Node:
+//
+//   - forward.Relay(node, gate, pick): decodes each inbound Forward
+//     envelope, runs the auth gate on it (JWT validate + identity inject,
+//     NO body read, NO billing — cloud-api bills the bridged request),
+//     re-emits the Forward with identity, and forwards to the picked peer,
+//     streaming the backend's Response back verbatim.
+//   - forward.RegisterReversePushHandler(node): routes backend→gateway
+//     Push frames (SSE / WebSocket) back to the originating client conn.
+//
+// The gate reuses package iamauth + gateway's permission bit-field math;
+// there is exactly one auth implementation. pick routes /v1/base/* to the
+// base peer, everything else to cloud.
+func RegisterRelay(deps RelayDeps) error {
+	if deps.Logger == nil {
+		return errors.New("gateway.RegisterRelay: nil Logger")
+	}
+	if deps.Node == nil {
+		return errors.New("gateway.RegisterRelay: nil Node")
+	}
+
+	gate := newGate(deps.Auth)
+	pick := pickPeer(deps.BasePeerID, deps.CloudPeerID)
+
+	forward.Relay(deps.Node, gate, pick)
+	forward.RegisterReversePushHandler(deps.Node)
+
+	deps.Logger.Info("gateway relay registered",
+		"base_peer", deps.BasePeerID,
+		"cloud_peer", deps.CloudPeerID,
+		"auth_enabled", deps.Auth.Enabled,
+		"require_auth", deps.Auth.RequireAuth,
+	)
+	return nil
+}
+
+// BuildApp returns the gateway's tiny HTTP surface for cmd/gateway/main's
+// :8080 listener. Real client traffic arrives over ZAP via RegisterRelay;
+// this app exists only so the process exposes a liveness/readiness HTTP
+// endpoint on the public port. It carries no forwarder.
 func BuildApp(deps RouterDeps) (*zip.App, error) {
 	if deps.Logger == nil {
 		return nil, errors.New("gateway.BuildApp: nil Logger")
@@ -47,28 +110,14 @@ func BuildApp(deps RouterDeps) (*zip.App, error) {
 		middleware.Recover(),
 		middleware.RequestID(),
 		middleware.Logger(deps.Logger),
-		middleware.CORS(middleware.CORSConfig{
-			AllowOrigins: []string{"*"},
-			AllowHeaders: []string{"Content-Type", "Authorization", "X-Request-Id"},
-		}),
 	)
-	// Catch-all forwarder placeholder until forwarder.go lands.
-	app.All("/*", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusServiceUnavailable, map[string]string{
-			"error":   "gateway forwarder not yet wired",
-			"backend": pickBackend(c.Path(), deps),
-		})
+	app.Get("/healthz", func(c *zip.Ctx) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 	})
-	deps.Logger.Info("gateway.BuildApp ready",
+	app.Get("/readyz", func(c *zip.Ctx) error {
+		return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
+	})
+	deps.Logger.Info("gateway.BuildApp ready (relay on ZAP node; HTTP is liveness-only)",
 		"cloud_zap", deps.CloudAddr, "base_zap", deps.BaseAddr)
 	return app, nil
-}
-
-// pickBackend chooses the ZAP peer for path. /v1/base/* → base;
-// everything else → cloud (which routes to per-HIP-0106 subsystems).
-func pickBackend(path string, deps RouterDeps) string {
-	if strings.HasPrefix(path, "/v1/base/") {
-		return deps.BaseAddr
-	}
-	return deps.CloudAddr
 }

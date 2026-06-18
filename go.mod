@@ -40,7 +40,7 @@ require (
 	github.com/krakend/krakend-xml/v2 v2.2.0
 	github.com/luraproject/lura/v2 v2.12.1
 	github.com/luxfi/log v1.4.3
-	github.com/luxfi/zap v0.7.2
+	github.com/luxfi/zap v0.8.8
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
@@ -237,7 +237,7 @@ require (
 	github.com/prometheus/prometheus v0.310.0 // indirect
 	github.com/prometheus/statsd_exporter v0.26.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.59.0 // indirect
+	github.com/quic-go/quic-go v0.59.1 // indirect
 	github.com/rabbitmq/amqp091-go v1.10.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20250401214520-65e299d6c5c9 // indirect
 	github.com/rs/cors v1.11.1 // indirect
