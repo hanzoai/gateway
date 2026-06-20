@@ -60,20 +60,82 @@ func (c *Claims) UserID() string {
 
 // Config is the edge validation configuration.
 type Config struct {
-	JWKSURL  string
-	Issuer   string
-	Audience string
-	JWKSTTL  time.Duration
+	JWKSURL string
+	Issuer  string
+	// Audiences is the allowlist of acceptable `aud` values. A token passes
+	// when its audience matches ANY entry (OR semantics). IAM (Casdoor)
+	// stamps user tokens with aud=<client_id> (e.g. hanzo-app), never the
+	// gateway origin, so a single fixed audience rejects every normal user
+	// JWT — the allowlist is the fix. An empty list disables the audience
+	// check; AudiencesFromEnv never returns empty, so it is always enforced.
+	Audiences []string
+	JWKSTTL   time.Duration
+}
+
+// DefaultAudiences is the baked allowlist of acceptable JWT audiences: the
+// known Hanzo IAM client_ids (each app's `aud` is its client_id) plus the
+// gateway origin. It is the single source of truth shared by the ingress and
+// the gin/KrakenD middleware. Forwards-only: append new client_ids, never
+// remove. Override entirely with GATEWAY_ALLOWED_AUDIENCES (comma-separated).
+var DefaultAudiences = []string{
+	"hanzo-app",
+	"hanzo-console",
+	"hanzo-chat",
+	"hanzo-id",
+	"cowork",
+	"https://api.hanzo.ai",
+}
+
+// AudiencesFromEnv resolves the audience allowlist. GATEWAY_ALLOWED_AUDIENCES
+// (comma-separated), when set, fully replaces the baked default. Otherwise the
+// baked DefaultAudiences is used; the legacy single-value AUTH_AUDIENCE, when
+// set, is folded IN (it widens, never narrows — so a live env still pinned to
+// AUTH_AUDIENCE=https://api.hanzo.ai keeps that value in an already-inclusive
+// set rather than collapsing the allowlist to one entry). The result is never
+// empty, so the audience check is always enforced.
+func AudiencesFromEnv() []string {
+	if v := os.Getenv("GATEWAY_ALLOWED_AUDIENCES"); v != "" {
+		if list := splitAndTrim(v); len(list) > 0 {
+			return list
+		}
+	}
+	out := append([]string(nil), DefaultAudiences...)
+	if legacy := strings.TrimSpace(os.Getenv("AUTH_AUDIENCE")); legacy != "" {
+		out = appendUnique(out, legacy)
+	}
+	return out
+}
+
+// splitAndTrim splits a comma-separated list and drops empty entries.
+func splitAndTrim(s string) []string {
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// appendUnique appends v to list unless already present.
+func appendUnique(list []string, v string) []string {
+	for _, e := range list {
+		if e == v {
+			return list
+		}
+	}
+	return append(list, v)
 }
 
 // ConfigFromEnv reads the same AUTH_* variables the gateway uses, with the
 // same defaults, so the gateway and ingress agree on the IAM authority.
 func ConfigFromEnv() Config {
 	return Config{
-		JWKSURL:  envOr("AUTH_JWKS_URL", "https://hanzo.id/.well-known/jwks"),
-		Issuer:   envOr("AUTH_ISSUER", "https://hanzo.id"),
-		Audience: envOr("AUTH_AUDIENCE", "https://api.hanzo.ai"),
-		JWKSTTL:  15 * time.Minute,
+		JWKSURL:   envOr("AUTH_JWKS_URL", "https://hanzo.id/.well-known/jwks"),
+		Issuer:    envOr("AUTH_ISSUER", "https://hanzo.id"),
+		Audiences: AudiencesFromEnv(),
+		JWKSTTL:   15 * time.Minute,
 	}
 }
 
@@ -170,10 +232,13 @@ func (c *JWKSCache) fetch() (*gojose.JSONWebKeySet, error) {
 // Validation
 // ----------------------------------------------------------------------------
 
-// ValidateToken parses and validates a JWT against the cached JWKS. Issuer
-// and audience (when configured) and expiry are ALWAYS enforced; a token
-// missing the issuer claim is rejected.
-func ValidateToken(rawToken string, cache *JWKSCache, expectedIssuer, expectedAudience string) (*Claims, error) {
+// ValidateToken parses and validates a JWT against the cached JWKS. Issuer,
+// audience (when an allowlist is configured), and expiry are ALWAYS enforced;
+// a token missing the issuer claim is rejected. The token passes the audience
+// check when its `aud` matches ANY entry in expectedAudiences (OR semantics).
+// An empty allowlist disables the audience check — callers that want it
+// enforced (all production callers) pass a non-empty list.
+func ValidateToken(rawToken string, cache *JWKSCache, expectedIssuer string, expectedAudiences []string) (*Claims, error) {
 	tok, err := jwt.ParseSigned(rawToken, []gojose.SignatureAlgorithm{
 		gojose.RS256, gojose.RS384, gojose.RS512,
 		gojose.ES256, gojose.ES384, gojose.ES512,
@@ -225,8 +290,8 @@ validated:
 		return nil, fmt.Errorf("invalid token: missing issuer")
 	}
 	expected := jwt.Expected{Issuer: expectedIssuer}
-	if expectedAudience != "" {
-		expected.AnyAudience = jwt.Audience{expectedAudience}
+	if len(expectedAudiences) > 0 {
+		expected.AnyAudience = jwt.Audience(expectedAudiences)
 	}
 	if err := claims.Claims.ValidateWithLeeway(expected, 2*time.Minute); err != nil {
 		return nil, fmt.Errorf("token validation failed: %w", err)
@@ -253,7 +318,7 @@ func (v *Validator) Validate(r *http.Request) (*Claims, error) {
 	if tok == "" {
 		return nil, ErrNoToken
 	}
-	return ValidateToken(tok, v.cache, v.cfg.Issuer, v.cfg.Audience)
+	return ValidateToken(tok, v.cache, v.cfg.Issuer, v.cfg.Audiences)
 }
 
 // ErrNoToken indicates no credential was present on the request.
