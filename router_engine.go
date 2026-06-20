@@ -425,9 +425,9 @@ type ginOptions struct {
 // corsPreflightMiddleware handles OPTIONS preflight requests globally.
 // Must run before any gateway routing to prevent 405/503 on preflight.
 func corsPreflightMiddleware() gin.HandlerFunc {
-	// CORS preflight origins. Localhost defaults are baked in for dev.
-	// Production origins must be supplied via the GATEWAY_CORS_ORIGINS env
-	// var (comma-separated) or the security/cors block in gateway config.
+	// Exact-match origins. Localhost defaults are baked in for dev; extra
+	// fully-qualified origins (scheme+host[:port]) may be supplied via the
+	// GATEWAY_CORS_ORIGINS env var (comma-separated).
 	origins := map[string]bool{
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
@@ -440,9 +440,21 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 			}
 		}
 	}
+	// Brand allowlist — the SAME baked-in set the widget security middleware
+	// uses (defaultAllowedOrigins). Built once. Every Hanzo/Lux/Zoo/Pars
+	// property (and its subdomains) is allowed by hostname suffix-match, so a
+	// browser SPA like https://cowork.hanzo.ai gets its AI preflight answered
+	// without any per-origin env config. One allowlist source (DRY).
+	brandOrigins := widgetAllowedOrigins(defaultAllowedOrigins())
+	originAllowed := func(origin string) bool {
+		if origins[origin] {
+			return true
+		}
+		return isAllowedOrigin(extractOriginHost(origin), brandOrigins)
+	}
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
-		if origin == "" || !origins[origin] {
+		if origin == "" || !originAllowed(origin) {
 			c.Next()
 			return
 		}
