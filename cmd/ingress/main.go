@@ -123,8 +123,8 @@ func newRouter(cfg *Config) *router {
 	if len(r.authHosts) > 0 {
 		cfg := iamauth.ConfigFromEnv()
 		r.validator = iamauth.NewValidator(cfg)
-		log.Printf("ingress IAM auth enabled for %d host(s): issuer=%s audience=%s",
-			len(r.authHosts), cfg.Issuer, cfg.Audience)
+		log.Printf("ingress IAM auth enabled for %d host(s): issuer=%s audiences=%v",
+			len(r.authHosts), cfg.Issuer, cfg.Audiences)
 	}
 
 	return r
