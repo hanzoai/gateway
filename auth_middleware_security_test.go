@@ -350,7 +350,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 		"X-Org-Id":           "forged-org",
 		"X-User-Id":          "forged-admin",
 		"X-User-Email":       "forged@evil.com",
-		"X-User-Permissions": "20", // Admin|Live attempted forgery
+		"X-User-Permissions": "20",            // Admin|Live attempted forgery
 		"X-Hanzo-Custom":     "forged-custom", // Mixed case to test case-insensitive stripping
 	}
 
@@ -840,11 +840,11 @@ func TestCanonicalHeaders_EmittedFromJWT(t *testing.T) {
 
 	gin.SetMode(gin.TestMode)
 	var got struct {
-		userID   string
-		orgID    string
-		roles    string
-		email    string
-		isAdmin  string
+		userID  string
+		orgID   string
+		roles   string
+		email   string
+		isAdmin string
 	}
 	r := gin.New()
 	r.Use(NewAuthMiddleware(AuthConfig{
@@ -1050,6 +1050,101 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 	}
 	if backendReached {
 		t.Error("request with zero balance should not reach backend")
+	}
+}
+
+// --- Test 16b: gateway calls the CORRECT commerce path (/v1/billing/balance) ---
+// Pins the path. If anyone reverts to /api/v1/... the mock 404s, checkBalance
+// fails-closed, and this test goes 503 instead of 200 — i.e. it would have
+// caught the -X theirs merge-train regression of PR #24.
+func TestBillingCheck_HitsV1PathAndAllows(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	var gotPath string
+	billingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		if r.URL.Path != "/v1/billing/balance" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(billingResponse{
+			User: "hanzo/alice", Currency: "usd",
+			Balance: 5000, Holds: 0, Available: 5000,
+		})
+	}))
+	defer billingServer.Close()
+
+	cfg := AuthConfig{
+		Enabled: true, JWKSURL: jwksServer.URL,
+		Issuer: "https://hanzo.id", Audience: "https://api.hanzo.ai",
+		BillingURL: billingServer.URL, BillingToken: "test-token", BillingEnabled: true,
+		PublicPaths: []string{}, PublicHosts: []string{}, RequireAuth: true,
+	}
+
+	r := gin.New()
+	r.Use(NewAuthMiddleware(cfg))
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if gotPath != "/v1/billing/balance" {
+		t.Errorf("gateway must call /v1/billing/balance, called %q", gotPath)
+	}
+	if w.Code != http.StatusOK || !backendReached {
+		t.Errorf("positive balance should reach backend with 200, got %d (reached=%v)", w.Code, backendReached)
+	}
+}
+
+// --- Test 16c: gateway fails CLOSED when commerce errors (no free) ---
+func TestBillingCheck_FailsClosedOnCommerceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	billingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer billingServer.Close()
+
+	cfg := AuthConfig{
+		Enabled: true, JWKSURL: jwksServer.URL,
+		Issuer: "https://hanzo.id", Audience: "https://api.hanzo.ai",
+		BillingURL: billingServer.URL, BillingToken: "test-token", BillingEnabled: true,
+		PublicPaths: []string{}, PublicHosts: []string{}, RequireAuth: true,
+	}
+
+	r := gin.New()
+	r.Use(NewAuthMiddleware(cfg))
+	backendReached := false
+	r.GET("/api/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
+
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	token := tj.signToken(t, claims)
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if backendReached {
+		t.Error("commerce error must NOT reach backend (fail-closed, no free)")
+	}
+	if w.Code != http.StatusServiceUnavailable {
+		t.Errorf("commerce error should yield 503 billing_unavailable, got %d", w.Code)
 	}
 }
 
@@ -1633,4 +1728,3 @@ func TestPermissions_UnparseableClaimFailsClosed(t *testing.T) {
 		t.Error("SECURITY: unparseable permissions claim must NOT mint a header")
 	}
 }
-
