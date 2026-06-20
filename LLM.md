@@ -38,6 +38,31 @@ gateway/
 - `Makefile` -- Build automation
 - `Dockerfile` -- Container build
 
+## JWT Audience Allowlist (edge auth)
+
+`iamauth.ValidateToken` validates `iss` (strict, env `AUTH_ISSUER`, prod
+`https://iam.hanzo.ai`) and `aud` against an **allowlist** (OR semantics — a
+token passes if its `aud` matches ANY entry). IAM (Casdoor) stamps user tokens
+with `aud = <client_id>` (the seeded app name: `hanzo-app`, `hanzo-console`,
+`hanzo-chat`, `hanzo-id`, …), never the gateway origin — so the prior single
+fixed audience (`https://api.hanzo.ai`) rejected EVERY normal user JWT (cowork
+AI 401, user billing 401).
+
+- Single source of truth: `iamauth.DefaultAudiences` (the known user-facing
+  client_ids + `https://api.hanzo.ai`) and `iamauth.AudiencesFromEnv()`. Shared
+  by the gin/KrakenD middleware (`auth_middleware.go`), the relay gate
+  (`gate.go`), the unified-binary mount (`mount.go`), and the ingress
+  (`cmd/ingress`). One implementation, four callers.
+- Override entirely with `GATEWAY_ALLOWED_AUDIENCES` (comma-separated). Legacy
+  `AUTH_AUDIENCE` / `JWT_AUDIENCE`, when set, are folded IN (widen, never
+  narrow — a live env pinned to `AUTH_AUDIENCE=https://api.hanzo.ai` keeps that
+  value in an already-inclusive set rather than collapsing to one entry).
+- The allowlist is never empty by construction, so the audience check is
+  ALWAYS enforced. `aud` outside the set fails; a missing/empty `iss` fails.
+- Forwards-only: append new client_ids to `DefaultAudiences`, never remove.
+- Regression: `iamauth/audience_test.go` (aud=hanzo-app/hanzo-chat PASS,
+  aud=evil FAIL, wrong issuer FAIL) + `TestJWTAuth_RejectsWrongAudience`.
+
 ## Identity Headers (Trust Boundary)
 
 Gateway is the **only** authority that may emit identity headers downstream.

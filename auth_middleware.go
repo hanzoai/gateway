@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/hanzoai/gateway/iamauth"
 )
 
 // AuthConfig holds configuration for the auth middleware.
@@ -28,8 +30,12 @@ type AuthConfig struct {
 	// Expected JWT issuer (default: https://hanzo.id)
 	Issuer string
 
-	// Expected JWT audience (default: https://api.hanzo.ai)
-	Audience string
+	// Audiences is the allowlist of acceptable JWT `aud` values. A token
+	// passes when its audience matches ANY entry. IAM stamps user tokens with
+	// aud=<client_id>, so a single fixed audience rejects every user JWT; the
+	// allowlist (iamauth.AudiencesFromEnv) is the fix. Override entirely with
+	// GATEWAY_ALLOWED_AUDIENCES.
+	Audiences []string
 
 	// Billing check endpoint (default: http://commerce.hanzo.svc.cluster.local:8001)
 	BillingURL string
@@ -320,12 +326,12 @@ func DefaultAuthConfig() AuthConfig {
 		issuer = "https://hanzo.id"
 	}
 
-	// AUTH_AUDIENCE defaults to https://api.hanzo.ai when not set. Audience
-	// validation is ALWAYS enforced (auth_middleware.go:739).
-	audience := os.Getenv("AUTH_AUDIENCE")
-	if audience == "" {
-		audience = "https://api.hanzo.ai"
-	}
+	// Audience is validated against an allowlist (iamauth.AudiencesFromEnv):
+	// the known Hanzo client_ids + the gateway origin, overridable via
+	// GATEWAY_ALLOWED_AUDIENCES. IAM stamps user tokens with aud=<client_id>,
+	// so the prior single fixed audience rejected every user JWT. Audience
+	// validation is ALWAYS enforced (the allowlist is never empty).
+	audiences := iamauth.AudiencesFromEnv()
 
 	billingURL := os.Getenv("AUTH_BILLING_URL")
 	if billingURL == "" {
@@ -381,7 +387,7 @@ func DefaultAuthConfig() AuthConfig {
 		Enabled:        enabled,
 		JWKSURL:        jwksURL,
 		Issuer:         issuer,
-		Audience:       audience,
+		Audiences:      audiences,
 		BillingURL:     billingURL,
 		BillingToken:   billingToken,
 		BillingEnabled: billingEnabled,
@@ -490,7 +496,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		}
 
 		// Parse and validate JWT
-		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audience)
+		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audiences)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",
