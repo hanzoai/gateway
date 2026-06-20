@@ -124,7 +124,7 @@ func setupMiddlewareWithJWKS(t *testing.T, overrideCfg func(*AuthConfig)) (*gin.
 		Enabled:        true,
 		JWKSURL:        jwksServer.URL,
 		Issuer:         "https://hanzo.id",
-		Audience:       "https://api.hanzo.ai",
+		Audiences:      []string{"https://api.hanzo.ai"},
 		BillingEnabled: false, // Disable billing for security tests
 		PublicPaths:    []string{"/healthz"},
 		PublicHosts:    []string{"hanzo.id"},
@@ -450,7 +450,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 				Enabled:        enabled,
 				JWKSURL:        jwksServer.URL,
 				Issuer:         "https://hanzo.id",
-				Audience:       "https://api.hanzo.ai",
+				Audiences:      []string{"https://api.hanzo.ai"},
 				BillingEnabled: false,
 				PublicPaths:    []string{"/healthz"},
 				PublicHosts:    []string{"hanzo.id"},
@@ -851,7 +851,7 @@ func TestCanonicalHeaders_EmittedFromJWT(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -924,7 +924,7 @@ func TestCanonicalHeaders_NoRolesNoHeader(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -983,7 +983,7 @@ func TestValidateToken_IssuerAttackVectors(t *testing.T) {
 			// No "iss" at all for empty issuer test
 
 			token := tj.signToken(t, claims)
-			_, err := validateToken(token, cache, "https://hanzo.id", "https://api.hanzo.ai")
+			_, err := validateToken(token, cache, "https://hanzo.id", []string{"https://api.hanzo.ai"})
 			if err == nil {
 				t.Errorf("SECURITY: validateToken accepted issuer %q -- should have been rejected", tt.issuer)
 			}
@@ -1017,7 +1017,7 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 		Enabled:        true,
 		JWKSURL:        jwksServer.URL,
 		Issuer:         "https://hanzo.id",
-		Audience:       "https://api.hanzo.ai",
+		Audiences:      []string{"https://api.hanzo.ai"},
 		BillingURL:     billingServer.URL,
 		BillingToken:   "test-token",
 		BillingEnabled: true,
@@ -1081,7 +1081,7 @@ func TestBillingCheck_HitsV1PathAndAllows(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled: true, JWKSURL: jwksServer.URL,
-		Issuer: "https://hanzo.id", Audience: "https://api.hanzo.ai",
+		Issuer: "https://hanzo.id", Audiences: []string{"https://api.hanzo.ai"},
 		BillingURL: billingServer.URL, BillingToken: "test-token", BillingEnabled: true,
 		PublicPaths: []string{}, PublicHosts: []string{}, RequireAuth: true,
 	}
@@ -1122,7 +1122,7 @@ func TestBillingCheck_FailsClosedOnCommerceError(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled: true, JWKSURL: jwksServer.URL,
-		Issuer: "https://hanzo.id", Audience: "https://api.hanzo.ai",
+		Issuer: "https://hanzo.id", Audiences: []string{"https://api.hanzo.ai"},
 		BillingURL: billingServer.URL, BillingToken: "test-token", BillingEnabled: true,
 		PublicPaths: []string{}, PublicHosts: []string{}, RequireAuth: true,
 	}
@@ -1368,7 +1368,7 @@ func TestPermissions_MintedFromClaim(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1418,7 +1418,7 @@ func TestPermissions_MintedFromStringArray(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1466,7 +1466,7 @@ func TestPermissions_MintedFromNumericClaim(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1514,7 +1514,7 @@ func TestPermissions_IsAdminMintsAdminLive(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1567,7 +1567,7 @@ func TestPermissions_AbsentWhenNoneGranted(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1618,7 +1618,7 @@ func TestPermissions_UnknownNameIgnored(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
@@ -1704,7 +1704,7 @@ func TestPermissions_UnparseableClaimFailsClosed(t *testing.T) {
 		Enabled:     true,
 		JWKSURL:     jwksServer.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
