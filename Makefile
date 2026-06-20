@@ -17,9 +17,21 @@ help: ## Show this help
 
 all: test
 
-build: cmd/gateway/schema/schema.json ## Build the gateway binary
-	@echo "Building the gateway binary..."
-	@go build -mod=mod -ldflags="-X ${MODULE}/pkg.Version=${VERSION} -X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION} \
+# BUILD_TAGS selects the gateway entrypoint. The production HTTP edge runs
+# the KrakenD `run -c gateway.json` path (cmd/gateway/main_legacy.go, tag
+# `legacy`) which mounts NewEngine -> hostProxyMiddleware (the proven HTTP
+# relay of api.hanzo.ai /v1/* straight to cloud-api:8000) + the CORS
+# preflight allowlist. The default (untagged) main.go is the HIP-0110
+# pure ZAP->ZAP relay; it serves ONLY /healthz on :8080 and 404s every
+# model call when the ZAP backends are absent (they are: cloud:9090 is
+# cloud's health listener, the base service does not exist). Until the
+# ZAP relay backends are live (HIP-0110 Phase C), the edge MUST be the
+# `legacy` build — that is what the Dockerfile CMD (`run -c ...`) drives.
+BUILD_TAGS ?= legacy
+
+build: cmd/gateway/schema/schema.json ## Build the gateway binary (KrakenD HTTP edge; BUILD_TAGS=legacy)
+	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
+	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${MODULE}/pkg.Version=${VERSION} -X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION} \
 	-X github.com/luraproject/lura/v2/core.GlibcVersion=${GLIBC_VERSION}" \
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
