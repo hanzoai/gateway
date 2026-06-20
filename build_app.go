@@ -43,9 +43,15 @@ type RouterDeps struct {
 type RelayDeps struct {
 	Logger luxlog.Logger
 	Node   *zaplib.Node
+	// Pick chooses the backend peer for a request path. Production passes a
+	// lazy resolver-backed picker (peerResolver.picker) that dials backends
+	// on first use, so the gateway boots even when the backends are absent.
+	// When nil, RegisterRelay falls back to the static pickPeer over the
+	// pre-resolved BasePeerID / CloudPeerID below.
+	Pick forward.PeerPicker
 	// BasePeerID / CloudPeerID are the handshake-learned NodeIDs of the
 	// already-connected base and cloud peers (from ConnectDirectID at dial
-	// time). pickPeer returns these for node.Call to resolve.
+	// time). Used only when Pick is nil (e.g. tests that dial up front).
 	BasePeerID  string
 	CloudPeerID string
 	// Auth is the IAM JWT validation config for the relay gate. Use
@@ -75,12 +81,16 @@ func RegisterRelay(deps RelayDeps) error {
 	}
 
 	gate := newGate(deps.Auth)
-	pick := pickPeer(deps.BasePeerID, deps.CloudPeerID)
+	pick := deps.Pick
+	if pick == nil {
+		pick = pickPeer(deps.BasePeerID, deps.CloudPeerID)
+	}
 
 	forward.Relay(deps.Node, gate, pick)
 	forward.RegisterReversePushHandler(deps.Node)
 
 	deps.Logger.Info("gateway relay registered",
+		"lazy_picker", deps.Pick != nil,
 		"base_peer", deps.BasePeerID,
 		"cloud_peer", deps.CloudPeerID,
 		"auth_enabled", deps.Auth.Enabled,
