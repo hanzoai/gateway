@@ -546,12 +546,16 @@ func TestDefaultAuthConfigAudience(t *testing.T) {
 	}
 }
 
-func TestBillingCheckerFailOpen(t *testing.T) {
-	// Test with unreachable billing URL - should fail open
+func TestBillingCheckerFailClosed(t *testing.T) {
+	// Unreachable billing service -> deny (no free), with a non-nil error so
+	// the caller can surface a 503 rather than a wrong "insufficient balance".
 	checker := newBillingChecker("http://127.0.0.1:1", "test-token") // unreachable port
-	ok, _ := checker.checkBalance("hanzo/test-user")
-	if !ok {
-		t.Error("billing check should fail-open when service is unreachable")
+	ok, err := checker.checkBalance("hanzo/test-user")
+	if ok {
+		t.Error("billing check must fail-closed (deny) when commerce is unreachable")
+	}
+	if err == nil {
+		t.Error("unreachable commerce should return a non-nil error so the caller emits 503")
 	}
 }
 
