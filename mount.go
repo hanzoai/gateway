@@ -23,6 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hanzoai/cloud"
+	"github.com/hanzoai/gateway/iamauth"
 	"github.com/hanzoai/zip"
 )
 
@@ -124,11 +125,19 @@ func zipFromGin(h gin.HandlerFunc) zip.Handler {
 // authConfigFromEnv builds the gateway AuthConfig from env, applying
 // cloud-friendly defaults derived from deps when env is unset.
 func authConfigFromEnv(deps cloud.Deps) AuthConfig {
+	// Audience allowlist: the shared known-client_id + origin set
+	// (iamauth.AudiencesFromEnv, overridable via GATEWAY_ALLOWED_AUDIENCES).
+	// A JWT_AUDIENCE override widens the set (parity with AUTH_AUDIENCE) — it
+	// never narrows it to one value, which would reject every user JWT.
+	audiences := iamauth.AudiencesFromEnv()
+	if a := strings.TrimSpace(getenv("JWT_AUDIENCE", "")); a != "" {
+		audiences = appendUniqueAud(audiences, a)
+	}
 	cfg := AuthConfig{
 		Enabled:        getenv("AUTH_ENABLED", "true") == "true",
 		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/.well-known/jwks"),
 		Issuer:         getenv("JWT_ISSUER", "https://hanzo.id"),
-		Audience:       getenv("JWT_AUDIENCE", "https://"+deps.Domain),
+		Audiences:      audiences,
 		BillingURL:     getenv("BILLING_URL", ""),
 		BillingToken:   getenv("BILLING_TOKEN", ""),
 		BillingEnabled: getenv("BILLING_ENABLED", "false") == "true",
@@ -182,4 +191,14 @@ func splitCSV(s string) []string {
 		}
 	}
 	return out
+}
+
+// appendUniqueAud appends v to the audience list unless already present.
+func appendUniqueAud(list []string, v string) []string {
+	for _, e := range list {
+		if e == v {
+			return list
+		}
+	}
+	return append(list, v)
 }

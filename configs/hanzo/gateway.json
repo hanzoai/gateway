@@ -940,7 +940,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions",
+          "url_pattern": "/v1/billing/subscriptions",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -986,7 +986,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions",
+          "url_pattern": "/v1/billing/subscriptions",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1032,7 +1032,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions/{id}",
+          "url_pattern": "/v1/billing/subscriptions/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1078,7 +1078,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions/{id}",
+          "url_pattern": "/v1/billing/subscriptions/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1124,7 +1124,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions/{id}",
+          "url_pattern": "/v1/billing/subscriptions/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1170,7 +1170,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/subscriptions/{id}/promotion",
+          "url_pattern": "/v1/billing/subscriptions/{id}/promotion",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1216,7 +1216,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/plans",
+          "url_pattern": "/v1/billing/plans",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -1262,7 +1262,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/plans/{id}",
+          "url_pattern": "/v1/billing/plans/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5348,7 +5348,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/balance",
+          "url_pattern": "/v1/billing/balance",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5394,7 +5394,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/deposit",
+          "url_pattern": "/v1/billing/deposit",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5440,7 +5440,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/credit",
+          "url_pattern": "/v1/billing/credit",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5486,7 +5486,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/transactions",
+          "url_pattern": "/v1/billing/transactions",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5532,7 +5532,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/invoices",
+          "url_pattern": "/v1/billing/invoices",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5578,7 +5578,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/payment-methods",
+          "url_pattern": "/v1/billing/payment-methods",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5624,7 +5624,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/payment-methods",
+          "url_pattern": "/v1/billing/payment-methods",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5670,7 +5670,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/payment-methods/{id}",
+          "url_pattern": "/v1/billing/payment-methods/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5716,7 +5716,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/payment-methods/{id}/default",
+          "url_pattern": "/v1/billing/payment-methods/{id}/default",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5762,7 +5762,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/usage",
+          "url_pattern": "/v1/billing/usage",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5808,7 +5808,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/spend-alerts",
+          "url_pattern": "/v1/billing/spend-alerts",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5854,7 +5854,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/spend-alerts",
+          "url_pattern": "/v1/billing/spend-alerts",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5900,7 +5900,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/spend-alerts/{id}",
+          "url_pattern": "/v1/billing/spend-alerts/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5946,7 +5946,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/spend-alerts/{id}",
+          "url_pattern": "/v1/billing/spend-alerts/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -5992,7 +5992,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/discount/validate",
+          "url_pattern": "/v1/billing/discount/validate",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6038,7 +6038,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/credit-grants",
+          "url_pattern": "/v1/billing/credit-grants",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6084,7 +6084,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/credit-balance",
+          "url_pattern": "/v1/billing/credit-balance",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6130,7 +6130,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/payment",
+          "url_pattern": "/v1/billing/payment",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6176,7 +6176,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/portal/overview",
+          "url_pattern": "/v1/billing/portal/overview",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6222,7 +6222,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/meters",
+          "url_pattern": "/v1/billing/meters",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6268,7 +6268,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/meter-events/summary",
+          "url_pattern": "/v1/billing/meter-events/summary",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6314,7 +6314,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts",
+          "url_pattern": "/v1/billing/accounts",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6360,7 +6360,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts",
+          "url_pattern": "/v1/billing/accounts",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6406,7 +6406,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts/{id}",
+          "url_pattern": "/v1/billing/accounts/{id}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6452,7 +6452,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts/{id}/members",
+          "url_pattern": "/v1/billing/accounts/{id}/members",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6498,7 +6498,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts/{id}/members",
+          "url_pattern": "/v1/billing/accounts/{id}/members",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6544,7 +6544,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts/{id}/members/{mid}",
+          "url_pattern": "/v1/billing/accounts/{id}/members/{mid}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],
@@ -6590,7 +6590,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/v1/v1/billing/accounts/{id}/members/{mid}",
+          "url_pattern": "/v1/billing/accounts/{id}/members/{mid}",
           "host": [
             "http://commerce.hanzo.svc.cluster.local:8001"
           ],

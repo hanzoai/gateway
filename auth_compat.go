@@ -19,8 +19,8 @@ type hanzoJWTClaims = iamauth.Claims
 
 func newJWKSCache(url string, ttl time.Duration) *jwksCache { return iamauth.NewJWKSCache(url, ttl) }
 
-func validateToken(raw string, cache *jwksCache, issuer, audience string) (*hanzoJWTClaims, error) {
-	return iamauth.ValidateToken(raw, cache, issuer, audience)
+func validateToken(raw string, cache *jwksCache, issuer string, audiences []string) (*hanzoJWTClaims, error) {
+	return iamauth.ValidateToken(raw, cache, issuer, audiences)
 }
 
 func stripIdentityHeaders(r *http.Request)          { iamauth.StripIdentityHeaders(r) }
