@@ -84,22 +84,30 @@ func main() {
 	logger := luxlog.New("service", "gateway")
 	cfg := loadConfig(logger)
 
-	zapNode, basePeerID, cloudPeerID, err := dialBackends(logger, cfg)
+	// startNode brings up the outbound ZAP node. Only a failure to start
+	// the node itself is fatal — that is a local resource error (port
+	// bind), not a dependency being absent. Reaching the cloud/base
+	// backends is deferred to the relay's lazy picker so the gateway boots
+	// and serves HTTP + healthz even when the backends don't exist yet
+	// (HIP-0110: HTTP serving is what prod needs; ZAP connects on demand).
+	zapNode, err := startNode(logger, cfg)
 	if err != nil {
-		logger.Error("backend dial failed", "err", err)
+		logger.Error("zap node start failed", "err", err)
 		os.Exit(1)
 	}
 
 	// The relay is the gateway's real work: it lives on the ZAP node, not
 	// on an HTTP router. It authenticates each inbound Forward envelope,
 	// injects identity, and forwards to base/cloud over ZAP. Billing is
-	// deferred to cloud-api's own balance gate (HIP-0110).
+	// deferred to cloud-api's own balance gate (HIP-0110). The picker dials
+	// backends lazily on first use (and best-effort warms them now), so an
+	// absent backend degrades only the requests routed to it, never boot.
+	pick := gateway.NewLazyPicker(zapNode, logger, cfg.BaseZAPAddr, cfg.CloudZAPAddr)
 	if err := gateway.RegisterRelay(gateway.RelayDeps{
-		Logger:      logger,
-		Node:        zapNode,
-		BasePeerID:  basePeerID,
-		CloudPeerID: cloudPeerID,
-		Auth:        gateway.DefaultAuthConfig(),
+		Logger: logger,
+		Node:   zapNode,
+		Pick:   pick,
+		Auth:   gateway.DefaultAuthConfig(),
 	}); err != nil {
 		logger.Error("RegisterRelay failed", "err", err)
 		zapNode.Stop()
@@ -184,38 +192,28 @@ func loadConfig(logger luxlog.Logger) config {
 	return cfg
 }
 
-// dialBackends constructs the gateway's outbound ZAP node and connects it
-// to cloud and base, returning the handshake-learned NodeID of each peer.
-// Those NodeIDs are what the relay's PeerPicker returns so node.Call can
-// resolve them against these connections. The reverse-push handler that
-// routes backend→gateway frames over the same conns is installed by
+// startNode constructs and starts the gateway's outbound ZAP node. It does
+// NOT dial cloud/base — connecting to the backends is deferred to the
+// relay's lazy picker (gateway.NewLazyPicker), which dials on first use and
+// retries until a backend is reachable. This is the decomplected boot path:
+// node startup (a local concern) is separated from backend reachability (a
+// dependency concern) so an absent backend never blocks boot. The only
+// failure returned here is a genuine local error — failure to bind the
+// ephemeral port. The reverse-push handler is installed by
 // gateway.RegisterRelay, not here.
-func dialBackends(logger luxlog.Logger, cfg config) (node *zaplib.Node, basePeerID, cloudPeerID string, err error) {
-	node = zaplib.NewNode(zaplib.NodeConfig{
+func startNode(logger luxlog.Logger, cfg config) (*zaplib.Node, error) {
+	node := zaplib.NewNode(zaplib.NodeConfig{
 		NodeID:      cfg.NodeID,
 		Port:        0, // ephemeral; gateway dials out, push flows back over same conn
 		NoDiscovery: true,
 		Logger:      slog.Default(),
 	})
-	if err = node.Start(); err != nil {
-		return nil, "", "", fmt.Errorf("zap node start: %w", err)
+	if err := node.Start(); err != nil {
+		return nil, fmt.Errorf("zap node start: %w", err)
 	}
-	cloudPeerID, err = node.ConnectDirectID(cfg.CloudZAPAddr)
-	if err != nil {
-		node.Stop()
-		return nil, "", "", fmt.Errorf("dial cloud %s: %w", cfg.CloudZAPAddr, err)
-	}
-	basePeerID, err = node.ConnectDirectID(cfg.BaseZAPAddr)
-	if err != nil {
-		node.Stop()
-		return nil, "", "", fmt.Errorf("dial base %s: %w", cfg.BaseZAPAddr, err)
-	}
-
-	logger.Info("zap backends connected",
-		"cloud", cfg.CloudZAPAddr, "cloud_peer", cloudPeerID,
-		"base", cfg.BaseZAPAddr, "base_peer", basePeerID,
-	)
-	return node, basePeerID, cloudPeerID, nil
+	logger.Info("zap node started (backends connect lazily on first use)",
+		"cloud", cfg.CloudZAPAddr, "base", cfg.BaseZAPAddr)
+	return node, nil
 }
 
 // buildHealthApp is the k8s liveness+readiness+metrics listener.
