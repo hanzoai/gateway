@@ -37,7 +37,7 @@ func gateConfig(t *testing.T, tj *testJWKS, requireAuth bool) (AuthConfig, func(
 		Enabled:     true,
 		JWKSURL:     srv.URL,
 		Issuer:      "https://hanzo.id",
-		Audience:    "https://api.hanzo.ai",
+		Audiences:   []string{"https://api.hanzo.ai"},
 		RequireAuth: requireAuth,
 	}
 	return cfg, srv.Close
@@ -67,7 +67,7 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	cfg, closeJWKS := gateConfig(t, tj, true)
 	defer closeJWKS()
 
-	claims := validClaims(cfg.Issuer, cfg.Audience)
+	claims := validClaims(cfg.Issuer, cfg.Audiences[0])
 	claims.IsAdmin = true
 	token := tj.signToken(t, claims)
 
@@ -170,7 +170,7 @@ func TestGateInvalidJWTDenies(t *testing.T) {
 	defer closeJWKS()
 
 	// Sign with a deliberately wrong issuer — validation must reject it.
-	claims := validClaims("https://evil.example", cfg.Audience)
+	claims := validClaims("https://evil.example", cfg.Audiences[0])
 	token := tj.signToken(t, claims)
 
 	gate := newGate(cfg)
@@ -361,7 +361,7 @@ func TestRegisterRelayEndToEnd(t *testing.T) {
 	waitPeers(t, ingress)
 
 	// Mint a valid JWT and drive a request through the relay.
-	token := tj.signToken(t, validClaims(cfg.Issuer, cfg.Audience))
+	token := tj.signToken(t, validClaims(cfg.Issuer, cfg.Audiences[0]))
 	req, _ := http.NewRequest(http.MethodGet, "http://gateway/v1/chat/completions", nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 

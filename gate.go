@@ -102,7 +102,7 @@ func newGate(cfg AuthConfig) forward.Gate {
 			return nil, nil
 		}
 
-		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audience)
+		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audiences)
 		if err != nil {
 			return denyJSON(http.StatusUnauthorized, "unauthorized",
 				"Invalid token"), nil

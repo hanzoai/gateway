@@ -535,14 +535,28 @@ func TestHeaderInjectionDisabledAuth(t *testing.T) {
 	}
 }
 
-// TestDefaultAuthConfigAudience verifies that the default config includes an audience.
+// TestDefaultAuthConfigAudience verifies the default config carries the
+// audience allowlist: the gateway origin plus the known IAM client_ids
+// (IAM stamps user tokens with aud=<client_id>, never the origin).
 func TestDefaultAuthConfigAudience(t *testing.T) {
 	cfg := DefaultAuthConfig()
-	if cfg.Audience == "" {
-		t.Error("Audience should default to https://api.hanzo.ai")
+	if len(cfg.Audiences) == 0 {
+		t.Fatal("Audiences should default to a non-empty allowlist")
 	}
-	if cfg.Audience != "https://api.hanzo.ai" {
-		t.Errorf("Audience = %q, want %q", cfg.Audience, "https://api.hanzo.ai")
+	has := func(want string) bool {
+		for _, a := range cfg.Audiences {
+			if a == want {
+				return true
+			}
+		}
+		return false
+	}
+	// The gateway origin and at least the primary app client_id must be
+	// accepted, else every normal user JWT (aud=hanzo-app) is rejected.
+	for _, want := range []string{"https://api.hanzo.ai", "hanzo-app"} {
+		if !has(want) {
+			t.Errorf("default Audiences %v missing %q", cfg.Audiences, want)
+		}
 	}
 }
 
