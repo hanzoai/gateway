@@ -156,14 +156,26 @@ func denyJSON(status int, errCode, message string) *forward.Response {
 	return &forward.Response{Status: status, Body: body, Headers: hdrs}
 }
 
+// isBasePath reports whether a request path routes to the base backend.
+// This is the single definition of the base/cloud split — both the static
+// pickPeer (tests) and the lazy peerResolver.picker (production) consult it,
+// so the routing rule lives in exactly one place.
+func isBasePath(path string) bool {
+	return strings.HasPrefix(path, "/v1/base/")
+}
+
 // pickPeer routes a Forward by path: /v1/base/* -> the base peer NodeID,
 // everything else -> the cloud peer NodeID. The NodeIDs are the
 // handshake-learned ids of the already-connected peers (captured at dial
 // time via ConnectDirectID), so forward.Relay's node.Call resolves them
 // against the existing connections.
+//
+// This static form is used where the peerIDs are known up front (tests).
+// Production uses peerResolver.picker, which dials lazily and shares the
+// same isBasePath routing rule.
 func pickPeer(basePeerID, cloudPeerID string) forward.PeerPicker {
 	return func(path string) string {
-		if strings.HasPrefix(path, "/v1/base/") {
+		if isBasePath(path) {
 			return basePeerID
 		}
 		return cloudPeerID
