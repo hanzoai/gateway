@@ -1,4 +1,4 @@
-module github.com/hanzoai/gateway
+module github.com/hanzoai/gateway/v2
 
 go 1.26.4
 

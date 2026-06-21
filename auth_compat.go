@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/hanzoai/gateway/iamauth"
+	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
 // These shims keep the gin/KrakenD auth middleware (and its security tests)
