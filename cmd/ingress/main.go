@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hanzoai/gateway/iamauth"
+	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
 type PathBackend struct {

@@ -23,7 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hanzoai/cloud"
-	"github.com/hanzoai/gateway/iamauth"
+	"github.com/hanzoai/gateway/v2/iamauth"
 	"github.com/hanzoai/zip"
 )
 

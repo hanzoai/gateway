@@ -27,7 +27,7 @@ import (
 
 	"github.com/luxfi/zap/forward"
 
-	"github.com/hanzoai/gateway/iamauth"
+	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
 // newGate builds the forward.Gate from an AuthConfig. The JWKS cache is
