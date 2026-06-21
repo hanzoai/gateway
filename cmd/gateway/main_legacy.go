@@ -20,7 +20,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	gateway "github.com/hanzoai/gateway"
+	gateway "github.com/hanzoai/gateway/v2"
 	cmd "github.com/krakend/krakend-cobra/v2"
 	flexibleconfig "github.com/krakend/krakend-flexibleconfig/v2"
 	koanf "github.com/krakend/krakend-koanf"

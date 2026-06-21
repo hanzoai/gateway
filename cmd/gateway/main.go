@@ -44,7 +44,7 @@ import (
 	luxlog "github.com/luxfi/log"
 	zaplib "github.com/luxfi/zap"
 
-	"github.com/hanzoai/gateway"
+	"github.com/hanzoai/gateway/v2"
 	"github.com/hanzoai/zip"
 	"github.com/hanzoai/zip/middleware"
 )

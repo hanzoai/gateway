@@ -15,7 +15,7 @@ import (
 
 	"github.com/hanzoai/zip"
 
-	gateway "github.com/hanzoai/gateway"
+	gateway "github.com/hanzoai/gateway/v2"
 )
 
 // AuthVerifier is the interface Auth() consumes. The real implementation
