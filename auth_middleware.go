@@ -14,7 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hanzoai/gateway/iamauth"
+	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
 // AuthConfig holds configuration for the auth middleware.
