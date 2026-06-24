@@ -112,3 +112,43 @@ func TestCORSPreflight_EnvOriginStillHonored(t *testing.T) {
 		t.Fatalf("env origin: expected ACAO echo, got %q", acao)
 	}
 }
+
+// TestCORS_CollapsesBackendDuplicateACAO verifies the edge is the SINGLE CORS
+// authority on the ACTUAL (non-preflight) response: when a backend also emits
+// its own Access-Control-Allow-Origin (commerce/cloud-api default to `*`), the
+// gateway collapses it to exactly one origin-specific value. A duplicated ACAO
+// (`https://billing.hanzo.ai, *`) is rejected by browsers ("contains multiple
+// values"), which is the exact failure that blocked the Square sandbox top-up.
+func TestCORS_CollapsesBackendDuplicateACAO(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+	r.Use(corsPreflightMiddleware())
+	// Simulate a backend (e.g. commerce) that appends its own wildcard CORS
+	// on the proxied response, then writes a body.
+	r.POST("/v1/billing/topup/token", func(c *gin.Context) {
+		c.Writer.Header().Add("Access-Control-Allow-Origin", "*")
+		c.Writer.Header().Add("Access-Control-Allow-Credentials", "true")
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/billing/topup/token", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Origin", "https://billing.hanzo.ai")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	acao := w.Header().Values("Access-Control-Allow-Origin")
+	if len(acao) != 1 {
+		t.Fatalf("expected exactly ONE Access-Control-Allow-Origin, got %d: %v", len(acao), acao)
+	}
+	if acao[0] != "https://billing.hanzo.ai" {
+		t.Fatalf("expected ACAO=origin, got %q", acao[0])
+	}
+	if cred := w.Header().Values("Access-Control-Allow-Credentials"); len(cred) != 1 || cred[0] != "true" {
+		t.Fatalf("expected exactly one ACA-Credentials=true, got %v", cred)
+	}
+}

@@ -477,22 +477,73 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 		}
 		return isAllowedOrigin(extractOriginHost(origin), brandOrigins)
 	}
+	setCORS := func(h http.Header, origin string) {
+		// The edge is the SINGLE CORS authority. Use Set (replace) so any
+		// CORS headers a backend also emits (commerce/cloud-api default to
+		// Access-Control-Allow-Origin: * — see commerce.go AllowedOrigins)
+		// are collapsed to one value. A duplicated ACAO (`https://x, *`) is
+		// rejected by browsers ("multiple values"); with credentials a `*`
+		// is doubly illegal. One origin-specific value, always.
+		h.Set("Access-Control-Allow-Origin", origin)
+		h.Set("Access-Control-Allow-Credentials", "true")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, X-Hanzo-Test")
+		h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		h.Set("Access-Control-Max-Age", "86400")
+		h.Set("Vary", "Origin")
+	}
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 		if origin == "" || !originAllowed(origin) {
 			c.Next()
 			return
 		}
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, X-Hanzo-Test")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-		c.Writer.Header().Set("Vary", "Origin")
+		setCORS(c.Writer.Header(), origin)
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
 		}
+		// Re-assert (Set/replace) CORS the instant the upstream response is
+		// committed, so a backend-appended duplicate ACAO is overwritten
+		// before the browser sees the headers. KrakenD/lura copies backend
+		// response headers during the proxy call (which happens at first
+		// Write/WriteHeader), so hook the writer rather than relying on the
+		// pre-Next Set above surviving the copy.
+		c.Writer = &corsCollapsingWriter{ResponseWriter: c.Writer, origin: origin, set: setCORS}
 		c.Next()
 	}
+}
+
+// corsCollapsingWriter re-asserts the edge's CORS headers (replace semantics)
+// at the moment the response is committed, after the proxy has copied any
+// backend CORS headers in. This guarantees exactly one Access-Control-Allow-
+// Origin reaches the browser even when a backend (commerce, cloud-api) also
+// emits its own `*`. It embeds gin.ResponseWriter so all other behaviour
+// (Flush, Hijack, status, size, CloseNotify) is inherited unchanged.
+type corsCollapsingWriter struct {
+	gin.ResponseWriter
+	origin    string
+	set       func(http.Header, string)
+	collapsed bool
+}
+
+func (w *corsCollapsingWriter) collapse() {
+	if !w.collapsed {
+		w.set(w.ResponseWriter.Header(), w.origin)
+		w.collapsed = true
+	}
+}
+
+func (w *corsCollapsingWriter) WriteHeader(status int) {
+	w.collapse()
+	w.ResponseWriter.WriteHeader(status)
+}
+
+func (w *corsCollapsingWriter) Write(b []byte) (int, error) {
+	w.collapse()
+	return w.ResponseWriter.Write(b)
+}
+
+func (w *corsCollapsingWriter) WriteString(s string) (int, error) {
+	w.collapse()
+	return w.ResponseWriter.WriteString(s)
 }
