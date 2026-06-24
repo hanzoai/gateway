@@ -103,6 +103,40 @@ Red P0-1 closed (2026-04-27): prior to this fix, the gateway neither stripped
 nor minted `X-User-Permissions`, allowing `curl -H "X-User-Permissions: 16"`
 to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 
+### X-Hanzo-Test — the one preserved vendor header (downgrade-only)
+
+`StripIdentityHeaders` (`iamauth/iamauth.go`) deletes every client-supplied
+`X-IAM-*` / `X-HANZO-*` header so a forged identity/privilege header can never
+survive. **The sole exception is `X-Hanzo-Test`.** It is a *downgrade-only*
+test-mode opt-in: commerce's `iammiddleware.liveFromHeaders` sets
+`org.Live=false` when it sees `X-Hanzo-Test: true`, routing the charge to
+Square **Sandbox** and the test ledger (strictly LESS privileged than the
+default live mode — a client setting it can never escalate). The blanket
+`X-HANZO-*` strip used to nuke it before the per-route KrakenD `input_headers`
+could forward it, so the sandbox-built billing UI (`billing.hanzo.ai/topup`)
+always charged *production* and a sandbox nonce was rejected. The exclusion is
+exactly `X-HANZO-TEST`; all other `X-Hanzo-*` (Role/Admin/Scope/…) are still
+stripped. Guard: `iamauth.TestStripIdentityHeaders_PreservesHanzoTest`.
+
+### CORS — the edge is the single CORS authority
+
+`corsPreflightMiddleware` (`router_engine.go`) owns CORS for ALL routes (origin
+allowlist = `widget_security.go` `defaultAllowedOrigins` suffix-match, covering
+every `*.hanzo.ai`/`*.lux.network`/`*.zoo.ngo`/brand `.id`). Two rules:
+
+1. `X-Hanzo-Test` is in `Access-Control-Allow-Headers` (gin path here **and**
+   the KrakenD `security/cors` block in `configs/hanzo/gateway.json`) so a
+   browser may send it cross-origin.
+2. **Single `Access-Control-Allow-Origin`.** Backends behind the gateway
+   (commerce/cloud-api default `AllowedOrigins=["*"]`) emit their own ACAO,
+   and lura copies backend response headers through → a duplicated
+   `ACAO: https://x, *` which browsers reject ("multiple values"; with
+   credentials a `*` is doubly illegal). `corsCollapsingWriter` wraps the gin
+   ResponseWriter and re-`Set`s (replace) the CORS headers at first
+   `WriteHeader`/`Write` — after the proxy copied the backend headers in —
+   collapsing any duplicate to one origin-specific value. One fix at the edge
+   covers every backend. Guard: `TestCORS_CollapsesBackendDuplicateACAO`.
+
 ## Upstream Kinds
 
 - **default** — KrakenD HTTP passthrough.
