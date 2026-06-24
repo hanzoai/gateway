@@ -485,7 +485,7 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 		}
 		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, X-Hanzo-Test")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
 		c.Writer.Header().Set("Vary", "Origin")
