@@ -110,6 +110,26 @@ func TestStripIdentityHeaders_LegacyAndVendor(t *testing.T) {
 	}
 }
 
+// X-Hanzo-Test is a downgrade-only test-mode signal (live -> sandbox),
+// strictly less privileged than the default, so it MUST survive the strip
+// and reach commerce; identity-like X-Hanzo-* headers must still be stripped.
+func TestStripIdentityHeaders_PreservesHanzoTest(t *testing.T) {
+	r := req(map[string]string{
+		"X-Hanzo-Test": "true",
+		"X-Hanzo-Role": "admin", // privilege header — must still be stripped
+		"X-Hanzo-Admin": "true", // privilege header — must still be stripped
+	})
+	StripIdentityHeaders(r)
+	if r.Header.Get("X-Hanzo-Test") != "true" {
+		t.Fatal("X-Hanzo-Test (downgrade-only) must survive the strip")
+	}
+	for _, h := range []string{"X-Hanzo-Role", "X-Hanzo-Admin"} {
+		if r.Header.Get(h) != "" {
+			t.Fatalf("privilege header %q must still be stripped", h)
+		}
+	}
+}
+
 func TestInjectIdentity(t *testing.T) {
 	r := req(nil)
 	InjectIdentity(r, &Claims{Owner: "hanzo", Email: "z@hanzo.ai", IsAdmin: true})

@@ -441,9 +441,19 @@ func StripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-Tenant-Id")
 	r.Header.Del("X-Tenant-ID")
 	r.Header.Del("X-Org")
-	// Every legacy vendor-prefixed header.
+	// Every legacy vendor-prefixed header. EXCEPT X-Hanzo-Test: it is a
+	// downgrade-only test-mode opt-in (live -> Square Sandbox / test
+	// ledger), strictly LESS privileged than the default live mode, so a
+	// client setting it can never escalate. Commerce keys org.Live off it
+	// (middleware/iammiddleware.liveFromHeaders) and the per-route KrakenD
+	// input_headers forwards it to the backend; stripping it here would
+	// silently break sandbox top-ups. Identity/privilege headers
+	// (X-Hanzo-Role, X-Hanzo-Admin, X-Hanzo-Scope, …) are still stripped.
 	for key := range r.Header {
 		upper := strings.ToUpper(key)
+		if upper == "X-HANZO-TEST" {
+			continue
+		}
 		if strings.HasPrefix(upper, "X-IAM-") || strings.HasPrefix(upper, "X-HANZO-") {
 			r.Header.Del(key)
 		}

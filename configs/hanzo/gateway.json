@@ -50,7 +50,8 @@
         "X-Project-Id",
         "X-Request-ID",
         "X-User-Id",
-        "X-Roles"
+        "X-Roles",
+        "X-Hanzo-Test"
       ],
       "expose_headers": [
         "Content-Length",
