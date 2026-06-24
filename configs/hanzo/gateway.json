@@ -21,44 +21,6 @@
       "syslog": false,
       "stdout": true
     },
-    "security/cors": {
-      "allow_origins": [
-        "https://hanzo.ai",
-        "https://*.hanzo.ai",
-        "https://hanzo.id",
-        "https://zoo.id",
-        "https://lux.id",
-        "https://pars.id",
-        "https://*.zoo.ngo",
-        "https://*.lux.network"
-      ],
-      "allow_methods": [
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS"
-      ],
-      "allow_headers": [
-        "Origin",
-        "Authorization",
-        "Content-Type",
-        "Accept",
-        "X-Requested-With",
-        "X-Org-Id",
-        "X-Project-Id",
-        "X-Request-ID",
-        "X-User-Id",
-        "X-Roles",
-        "X-Hanzo-Test"
-      ],
-      "expose_headers": [
-        "Content-Length",
-        "X-Request-ID"
-      ],
-      "max_age": "12h"
-    },
     "telemetry/opentelemetry": {
       "service_name": "gateway",
       "service_version": "2.13.0",
