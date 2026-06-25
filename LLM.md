@@ -127,3 +127,52 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
   ```
 
   Prometheus metrics: `gateway_base_ha_leader_polls_total`, `gateway_base_ha_leader_poll_errors_total`, `gateway_base_ha_leader_changes_total`, `gateway_base_ha_writer_failures_total`, `gateway_base_ha_writer_failures_fatal_total`, `gateway_base_ha_no_writer_total`.
+
+## admin-guard — global-admin forward-auth gate (cmd/admin-guard)
+
+`cmd/admin-guard` is the single forward-auth gate that restricts Hanzo's RAW
+global-admin surfaces to GLOBAL ADMINS ONLY. Image: `ghcr.io/hanzoai/admin-guard`.
+Consumed by hanzoai/ingress (Traefik) as a `forwardAuth` Middleware whose
+`address` is `http://admin-guard.hanzo.svc:8080/__guard/verify`.
+
+Global admin = IAM user whose org (`owner`) equals the admin org (IAM
+`IsGlobalAdmin`: `owner == conf.AdminOrg`, env `IAM_ADMIN_ORG`, default `admin`).
+
+Endpoints:
+- `GET /__guard/verify` — forward-auth target. 2xx = allow (global admin);
+  302 = redirect (non-admin → `CONSOLE_URL`; anonymous browser → IAM PKCE login).
+  API callers (Bearer/Basic, non-html Accept) fail closed with 401/403 instead
+  of an interactive redirect.
+- `GET /__guard/callback` — OAuth2 Authorization-Code + PKCE callback.
+- `GET /__guard/logout`, `GET /__guard/healthz`.
+
+Identity resolution — one predicate (`owner == AdminOrg`), three sources tried
+in order, all reusing `iamauth`:
+  1. the guard's own signed session cookie (HMAC, parent-domain `.hanzo.ai`, so
+     one admin login covers every guarded `*.hanzo.ai` host) — browser fast path;
+  2. a Bearer/Basic JWT via `iamauth.Validator.Validate` (the JWT already carries
+     `owner`, no IAM round-trip) — API path;
+  3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/get-account`
+     server-side and reading `owner` — browser-with-IAM-session path.
+
+Login is standard OAuth2 PKCE against IAM (`client_id=hanzo-admin-guard`, app is
+org-locked to `admin`). `Validator.ValidateRaw` (added to `iamauth`) validates
+the id_token/access_token from the code exchange.
+
+Config (env): `IAM_PUBLIC_URL` (browser IAM), `IAM_INTERNAL_URL` (in-cluster IAM
+for get-account/token), `IAM_CLIENT_ID`/`IAM_CLIENT_SECRET`, `IAM_ADMIN_ORG`,
+`AUTH_ISSUER`/`AUTH_JWKS_URL` + `GATEWAY_ALLOWED_AUDIENCES` (must include
+`hanzo-admin-guard`), `CONSOLE_URL`, `GUARD_COOKIE_DOMAIN`/`_TTL`, `GUARD_HMAC_KEY`.
+
+Deploy: operator `Service` CR `universe/infra/k8s/operator/crs/admin-guard-v1.yaml`
+(internal-only, no ingress). Wiring: `universe/infra/k8s/ingress/routes.yaml`
+middleware `admin-guard-auth` + per-host `/__guard` bypass routers (priority 200+)
++ `admin-guard-auth` attached to the gated routers (platform, app.platform,
+studio, commerce-admin, kms `/admin`). The IAM management API self-gates
+already (returns Unauthorized to non-admins) so iam.hanzo.ai/hanzo.id login &
+oauth are left ungated. K8s secrets: `admin-guard-secrets`
+(GUARD_HMAC_KEY + IAM_CLIENT_SECRET).
+
+Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
+expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
+NOT GHA.
