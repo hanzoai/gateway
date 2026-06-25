@@ -340,10 +340,13 @@ func DefaultAuthConfig() AuthConfig {
 
 	billingToken := os.Getenv("COMMERCE_SERVICE_TOKEN")
 
-	billingEnabled := true
-	if os.Getenv("BILLING_ENABLED") == "false" {
-		billingEnabled = false
-	}
+	// Billing enforcement is the single responsibility of cloud-api's
+	// balance_gate, which resolves hk- API keys, applies per-model pricing,
+	// and exempts service keys — none of which the edge gateway can see.
+	// The gateway must NOT double-gate balance, so billing is OFF by default.
+	// Opt in only for edge-only deployments that front no balance_gate, via
+	// BILLING_ENABLED=true. One way; one enforcement point.
+	billingEnabled := os.Getenv("BILLING_ENABLED") == "true"
 
 	publicPathsStr := os.Getenv("AUTH_PUBLIC_PATHS")
 	var publicPaths []string
