@@ -317,3 +317,5 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
+
+replace github.com/lyft/protoc-gen-validate v0.0.13 => github.com/envoyproxy/protoc-gen-validate v0.1.0
