@@ -60,6 +60,13 @@ type config struct {
 	clientID     string
 	clientSecret string
 
+	// adminAudience is the SPECIFIC audience a Bearer/Basic JWT must carry to be
+	// accepted on a raw admin surface. By construction it is the guard's own
+	// OAuth client_id (IAM stamps aud=<client_id>), so only a token minted FOR
+	// the admin-guard is accepted — a valid token for another app (aud=hanzo-
+	// chat), even a real global admin's, is rejected (audience confinement).
+	adminAudience string
+
 	// AdminOrg is the global-admin org slug (IAM conf.AdminOrg). A caller is a
 	// global admin iff their token/account `owner` equals this. Default "admin".
 	adminOrg string
@@ -124,24 +131,50 @@ func loadConfig() *config {
 	}
 
 	iamPublic := envOr("IAM_PUBLIC_URL", "https://hanzo.id")
+	clientID := envOr("IAM_CLIENT_ID", "hanzo-admin-guard")
+	// The admin audience is the guard's own OAuth client_id by construction
+	// (IAM stamps aud=<client_id>). GUARD_ADMIN_AUDIENCE overrides if the
+	// guard's tokens ever carry a different aud.
+	adminAudience := envOr("GUARD_ADMIN_AUDIENCE", clientID)
+
 	// iamauth validates against the JWKS issuer; reuse its env (AUTH_ISSUER /
-	// AUTH_JWKS_URL) so the guard and gateway agree on the IAM authority.
+	// AUTH_JWKS_URL) so the guard and gateway agree on the IAM authority. The
+	// admin audience MUST be in the allowlist so (a) the OAuth callback's
+	// id_token (aud=adminAudience) validates, and (b) a wrong-audience token
+	// still validates far enough for handleVerify's audience gate to 403 it
+	// precisely rather than 401 it generically.
 	vcfg := iamauth.ConfigFromEnv()
+	vcfg.Audiences = appendAudience(vcfg.Audiences, adminAudience)
 
 	return &config{
-		addr:         envOr("GUARD_ADDR", ":8080"),
-		iamPublic:    iamPublic,
-		iamInternal:  envOr("IAM_INTERNAL_URL", "https://iam.hanzo.ai"),
-		clientID:     envOr("IAM_CLIENT_ID", "hanzo-admin-guard"),
-		clientSecret: clientSecret,
-		adminOrg:     envOr("IAM_ADMIN_ORG", "admin"),
-		consoleURL:   envOr("CONSOLE_URL", "https://console.hanzo.ai"),
-		cookieDomain: envOr("GUARD_COOKIE_DOMAIN", ".hanzo.ai"),
-		cookieName:   envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
-		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
-		hmacKey:      hmacKey,
-		validator:    iamauth.NewValidator(vcfg),
+		addr:          envOr("GUARD_ADDR", ":8080"),
+		iamPublic:     iamPublic,
+		iamInternal:   envOr("IAM_INTERNAL_URL", "https://iam.hanzo.ai"),
+		clientID:      clientID,
+		clientSecret:  clientSecret,
+		adminAudience: adminAudience,
+		adminOrg:      envOr("IAM_ADMIN_ORG", "admin"),
+		consoleURL:    envOr("CONSOLE_URL", "https://console.hanzo.ai"),
+		cookieDomain:  envOr("GUARD_COOKIE_DOMAIN", ".hanzo.ai"),
+		cookieName:    envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
+		cookieTTL:     envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
+		hmacKey:       hmacKey,
+		validator:     iamauth.NewValidator(vcfg),
 	}
+}
+
+// appendAudience appends aud to list unless already present. Keeps the guard's
+// validator allowlist minimal and duplicate-free.
+func appendAudience(list []string, aud string) []string {
+	if aud == "" {
+		return list
+	}
+	for _, a := range list {
+		if a == aud {
+			return list
+		}
+	}
+	return append(list, aud)
 }
 
 // ----------------------------------------------------------------------------
@@ -162,8 +195,23 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 
 	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner` directly.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		c.decide(w, r, claims.Owner, orig)
-		return
+		// Audience confinement: the token MUST have been minted FOR the
+		// admin-guard (aud == adminAudience). A genuine IAM token for another
+		// app (e.g. aud=hanzo-chat) — even a real global admin's — is NOT a
+		// credential for raw admin surfaces, so it is rejected here BEFORE the
+		// owner check. For an API caller this is 403 (authenticated, but this
+		// token is not authorized for this surface), never a fall-through to
+		// another identity source.
+		if claims.HasAudience(c.adminAudience) {
+			c.decide(w, r, claims.Owner, orig)
+			return
+		}
+		if isAPIClient(r) {
+			http.Error(w, "token audience not authorized for admin surface", http.StatusForbidden)
+			return
+		}
+		// Browser presented a wrong-audience bearer — fall through to the IAM
+		// session cookie / interactive login path below.
 	} else if err != nil && err != iamauth.ErrNoToken {
 		// A token was presented but did not validate. For an API caller, fail
 		// closed with 401 (don't bounce a non-browser through a login redirect).

@@ -21,6 +21,7 @@ func StripIdentityHeaders() zip.Handler {
 		req.Header.Del("X-User-Id")
 		req.Header.Del("X-User-Email")
 		req.Header.Del("X-User-IsAdmin")
+		req.Header.Del("X-User-IsGlobalAdmin")
 		req.Header.Del("X-Roles")
 		req.Header.Del("X-User-Permissions")
 		return c.Continue()

@@ -29,12 +29,18 @@ type AuthVerifier interface {
 }
 
 // Identity is the validated identity payload returned by AuthVerifier.
+//
+// IsAdmin is the ORG-level admin role (an org owner has it within their org).
+// IsGlobalAdmin is the PLATFORM superadmin flag — the only one safe to gate
+// cross-org / superadmin actions on. They are distinct and minted as distinct
+// headers (X-User-IsAdmin vs X-User-IsGlobalAdmin); never conflate them.
 type Identity struct {
-	Org       string
-	User      string
-	UserEmail string
-	IsAdmin   bool
-	Roles     []string
+	Org           string
+	User          string
+	UserEmail     string
+	IsAdmin       bool
+	IsGlobalAdmin bool
+	Roles         []string
 }
 
 // Auth validates incoming requests via verifier. When the request already
@@ -75,6 +81,9 @@ func Auth(verifier AuthVerifier) zip.Handler {
 		req.Header.Set("X-User-Email", id.UserEmail)
 		if id.IsAdmin {
 			req.Header.Set("X-User-IsAdmin", "true")
+		}
+		if id.IsGlobalAdmin {
+			req.Header.Set("X-User-IsGlobalAdmin", "true")
 		}
 		if len(id.Roles) > 0 {
 			req.Header.Set("X-Roles", strings.Join(id.Roles, ","))

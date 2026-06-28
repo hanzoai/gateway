@@ -159,7 +159,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte(`{"error":"unauthorized","message":"valid Hanzo IAM token required"}`))
 			return
 		}
-		iamauth.InjectIdentity(req, claims)
+		iamauth.InjectIdentity(req, claims, r.validator.AdminOrg())
 		req.Header.Del("Authorization")
 		req.Header.Del("X-Authorization")
 	}

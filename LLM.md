@@ -78,8 +78,22 @@ JWT validation, the gateway re-injects the headers from the validated claims.
 | X-Roles             | `roles`              | comma-joined role names               |
 | X-User-Email        | `email`              | string                                |
 | X-Phone-Number      | `phone_number`/`phone` | E.164 string                        |
-| X-User-IsAdmin      | `isAdmin`            | "true" iff platform superadmin        |
+| X-User-IsAdmin      | `isAdmin`            | "true" iff ORG-level admin (org owner)|
+| X-User-IsGlobalAdmin | `owner==AdminOrg` / `isGlobalAdmin` | "true" iff PLATFORM (global) admin |
 | X-User-Permissions  | `permissions`+`isAdmin` | base-10 int64 bit.Field            |
+
+**Org-admin vs global-admin (Red — anti-conflation):** `X-User-IsAdmin` is the
+ORG-level admin role — an org owner (e.g. `maxpower`) carries `isAdmin=true`
+within their own org. It is safe ONLY for org-scoped RBAC. The PLATFORM
+superadmin signal is the SEPARATE `X-User-IsGlobalAdmin`, minted ONLY for a
+caller who is `Claims.GlobalAdmin(AdminOrg)` — `owner == AdminOrg` (env
+`IAM_ADMIN_ORG`, default `admin`) OR the explicit `isGlobalAdmin` claim.
+Downstream services MUST gate cross-org / superadmin actions on
+`X-User-IsGlobalAdmin` (commerce `auth.IAMClaims.GlobalAdmin()`), NEVER on
+`isAdmin` — that conflation let any org owner perform tenant-admin ops. Both
+headers are in the strip-list, so a client can forge neither. The org-level
+`permission.Admin|Live` bit is still derived from `isAdmin` because it gates
+org-SCOPED endpoints within the caller's namespace.
 
 **X-User-Permissions** is gateway-derived from the JWT `permissions` claim
 (any of: numeric bit-field, `[]string` of names, `[]{"name":"..."}` upstream-IAM
@@ -151,7 +165,13 @@ in order, all reusing `iamauth`:
   1. the guard's own signed session cookie (HMAC, parent-domain `.hanzo.ai`, so
      one admin login covers every guarded `*.hanzo.ai` host) — browser fast path;
   2. a Bearer/Basic JWT via `iamauth.Validator.Validate` (the JWT already carries
-     `owner`, no IAM round-trip) — API path;
+     `owner`, no IAM round-trip) — API path. **Audience confinement (Red):** the
+     JWT must carry `aud == adminAudience` (`GUARD_ADMIN_AUDIENCE`, default the
+     guard's own `client_id`=`hanzo-admin-guard`). A genuine IAM token minted for
+     ANOTHER app (e.g. `aud=hanzo-chat`), even a real global admin's, is rejected
+     — API callers get **403** (`claims.HasAudience` gate, before the owner
+     check); a browser falls through to interactive login. This stops a chat/app
+     token from being replayed against raw admin surfaces.
   3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/get-account`
      server-side and reading `owner` — browser-with-IAM-session path.
 
@@ -161,6 +181,7 @@ the id_token/access_token from the code exchange.
 
 Config (env): `IAM_PUBLIC_URL` (browser IAM), `IAM_INTERNAL_URL` (in-cluster IAM
 for get-account/token), `IAM_CLIENT_ID`/`IAM_CLIENT_SECRET`, `IAM_ADMIN_ORG`,
+`GUARD_ADMIN_AUDIENCE` (the required token audience; default `IAM_CLIENT_ID`),
 `AUTH_ISSUER`/`AUTH_JWKS_URL` + `GATEWAY_ALLOWED_AUDIENCES` (must include
 `hanzo-admin-guard`), `CONSOLE_URL`, `GUARD_COOKIE_DOMAIN`/`_TTL`, `GUARD_HMAC_KEY`.
 
@@ -174,5 +195,7 @@ oauth are left ungated. K8s secrets: `admin-guard-secrets`
 (GUARD_HMAC_KEY + IAM_CLIENT_SECRET).
 
 Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
-expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
+expiry) + `cmd/admin-guard/audience_guard_test.go` (audience confinement:
+admin-aud+global→204, admin-aud+org-owner→403, wrong-aud+global→403,
+wrong-aud+browser→login). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
 NOT GHA.
