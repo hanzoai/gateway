@@ -42,8 +42,15 @@ type Claims struct {
 	PhoneNumber       string          `json:"phone_number"` // OIDC standard
 	Type              string          `json:"type"`
 	IsAdmin           bool            `json:"isAdmin"`
-	Roles             json.RawMessage `json:"roles"`
-	Permissions       json.RawMessage `json:"permissions"`
+	// IsGlobalAdmin is the platform-wide superadmin flag. It is DISTINCT from
+	// IsAdmin: IsAdmin is an ORG-level role (an org owner carries IsAdmin=true
+	// within their own org), whereas IsGlobalAdmin is true ONLY for Hanzo
+	// platform administrators. It is the one claim safe to gate cross-org /
+	// superadmin actions on. The Casdoor fork usually leaves it unset, so the
+	// operative predicate is membership in the admin org — see GlobalAdmin.
+	IsGlobalAdmin bool            `json:"isGlobalAdmin"`
+	Roles         json.RawMessage `json:"roles"`
+	Permissions   json.RawMessage `json:"permissions"`
 }
 
 // UserID resolves the canonical user identifier: sub, then
@@ -58,6 +65,40 @@ func (c *Claims) UserID() string {
 	return c.Name
 }
 
+// GlobalAdmin reports whether the caller is a Hanzo PLATFORM (global) admin —
+// the ONLY predicate safe to gate cross-org / superadmin actions on. True iff
+// the JWT carries the explicit isGlobalAdmin claim, OR the user's org (owner)
+// is the platform admin org (adminOrg, conventionally "admin").
+//
+// Plain IsAdmin is deliberately excluded: it is an ORG-level role (an org
+// owner carries IsAdmin=true within their own org). Gating cross-org actions
+// on IsAdmin is the privilege escalation this predicate exists to prevent.
+// adminOrg comparison is case-insensitive; an empty adminOrg never matches by
+// owner (so a misconfigured/empty admin org cannot silently anoint org "").
+func (c *Claims) GlobalAdmin(adminOrg string) bool {
+	if c.IsGlobalAdmin {
+		return true
+	}
+	return adminOrg != "" && strings.EqualFold(strings.TrimSpace(c.Owner), adminOrg)
+}
+
+// HasAudience reports whether aud is among the token's audiences. Callers that
+// must confine acceptance to a SPECIFIC audience beyond the edge allowlist use
+// this — a token minted for another app (a different aud) is not a credential
+// for theirs, even when it is otherwise a valid IAM token. An empty aud never
+// matches.
+func (c *Claims) HasAudience(aud string) bool {
+	if aud == "" {
+		return false
+	}
+	for _, a := range c.Audience {
+		if a == aud {
+			return true
+		}
+	}
+	return false
+}
+
 // Config is the edge validation configuration.
 type Config struct {
 	JWKSURL string
@@ -70,6 +111,11 @@ type Config struct {
 	// check; AudiencesFromEnv never returns empty, so it is always enforced.
 	Audiences []string
 	JWKSTTL   time.Duration
+	// AdminOrg is the platform global-admin org slug (IAM conf.AdminOrg). A
+	// caller is a global admin iff their claims' owner equals this (or they
+	// carry the explicit isGlobalAdmin claim). Default "admin"; override with
+	// IAM_ADMIN_ORG. Shared with cmd/admin-guard so every edge agrees.
+	AdminOrg string
 }
 
 // DefaultAudiences is the baked allowlist of acceptable JWT audiences: the
@@ -128,6 +174,14 @@ func appendUnique(list []string, v string) []string {
 	return append(list, v)
 }
 
+// AdminOrgFromEnv resolves the platform global-admin org slug. IAM_ADMIN_ORG
+// overrides; the default "admin" matches the org slug Hanzo IAM seeds global
+// admins into (and cmd/admin-guard's IAM_ADMIN_ORG default), so every edge
+// agrees on one definition of "global admin".
+func AdminOrgFromEnv() string {
+	return envOr("IAM_ADMIN_ORG", "admin")
+}
+
 // ConfigFromEnv reads the same AUTH_* variables the gateway uses, with the
 // same defaults, so the gateway and ingress agree on the IAM authority.
 func ConfigFromEnv() Config {
@@ -136,6 +190,7 @@ func ConfigFromEnv() Config {
 		Issuer:    envOr("AUTH_ISSUER", "https://hanzo.id"),
 		Audiences: AudiencesFromEnv(),
 		JWKSTTL:   15 * time.Minute,
+		AdminOrg:  AdminOrgFromEnv(),
 	}
 }
 
@@ -310,6 +365,11 @@ func NewValidator(cfg Config) *Validator {
 	return &Validator{cfg: cfg, cache: NewJWKSCache(cfg.JWKSURL, cfg.JWKSTTL)}
 }
 
+// AdminOrg returns the configured platform global-admin org slug, so callers
+// holding only a Validator (e.g. cmd/ingress) can mint the global-admin signal
+// without re-reading the environment per request.
+func (v *Validator) AdminOrg() string { return v.cfg.AdminOrg }
+
 // Validate extracts a token from the request (Bearer / Basic / cookie) and
 // validates it. Returns the empty-token sentinel ErrNoToken when absent so
 // callers can distinguish "missing" from "invalid".
@@ -432,6 +492,7 @@ var MintedIdentityHeaders = []string{
 	"X-User-Email",
 	"X-Phone-Number",
 	"X-User-IsAdmin",
+	"X-User-IsGlobalAdmin",
 }
 
 // StripIdentityHeaders removes every client-supplied identity header. The
@@ -445,6 +506,7 @@ func StripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
 	r.Header.Del("X-User-IsAdmin")
+	r.Header.Del("X-User-IsGlobalAdmin")
 	// Non-canonical legacy identity headers.
 	r.Header.Del("X-User-Role")
 	r.Header.Del("X-User-Roles")
@@ -462,10 +524,16 @@ func StripIdentityHeaders(r *http.Request) {
 }
 
 // InjectIdentity sets the core identity headers from validated claims. This
-// is the minimal edge identity (id, org, email, isAdmin) — roles and the
-// permission bit-field stay in the commerce-coupled gateway middleware.
-// Call StripIdentityHeaders first.
-func InjectIdentity(r *http.Request, c *Claims) {
+// is the minimal edge identity (id, org, email, isAdmin, isGlobalAdmin) —
+// roles and the permission bit-field stay in the commerce-coupled gateway
+// middleware. Call StripIdentityHeaders first.
+//
+// X-User-IsAdmin carries the ORG-level admin role (set for an org owner).
+// X-User-IsGlobalAdmin carries the PLATFORM superadmin signal and is emitted
+// ONLY for a global admin (GlobalAdmin(adminOrg)); it is the spoof-proof
+// header downstream services gate cross-org / superadmin actions on. Both are
+// in the strip-list, so a client can never forge either.
+func InjectIdentity(r *http.Request, c *Claims, adminOrg string) {
 	r.Header.Set("X-User-Id", c.UserID())
 	r.Header.Set("X-Org-Id", c.Owner)
 	if c.Email != "" {
@@ -473,5 +541,8 @@ func InjectIdentity(r *http.Request, c *Claims) {
 	}
 	if c.IsAdmin {
 		r.Header.Set("X-User-IsAdmin", "true")
+	}
+	if c.GlobalAdmin(adminOrg) {
+		r.Header.Set("X-User-IsGlobalAdmin", "true")
 	}
 }

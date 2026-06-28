@@ -112,7 +112,9 @@ func TestStripIdentityHeaders_LegacyAndVendor(t *testing.T) {
 
 func TestInjectIdentity(t *testing.T) {
 	r := req(nil)
-	InjectIdentity(r, &Claims{Owner: "hanzo", Email: "z@hanzo.ai", IsAdmin: true})
+	// Owner "hanzo" with org-level IsAdmin: an ORG admin, NOT a global admin
+	// (adminOrg is "admin"). Org signal yes, global signal no.
+	InjectIdentity(r, &Claims{Owner: "hanzo", Email: "z@hanzo.ai", IsAdmin: true}, "admin")
 	// UserID falls back to preferred_username/name when sub empty; here all empty.
 	if r.Header.Get("X-Org-Id") != "hanzo" {
 		t.Fatalf("X-Org-Id: got %q", r.Header.Get("X-Org-Id"))
@@ -122,6 +124,11 @@ func TestInjectIdentity(t *testing.T) {
 	}
 	if r.Header.Get("X-User-IsAdmin") != "true" {
 		t.Fatalf("X-User-IsAdmin: got %q", r.Header.Get("X-User-IsAdmin"))
+	}
+	// An org admin in a non-admin org is NOT a global admin: the spoof-proof
+	// platform signal must be absent.
+	if got := r.Header.Get("X-User-IsGlobalAdmin"); got != "" {
+		t.Fatalf("X-User-IsGlobalAdmin must be empty for an org admin, got %q", got)
 	}
 }
 
