@@ -434,6 +434,13 @@ func StripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
 	r.Header.Del("X-User-IsAdmin")
+	// X-Project-Id selects a tenant/project scope but is NOT minted from any
+	// validated claim (no project claim exists in the IAM token yet). A client
+	// value is therefore unauthenticated and forgeable, so strip it — a backend
+	// must never authorize on a caller-controlled project id (cross-project
+	// IDOR). When IAM carries a project claim, mint it here after the strip,
+	// exactly like X-Org-Id.
+	r.Header.Del("X-Project-Id")
 	// Non-canonical legacy identity headers.
 	r.Header.Del("X-User-Role")
 	r.Header.Del("X-User-Roles")
