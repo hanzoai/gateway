@@ -141,6 +141,7 @@ func authConfigFromEnv(deps cloud.Deps) AuthConfig {
 		BillingURL:     getenv("BILLING_URL", ""),
 		BillingToken:   getenv("BILLING_TOKEN", ""),
 		BillingEnabled: getenv("BILLING_ENABLED", "false") == "true",
+		BillingPaths:   splitCSV(getenv("BILLING_PATHS", "")),
 		RequireAuth:    getenv("AUTH_REQUIRE", "false") == "true",
 	}
 	if hosts := getenv("AUTH_PUBLIC_HOSTS", ""); hosts != "" {

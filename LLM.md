@@ -103,6 +103,61 @@ Red P0-1 closed (2026-04-27): prior to this fix, the gateway neither stripped
 nor minted `X-User-Permissions`, allowing `curl -H "X-User-Permissions: 16"`
 to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 
+## Edge Route Auth Classes + Billing (must-gate hardening, 2026-06-27)
+
+`configs/hanzo/gateway.json` endpoints fall in three auth classes:
+
+- **PUBLIC** (14): health/discovery/catalog (`/`, `/health`, `/v1/*/health`,
+  `/v1/get-providers`, `/v1/get-global-providers`, `/v1/get-provider`,
+  `/v1/pricing-policy`, `/v1/models`, `/v1/analytics/heartbeat`,
+  `/v1/pubsub/healthz`, `/bot/health`). No `auth/validator`.
+- **AI / API-KEY** (8): `/v1/chat`, `/v1/chat/completions`, `/v1/completions`,
+  `/v1/messages`, `/ai/{path}`, `/v1/ai/{path}`. NO IAM-JWT validator — these
+  use opaque API keys (hk-/sk-) and are billed per-token by cloud-api. Adding
+  an `auth/validator` here would 401 every API-key call.
+- **MUST-GATE** (24, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}`,
+  `/v1/commerce/{path}`, `/v1/tasks/{path}`, `/v1/insights/{path}`,
+  `/v1/o11y/{path}`, `/v1/mpc/{path}`, `/v1/evals/{path}`,
+  `/v1/licensing/{path}`, `/v1/product/{path}`, `/v1/provisioning/{path}`,
+  `/v1/add-provider`, `/v1/update-provider`. Each carries the canonical
+  `auth/validator` block (RS256, `https://hanzo.id/.well-known/jwks`,
+  `propagate_claims` sub→X-User-Id / owner→X-Org-Id / roles→X-Roles) and
+  `input_headers` = the VH set. Result: **401 at the edge without a valid JWT**
+  (before this change they were reachable unauthenticated — `GET /v1/mpc/health`
+  returned 200 to anyone).
+
+**GOTCHA — `hostProxyMiddleware` validator bypass**: for host `api.hanzo.ai`,
+any path whose prefix is in `apiHanzoAIEndpoints` (`router_engine.go`:
+`/v1/chat`, `/v1/completions`, `/v1/messages`, `/v1/models`, `/v1/embeddings`,
+`/v1/images`, `/v1/audio`, `/v1/zap`, `/zap`) is reverse-proxied straight to
+cloud-api and **the per-route `auth/validator` in gateway.json is never run**
+(cloud-api enforces the API key instead). So those AI routes' config validator
+is effectively inert. NEVER add a must-gate route under one of those prefixes —
+its edge validator would be silently bypassed.
+
+**Billing — path-scoped balance gate** (`auth_middleware.go`): the global
+`NewAuthMiddleware` enforces a commerce balance check ONLY when
+`BILLING_ENABLED=true` AND the request path matches a `BILLING_PATHS` prefix.
+This keeps billing OFF for the 171 AI/validated routes (AI bills per-token
+downstream) and public routes, ON for the metered must-gate surface. Key is the
+verified commerce `org/sub` user identity; per-org billing needs a commerce-side
+balance-model change first. Fail-closed: 402 on zero balance, 503 if commerce
+is unreachable. KrakenD cannot express this in `gateway.json` (no-op encoding
+forbids a sequential balance pre-check), so it lives in the Go middleware.
+
+Activation (NOT enabled by default — live is `BILLING_ENABLED=false`):
+1. Provision `COMMERCE_SERVICE_TOKEN` (currently empty in the deployment) from
+   KMS — without it `checkBalance` calls commerce unauthenticated → fail-closed.
+2. Set `BILLING_ENABLED=true` and
+   `BILLING_PATHS=/v1/cloud/,/cloud/,/v1/tasks/,/v1/insights/,/v1/o11y/,/v1/mpc/,/v1/evals/,/v1/licensing/,/v1/product/,/v1/provisioning/,/v1/add-provider,/v1/update-provider`
+   (EXCLUDE `/v1/commerce/` — it is the funding surface; balance-gating it
+   locks users out of adding funds).
+3. Confirm commerce balance granularity before enabling.
+
+Deploy = update ConfigMap `gateway-config` from this file + `rollout restart
+deploy gateway`. NEVER `make apply-hanzo` (its manifest pins an older image tag
+and downgrades the running gateway — live is ahead of the manifest).
+
 ## Upstream Kinds
 
 - **default** — KrakenD HTTP passthrough.
