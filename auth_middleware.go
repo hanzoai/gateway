@@ -56,6 +56,12 @@ type AuthConfig struct {
 	// If true, requests without a token are rejected (402/401).
 	// If false (default), requests without a token pass through without headers.
 	RequireAuth bool
+
+	// AdminOrg is the platform global-admin org slug. The gateway emits the
+	// spoof-proof X-User-IsGlobalAdmin signal ONLY for a caller whose claims
+	// are GlobalAdmin(AdminOrg) — distinct from the org-level X-User-IsAdmin.
+	// Default "admin"; override with IAM_ADMIN_ORG (shared with admin-guard).
+	AdminOrg string
 }
 
 // hanzoJWTClaims and the JWKS cache, token validation, extraction, and the
@@ -397,6 +403,7 @@ func DefaultAuthConfig() AuthConfig {
 		PublicPaths:    publicPaths,
 		PublicHosts:    publicHosts,
 		RequireAuth:    requireAuth,
+		AdminOrg:       iamauth.AdminOrgFromEnv(),
 	}
 }
 
@@ -411,9 +418,12 @@ func DefaultAuthConfig() AuthConfig {
 //   - isAdmin (commerce treats absent/0 as no rights).
 //
 // Auxiliary headers (derivatives of the JWT for convenience):
-//   - X-User-Email:   email from JWT "email" claim
-//   - X-Phone-Number: phone from JWT "phone_number" or "phone" claim
-//   - X-User-IsAdmin: "true" if the JWT asserts isAdmin
+//   - X-User-Email:        email from JWT "email" claim
+//   - X-Phone-Number:      phone from JWT "phone_number" or "phone" claim
+//   - X-User-IsAdmin:      "true" iff the JWT asserts ORG-level isAdmin
+//   - X-User-IsGlobalAdmin: "true" iff the caller is a PLATFORM (global) admin
+//     (owner == AdminOrg, or explicit isGlobalAdmin claim) — the only signal
+//     downstream may gate cross-org / superadmin actions on.
 //
 // Trust boundary: all of the above are stripped on ingress (see
 // stripIdentityHeaders) and only re-set after the JWT is validated. A
@@ -539,9 +549,19 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		if userPhone != "" {
 			c.Request.Header.Set("X-Phone-Number", userPhone)
 		}
-		// Propagate isAdmin for downstream RBAC (broker compliance, etc.)
+		// Propagate the ORG-level admin role (an org owner carries isAdmin
+		// within their own org). Downstream services use this for org-SCOPED
+		// RBAC only; it must NEVER be treated as platform superadmin.
 		if claims.IsAdmin {
 			c.Request.Header.Set("X-User-IsAdmin", "true")
+		}
+		// Emit the PLATFORM superadmin signal ONLY for a global admin
+		// (owner == AdminOrg, or the explicit isGlobalAdmin claim). This is
+		// the spoof-proof header downstream services gate cross-org /
+		// superadmin actions on — keeping org-level isAdmin from being
+		// conflated with global admin (Red: org-owner → superadmin escalation).
+		if claims.GlobalAdmin(cfg.AdminOrg) {
+			c.Request.Header.Set("X-User-IsGlobalAdmin", "true")
 		}
 
 		// Mint X-User-Permissions from the validated JWT. isAdmin implies
