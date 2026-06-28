@@ -788,6 +788,8 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		"X-Tenant-Id",
 		"X-Tenant-ID",
 		"X-Org",
+		// Forgeable project/tenant scope selector — not minted from any claim.
+		"X-Project-Id",
 		// Vendor-prefixed legacy headers
 		"X-Hanzo-Role",
 		"X-Hanzo-Scope",
