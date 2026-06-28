@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -50,10 +51,11 @@ type AuthConfig struct {
 	// BillingPaths scopes balance enforcement to request paths matching one
 	// of these prefixes. This is the one knob that keeps billing OFF for the
 	// AI/validated (per-token billed downstream) and public routes while
-	// ON for the metered must-gate platform surface (cloud/commerce/tasks/
-	// insights/o11y/mpc/evals/licensing/product/provisioning/…). Empty list
-	// preserves the legacy global behavior (enforce on every non-public
-	// route). Set BILLING_PATHS to the must-gate prefixes. One scope.
+	// ON for the metered must-gate platform surface (cloud/tasks/insights/
+	// o11y/mpc/evals/licensing/product/provisioning/…). The /v1/commerce
+	// funding surface is hard-excluded in code (billingPathMatch) regardless
+	// of this list. Empty list enforces on every non-funding, non-public
+	// route. Set BILLING_PATHS to the must-gate prefixes. One scope.
 	BillingPaths []string
 
 	// Paths that bypass auth entirely (exact prefix match)
@@ -318,11 +320,22 @@ func (b *billingChecker) checkBalance(userID string) (bool, error) {
 	return result.Available > 0, nil
 }
 
+// commercePathPrefix is the funding surface — the routes a user adds funds
+// through. It is NEVER balance-gated: a 402 here would lock a zero-balance
+// user out of the only page that lets them pay. The exclusion lives in code,
+// not operator discipline, so it cannot be misconfigured away by BILLING_PATHS.
+const commercePathPrefix = "/v1/commerce"
+
 // billingPathMatch reports whether path falls under balance enforcement.
-// An empty prefix list means "enforce everywhere" (legacy global behavior);
-// a non-empty list scopes enforcement to those prefixes — the must-gate
-// surface — so the AI/validated and public routes are never balance-gated.
+// The funding surface (commercePathPrefix) is always excluded. An empty prefix
+// list enforces on every non-funding path; a non-empty list scopes enforcement
+// to those prefixes — the metered must-gate surface — so the AI/validated and
+// public routes are never balance-gated.
 func billingPathMatch(path string, prefixes []string) bool {
+	// Funding surface is never balance-gated, even when BILLING_PATHS lists it.
+	if path == commercePathPrefix || strings.HasPrefix(path, commercePathPrefix+"/") {
+		return false
+	}
 	if len(prefixes) == 0 {
 		return true
 	}
@@ -437,6 +450,25 @@ func DefaultAuthConfig() AuthConfig {
 	}
 }
 
+// Validate reports a fatal misconfiguration: billing enabled without the
+// Commerce endpoint and service token it depends on. Enforced so enabling
+// billing can never silently fail open (empty URL → checkBalance allows) nor
+// 503-storm the whole metered surface (empty token → Commerce 401). The one
+// caller that can return an error — gateway.Mount — refuses to start in this
+// state; NewAuthMiddleware additionally fails the balance gate closed.
+func (c AuthConfig) Validate() error {
+	if !c.BillingEnabled {
+		return nil
+	}
+	if c.BillingURL == "" {
+		return fmt.Errorf("auth: BILLING_ENABLED=true requires AUTH_BILLING_URL (Commerce endpoint)")
+	}
+	if c.BillingToken == "" {
+		return fmt.Errorf("auth: BILLING_ENABLED=true requires COMMERCE_SERVICE_TOKEN (from KMS)")
+	}
+	return nil
+}
+
 // NewAuthMiddleware creates a gin middleware that validates IAM JWT tokens,
 // checks billing status, and injects identity headers for downstream services.
 //
@@ -477,6 +509,16 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 
 	cache := newJWKSCache(cfg.JWKSURL, 5*time.Minute)
 	billing := newBillingChecker(cfg.BillingURL, cfg.BillingToken)
+
+	// Fail-secure: billing enabled but its Commerce dependency is not fully
+	// configured. gateway.Mount refuses to start in this state (cfg.Validate);
+	// this covers the standalone path, which has no error return — the balance
+	// gate denies the metered surface (503) instead of failing open. The
+	// funding surface stays reachable (billingPathMatch excludes /v1/commerce).
+	billingMisconfigured := cfg.BillingEnabled && (cfg.BillingURL == "" || cfg.BillingToken == "")
+	if billingMisconfigured {
+		log.Printf("gateway auth: BILLING_ENABLED=true but AUTH_BILLING_URL or COMMERCE_SERVICE_TOKEN is empty; metered surface fails closed (503) until both are set from KMS")
+	}
 
 	// Pre-build public host set for O(1) lookup
 	publicHostSet := make(map[string]bool, len(cfg.PublicHosts))
@@ -597,11 +639,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// Balance gate — path-scoped + fail-closed (see checkBalance).
 		//
 		// Scope: cfg.BillingPaths (the metered must-gate surface — cloud,
-		// commerce, tasks, insights, o11y, mpc, evals, licensing, product,
-		// provisioning, …). The AI routes bill per-token downstream and the
+		// tasks, insights, o11y, mpc, evals, licensing, product,
+		// provisioning, …). The /v1/commerce funding surface is hard-excluded
+		// (billingPathMatch) so a zero-balance user can always reach it to add
+		// funds. The AI routes bill per-token downstream and the
 		// validated/public routes are never balance-gated, so they are NOT in
-		// BillingPaths and skip this gate. Empty BillingPaths preserves the
-		// legacy global behavior (enforce on every non-public route).
+		// BillingPaths and skip this gate. Empty BillingPaths enforces on every
+		// non-funding, non-public route.
 		//
 		// Key: the IAM "org/sub" composite — org from owner/X-Org-Id, sub from
 		// the user. Commerce's /v1/billing/balance is user-scoped under an org
@@ -609,6 +653,16 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// side balance-model change first, so the org is carried in the key
 		// rather than used alone.
 		if cfg.BillingEnabled && userID != "" && billingPathMatch(path, cfg.BillingPaths) {
+			// Fail closed when billing is enabled but misconfigured (no URL or
+			// token) — never serve metered product we cannot bill for.
+			if billingMisconfigured {
+				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
+					"error":   "billing_unavailable",
+					"message": "Billing is temporarily unavailable. Please retry shortly.",
+				})
+				return
+			}
+
 			// Construct the Commerce user identifier: org/username
 			billingUser := userID
 			if orgID != "" && !strings.Contains(userID, "/") {
