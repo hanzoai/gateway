@@ -788,6 +788,8 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		"X-Tenant-Id",
 		"X-Tenant-ID",
 		"X-Org",
+		// Forgeable project/tenant scope selector — not minted from any claim.
+		"X-Project-Id",
 		// Vendor-prefixed legacy headers
 		"X-Hanzo-Role",
 		"X-Hanzo-Scope",
@@ -1050,6 +1052,73 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 	}
 	if backendReached {
 		t.Error("request with zero balance should not reach backend")
+	}
+}
+
+// --- Test 16a: billing is PATH-SCOPED to the must-gate surface ---
+// With BillingPaths set, a zero-balance org is 402'd on a must-gate route
+// but NOT balance-gated on an off-scope route (the AI/validated surface,
+// which bills per-token downstream). This is the guarantee that turning
+// edge billing ON for the must-gate routes never breaks the 171.
+func TestBillingCheck_PathScoped(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	// Commerce mock: every org has zero available balance.
+	billingServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(billingResponse{Currency: "usd", Available: 0})
+	}))
+	defer billingServer.Close()
+
+	cfg := AuthConfig{
+		Enabled:        true,
+		JWKSURL:        jwksServer.URL,
+		Issuer:         "https://hanzo.id",
+		Audiences:      []string{"https://api.hanzo.ai"},
+		BillingURL:     billingServer.URL,
+		BillingToken:   "test-token",
+		BillingEnabled: true,
+		BillingPaths:   []string{"/v1/mpc/", "/v1/cloud/"}, // must-gate scope
+		PublicPaths:    []string{},
+		PublicHosts:    []string{},
+		RequireAuth:    true,
+	}
+
+	r := gin.New()
+	r.Use(NewAuthMiddleware(cfg))
+	embeddingsReached := false
+	mpcReached := false
+	r.POST("/v1/embeddings", func(c *gin.Context) { embeddingsReached = true; c.Status(http.StatusOK) })
+	r.POST("/v1/mpc/sign", func(c *gin.Context) { mpcReached = true; c.Status(http.StatusOK) })
+
+	token := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai"))
+	do := func(path string) int {
+		req := httptest.NewRequest(http.MethodPost, path, nil)
+		req.Host = "api.hanzo.ai"
+		req.Header.Set("Authorization", "Bearer "+token)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w.Code
+	}
+
+	// Off-scope (AI/validated) route: zero balance MUST NOT gate it.
+	if code := do("/v1/embeddings"); code != http.StatusOK {
+		t.Errorf("off-scope route must not be balance-gated; got %d, want 200", code)
+	}
+	if !embeddingsReached {
+		t.Error("off-scope route should reach backend despite zero balance")
+	}
+
+	// In-scope (must-gate) route: zero balance MUST 402.
+	if code := do("/v1/mpc/sign"); code != http.StatusPaymentRequired {
+		t.Errorf("must-gate route with zero balance must be 402; got %d", code)
+	}
+	if mpcReached {
+		t.Error("must-gate route with zero balance must not reach backend")
 	}
 }
 

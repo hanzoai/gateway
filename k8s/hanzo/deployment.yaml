@@ -22,7 +22,7 @@ spec:
         - name: registry-credentials
       containers:
         - name: gateway
-          image: ghcr.io/hanzoai/gateway:v2.14.0
+          image: ghcr.io/hanzoai/gateway:v2.14.10
           imagePullPolicy: Always
           command: ["/usr/bin/gateway"]
           args: ["run", "-c", "/etc/gateway/gateway.json"]
@@ -55,6 +55,11 @@ spec:
             # -- Billing enforcement via Commerce API --
             - name: AUTH_BILLING_URL
               value: "http://commerce.hanzo.svc.cluster.local:8001"
+            # Admin-scoped S2S token the balance gate uses to call Commerce.
+            # REQUIRED from KMS (gateway-secrets) whenever BILLING_ENABLED=true:
+            # the gateway refuses to start without it (AuthConfig.Validate). It
+            # stays optional here only because billing is OFF (BILLING_ENABLED
+            # unset); populate it from KMS before flipping billing on.
             - name: COMMERCE_SERVICE_TOKEN
               valueFrom:
                 secretKeyRef:

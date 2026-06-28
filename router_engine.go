@@ -255,6 +255,19 @@ var apiHanzoAIEndpoints = []string{
 	"/zap",
 }
 
+// matchesAPIEndpoint reports whether path is one of the cloud-api passthrough
+// endpoints, matching on segment boundaries so "/v1/models" does not also
+// capture "/v1/models-internal" or "/v1/modelsX". A prefix matches when the
+// path equals it exactly or continues with a "/" separator.
+func matchesAPIEndpoint(path string) bool {
+	for _, prefix := range apiHanzoAIEndpoints {
+		if path == prefix || strings.HasPrefix(path, prefix+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // hostProxyMiddleware intercepts requests and routes them to the correct
 // backend based on hostname and path prefix. Supports WebSocket upgrades
 // natively via httputil.ReverseProxy.
@@ -290,14 +303,10 @@ func hostProxyMiddleware() gin.HandlerFunc {
 		}
 
 		// api.hanzo.ai: route AI endpoints directly to cloud-api (no rewrite).
-		if host == "api.hanzo.ai" {
-			for _, prefix := range apiHanzoAIEndpoints {
-				if strings.HasPrefix(path, prefix) {
-					apiPassthroughProxy.ServeHTTP(c.Writer, c.Request)
-					c.Abort()
-					return
-				}
-			}
+		if host == "api.hanzo.ai" && matchesAPIEndpoint(path) {
+			apiPassthroughProxy.ServeHTTP(c.Writer, c.Request)
+			c.Abort()
+			return
 		}
 
 		// Exact host match.
