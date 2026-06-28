@@ -47,6 +47,15 @@ type AuthConfig struct {
 	// Default: true (checks enabled). Set to false to disable.
 	BillingEnabled bool
 
+	// BillingPaths scopes balance enforcement to request paths matching one
+	// of these prefixes. This is the one knob that keeps billing OFF for the
+	// AI/validated (per-token billed downstream) and public routes while
+	// ON for the metered must-gate platform surface (cloud/commerce/tasks/
+	// insights/o11y/mpc/evals/licensing/product/provisioning/…). Empty list
+	// preserves the legacy global behavior (enforce on every non-public
+	// route). Set BILLING_PATHS to the must-gate prefixes. One scope.
+	BillingPaths []string
+
 	// Paths that bypass auth entirely (exact prefix match)
 	PublicPaths []string
 
@@ -309,6 +318,22 @@ func (b *billingChecker) checkBalance(userID string) (bool, error) {
 	return result.Available > 0, nil
 }
 
+// billingPathMatch reports whether path falls under balance enforcement.
+// An empty prefix list means "enforce everywhere" (legacy global behavior);
+// a non-empty list scopes enforcement to those prefixes — the must-gate
+// surface — so the AI/validated and public routes are never balance-gated.
+func billingPathMatch(path string, prefixes []string) bool {
+	if len(prefixes) == 0 {
+		return true
+	}
+	for _, p := range prefixes {
+		if p != "" && strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // DefaultAuthConfig returns the default auth configuration from environment variables.
 func DefaultAuthConfig() AuthConfig {
 	enabled := true
@@ -347,6 +372,17 @@ func DefaultAuthConfig() AuthConfig {
 	// Opt in only for edge-only deployments that front no balance_gate, via
 	// BILLING_ENABLED=true. One way; one enforcement point.
 	billingEnabled := os.Getenv("BILLING_ENABLED") == "true"
+
+	// BILLING_PATHS scopes balance enforcement to these path prefixes (CSV).
+	// Set this to the must-gate surface so the AI/validated and public routes
+	// are never balance-gated. Empty = legacy global enforcement.
+	var billingPaths []string
+	if bp := os.Getenv("BILLING_PATHS"); bp != "" {
+		billingPaths = strings.Split(bp, ",")
+		for i := range billingPaths {
+			billingPaths[i] = strings.TrimSpace(billingPaths[i])
+		}
+	}
 
 	publicPathsStr := os.Getenv("AUTH_PUBLIC_PATHS")
 	var publicPaths []string
@@ -394,6 +430,7 @@ func DefaultAuthConfig() AuthConfig {
 		BillingURL:     billingURL,
 		BillingToken:   billingToken,
 		BillingEnabled: billingEnabled,
+		BillingPaths:   billingPaths,
 		PublicPaths:    publicPaths,
 		PublicHosts:    publicHosts,
 		RequireAuth:    requireAuth,
@@ -557,10 +594,21 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			c.Request.Header.Set("X-User-Permissions", strconv.FormatInt(bits, 10))
 		}
 
-		// Check billing status (fail-closed — see checkBalance).
-		// Uses the IAM "org/sub" as the billing identity, which maps to
-		// Commerce's user-scoped balance tracking.
-		if cfg.BillingEnabled && userID != "" {
+		// Balance gate — path-scoped + fail-closed (see checkBalance).
+		//
+		// Scope: cfg.BillingPaths (the metered must-gate surface — cloud,
+		// commerce, tasks, insights, o11y, mpc, evals, licensing, product,
+		// provisioning, …). The AI routes bill per-token downstream and the
+		// validated/public routes are never balance-gated, so they are NOT in
+		// BillingPaths and skip this gate. Empty BillingPaths preserves the
+		// legacy global behavior (enforce on every non-public route).
+		//
+		// Key: the IAM "org/sub" composite — org from owner/X-Org-Id, sub from
+		// the user. Commerce's /v1/billing/balance is user-scoped under an org
+		// (the verified contract); per-org billing would require a commerce-
+		// side balance-model change first, so the org is carried in the key
+		// rather than used alone.
+		if cfg.BillingEnabled && userID != "" && billingPathMatch(path, cfg.BillingPaths) {
 			// Construct the Commerce user identifier: org/username
 			billingUser := userID
 			if orgID != "" && !strings.Contains(userID, "/") {
