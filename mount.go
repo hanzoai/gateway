@@ -58,6 +58,9 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 	// vs. co-resident deployments stay byte-identical on the trust
 	// boundary.
 	authCfg := authConfigFromEnv(deps)
+	if err := authCfg.Validate(); err != nil {
+		return fmt.Errorf("gateway.Mount: %w", err)
+	}
 	authGin := NewAuthMiddleware(authCfg)
 
 	// Bridge gin.HandlerFunc → zip.Handler. We never .Next() at the gin
@@ -138,8 +141,8 @@ func authConfigFromEnv(deps cloud.Deps) AuthConfig {
 		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/.well-known/jwks"),
 		Issuer:         getenv("JWT_ISSUER", "https://hanzo.id"),
 		Audiences:      audiences,
-		BillingURL:     getenv("BILLING_URL", ""),
-		BillingToken:   getenv("BILLING_TOKEN", ""),
+		BillingURL:     getenv("AUTH_BILLING_URL", "http://commerce.hanzo.svc.cluster.local:8001"),
+		BillingToken:   getenv("COMMERCE_SERVICE_TOKEN", ""),
 		BillingEnabled: getenv("BILLING_ENABLED", "false") == "true",
 		BillingPaths:   splitCSV(getenv("BILLING_PATHS", "")),
 		RequireAuth:    getenv("AUTH_REQUIRE", "false") == "true",
