@@ -1,3 +1,5 @@
+<p align="center"><img src=".github/hero.svg" alt="gateway" width="880"></p>
+
 # gateway
 
 HTTP gateway: routing, JWT validation, identity strip + mint, rate limit, circuit break, telemetry.
