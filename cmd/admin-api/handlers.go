@@ -43,10 +43,20 @@ func (s *server) gate(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// isGlobalAdminOrg is the ONE canonical platform-admin predicate: the admin org
+// and nothing else. Derived solely from `owner` (the ground-truth claim) — it
+// deliberately does NOT trust a server-sent isGlobalAdmin flag, because the live
+// globalAdminOrgs override could smuggle a tenant org (e.g. hanzo) into that flag.
+// The platform swapped its superadmin org from the Casdoor-legacy `built-in` to
+// `admin`; there is no `built-in` compat path here — one org, one way.
+func (s *server) isGlobalAdminOrg(owner string) bool {
+	return owner == s.cfg.adminOrg
+}
+
 func (s *server) authenticate(r *http.Request) (identity, bool) {
 	// (1) JWT (Bearer/Basic) — carries `owner` directly.
 	if claims, err := s.cfg.validator.Validate(r); err == nil && claims != nil {
-		if claims.Owner == s.cfg.adminOrg {
+		if s.isGlobalAdminOrg(claims.Owner) {
 			return identity{
 				Owner: claims.Owner, Name: claims.Name, Email: claims.Email,
 				DisplayName: claims.Name, IsGlobalAdmin: true,
@@ -65,7 +75,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	}
 	key := hashStr(cookie)
 	if id, ok := s.cacheGet(key); ok {
-		return id, id.Owner == s.cfg.adminOrg || id.IsGlobalAdmin
+		return id, s.isGlobalAdminOrg(id.Owner)
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
@@ -104,7 +114,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	if d.Type == "anonymous-user" || d.IsForbidden {
 		return identity{}, false
 	}
-	if d.Owner != s.cfg.adminOrg && !d.IsGlobalAdmin {
+	if !s.isGlobalAdminOrg(d.Owner) {
 		return identity{}, false
 	}
 	id := identity{Owner: d.Owner, Name: d.Name, Email: d.Email, DisplayName: nz(d.DisplayName, d.Name), IsGlobalAdmin: true}

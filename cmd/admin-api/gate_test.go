@@ -90,7 +90,10 @@ func TestGate_DeniesTenantOrgAdmin(t *testing.T) {
 // Proves the gateway admin-api is not fooled by the ai-repo
 // globalAdminOrgs=admin,hanzo override.
 func TestGate_DeniesHanzoTenantOrg(t *testing.T) {
-	cloud := fakeCloudAPI(t, map[string]any{"owner": "hanzo", "name": "dave", "isAdmin": true, "type": "normal-user"})
+	// Non-vacuous (red V5): cloud-api SMUGGLES isGlobalAdmin:true — the
+	// globalAdminOrgs=admin,hanzo override angle. The gate must IGNORE the
+	// server-sent flag and deny on `owner` alone (hanzo != admin).
+	cloud := fakeCloudAPI(t, map[string]any{"owner": "hanzo", "name": "dave", "isAdmin": true, "isGlobalAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
 	iam := fakeIAM(t)
 	defer iam.Close()
@@ -98,7 +101,7 @@ func TestGate_DeniesHanzoTenantOrg(t *testing.T) {
 
 	rec := gatedGet(srv, srv.handleApplications, "/v1/admin/applications")
 	if rec.Code != http.StatusForbidden {
-		t.Fatalf("hanzo tenant org-admin should be 403, got %d", rec.Code)
+		t.Fatalf("hanzo tenant org-admin (smuggled isGlobalAdmin) should be 403, got %d", rec.Code)
 	}
 }
 
