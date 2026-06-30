@@ -20,20 +20,19 @@ WORKDIR /app
 ARG GO_EXPERIMENT=jsonv2
 ENV GOEXPERIMENT=${GO_EXPERIMENT}
 
-# Private cross-repo modules (hanzoai/cloud, hanzoai/zip, luxfi/*) are FIRST-PARTY
-# (we own them; now public on GitHub) and are fetched directly via authenticated
-# git, bypassing the public proxy + checksum DB. GOPRIVATE alone is NOT enough:
-# the default GOPROXY=proxy.golang.org still answers for these paths and serves a
-# tag's FIRST-seen content, which sum.golang.org pins immutably. When one of our
-# tags is re-pointed to a newer commit, that cached content no longer matches the
-# current origin → `checksum mismatch · SECURITY ERROR` on a fresh build. The
-# committed go.sum is the source of truth (re-recorded to the live tag content);
-# we route our orgs straight to git (GOPROXY=direct) and skip the public sumdb for
-# them ONLY (GONOSUMDB) — first-party-scoped, NEVER global GONOSUMDB=* / GOINSECURE.
-ENV GOPRIVATE=github.com/hanzoai/*,github.com/luxfi/*,github.com/zap-proto/* \
-    GONOSUMDB=github.com/hanzoai/*,github.com/luxfi/*,github.com/zap-proto/* \
+# hanzoai/* and luxfi/* are PUBLIC and resolve via the IMMUTABLE public proxy +
+# sumdb — go.sum pins those canonical hashes, so a force-re-pointed tag can never
+# break the build. Routing them DIRECT (the old GOPRIVATE approach) re-fetches a
+# re-tagged tree (e.g. luxfi/zap@v0.8.8) whose hash differs from go.sum's proxy
+# hash → "checksum mismatch / SECURITY ERROR". This matches the drop-GOPRIVATE
+# fix already shipped in hanzoai/cloud + iam + luxfi/kms. Only zap-proto/* stays
+# first-party-direct (kept in GOPRIVATE) — authenticated git via gh_token. GOPROXY
+# still routes nested-path monorepo tags through the proxy. The committed go.sum
+# is the single source of truth.
+ENV GOPRIVATE=github.com/zap-proto/* \
+    GONOSUMDB=github.com/zap-proto/* \
     GOSUMDB=off \
-    GOPROXY=direct \
+    GOPROXY=https://proxy.golang.org,direct \
     GOFLAGS=-mod=mod
 
 RUN --mount=type=cache,target=/go/pkg/mod \
