@@ -3356,7 +3356,7 @@
     {
      "url_pattern": "/{path}",
      "host": [
-      "http://functions.hanzo.svc.cluster.local:8070"
+      "http://router.fission.svc.cluster.local:80"
      ],
      "encoding": "no-op"
     }
@@ -3402,7 +3402,7 @@
     {
      "url_pattern": "/{path}",
      "host": [
-      "http://functions.hanzo.svc.cluster.local:8070"
+      "http://router.fission.svc.cluster.local:80"
      ],
      "encoding": "no-op"
     }
@@ -3448,7 +3448,7 @@
     {
      "url_pattern": "/{path}",
      "host": [
-      "http://functions.hanzo.svc.cluster.local:8070"
+      "http://router.fission.svc.cluster.local:80"
      ],
      "encoding": "no-op"
     }
@@ -3494,7 +3494,7 @@
     {
      "url_pattern": "/{path}",
      "host": [
-      "http://functions.hanzo.svc.cluster.local:8070"
+      "http://router.fission.svc.cluster.local:80"
      ],
      "encoding": "no-op"
     }
