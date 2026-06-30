@@ -50,12 +50,18 @@ require (
 )
 
 require (
+	github.com/ClickHouse/ch-go v0.71.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
+	github.com/go-faster/city v1.0.1 // indirect
+	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
+	github.com/hanzoai/datastore-go/v2 v2.45.1 // indirect
 	github.com/luxfi/accel v1.1.9 // indirect
 	github.com/luxfi/crypto v1.19.17 // indirect
+	github.com/paulmach/orb v0.13.0 // indirect
 	github.com/prometheus/client_golang v1.23.2 // indirect
+	github.com/segmentio/asm v1.2.1 // indirect
 )
 
 require (

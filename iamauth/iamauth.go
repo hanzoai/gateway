@@ -321,6 +321,17 @@ func (v *Validator) Validate(r *http.Request) (*Claims, error) {
 	return ValidateToken(tok, v.cache, v.cfg.Issuer, v.cfg.Audiences)
 }
 
+// ValidateRaw validates a raw token string (no *http.Request) through the
+// validator's bound config + JWKS cache. Used by callers that already hold a
+// token out-of-band — e.g. an OAuth2 code-exchange handler validating the
+// id_token / access_token it just received.
+func (v *Validator) ValidateRaw(rawToken string) (*Claims, error) {
+	if rawToken == "" {
+		return nil, ErrNoToken
+	}
+	return ValidateToken(rawToken, v.cache, v.cfg.Issuer, v.cfg.Audiences)
+}
+
 // ErrNoToken indicates no credential was present on the request.
 var ErrNoToken = fmt.Errorf("no token")
 
