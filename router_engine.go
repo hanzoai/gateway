@@ -241,31 +241,17 @@ func cloudAPIURL() *url.URL {
 	return u
 }
 
-// apiHanzoAIEndpoints lists the /v1/* path prefixes that route directly
-// to cloud-api, bypassing the gateway JWT middleware.
-var apiHanzoAIEndpoints = []string{
-	"/v1/chat",
-	"/v1/completions",
-	"/v1/messages",
-	"/v1/models",
-	"/v1/embeddings",
-	"/v1/images",
-	"/v1/audio",
-	"/v1/zap",
-	"/zap",
-}
-
-// matchesAPIEndpoint reports whether path is one of the cloud-api passthrough
-// endpoints, matching on segment boundaries so "/v1/models" does not also
-// capture "/v1/models-internal" or "/v1/modelsX". A prefix matches when the
-// path equals it exactly or continues with a "/" separator.
-func matchesAPIEndpoint(path string) bool {
-	for _, prefix := range apiHanzoAIEndpoints {
-		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			return true
-		}
-	}
-	return false
+// apiCloudHosts are the hosts whose ENTIRE surface is the unified cloud API.
+// Both resolve to the same hanzoai/cloud binary (HIP-0106), which owns ALL
+// /v1/* routing — AI inference top-level (/v1/chat, /v1/messages, …) plus every
+// per-service control plane (/v1/cloud, /v1/iam, /v1/kms, /v1/o11y, …). The
+// gateway is a STATELESS edge: auth + ratelimit + meter already ran in the
+// upstream middleware, so for these hosts it forwards "/*" straight to cloud
+// with NO per-route allow-list. ONE routing source of truth = cloud's mount
+// table, not a second map here.
+var apiCloudHosts = map[string]bool{
+	"api.hanzo.ai":       true,
+	"api.cloud.hanzo.ai": true,
 }
 
 // hostProxyMiddleware intercepts requests and routes them to the correct
@@ -302,8 +288,10 @@ func hostProxyMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// api.hanzo.ai: route AI endpoints directly to cloud-api (no rewrite).
-		if host == "api.hanzo.ai" && matchesAPIEndpoint(path) {
+		// Unified cloud API hosts: forward EVERY path to cloud-api, unchanged
+		// (cloud speaks /v1/* natively — no rewrite). Stateless passthrough; cloud
+		// owns all routing.
+		if apiCloudHosts[host] {
 			apiPassthroughProxy.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
 			return
