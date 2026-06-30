@@ -10,6 +10,7 @@ require (
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/hanzoai/datastore-go/v2 v2.45.1
 	github.com/krakend/bloomfilter/v2 v2.1.0
 	github.com/krakend/krakend-amqp/v2 v2.3.0
 	github.com/krakend/krakend-botdetector/v2 v2.3.0
@@ -40,7 +41,7 @@ require (
 	github.com/krakend/krakend-xml/v2 v2.2.0
 	github.com/luraproject/lura/v2 v2.12.1
 	github.com/luxfi/log v1.4.3
-	github.com/luxfi/zap v0.8.8
+	github.com/luxfi/zap v1.1.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
@@ -56,7 +57,6 @@ require (
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
-	github.com/hanzoai/datastore-go/v2 v2.45.1 // indirect
 	github.com/luxfi/accel v1.1.9 // indirect
 	github.com/luxfi/crypto v1.19.17 // indirect
 	github.com/paulmach/orb v0.13.0 // indirect
@@ -212,7 +212,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
-	github.com/luxfi/metric v1.5.8
+	github.com/luxfi/metric v1.6.0
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/miekg/dns v1.1.72 // indirect
