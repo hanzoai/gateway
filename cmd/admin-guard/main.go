@@ -8,12 +8,19 @@
 // enforces the verdict.
 //
 //	verdict 2xx  → allow (caller is a global admin)
-//	verdict 302  → redirect (caller is a non-admin → console.hanzo.ai;
-//	               or anonymous → IAM PKCE login)
+//	verdict 302  → redirect (an AUTHORITATIVELY-resolved non-admin →
+//	               console.hanzo.ai; an anonymous browser, or a browser carrying
+//	               only a non-admin IAM SSO session, → IAM PKCE admin login)
 //
 // One gate, one mechanism, every admin surface. Clients never reach a raw
 // admin or a 403 dead-end: a non-admin is always sent to the unified client
-// surface, console.hanzo.ai.
+// surface, console.hanzo.ai — but that non-admin verdict is authoritative only
+// from the guard's own signed cookie or a completed admin-app login, NOT from an
+// incidental other-org IAM session. Hanzo staff are duplicated across their
+// customer org and the `admin` org, so a stale customer-org session ("owner=
+// hanzo") must not mask the same human's admin identity ("owner=admin"): such a
+// session is offered the admin login instead of being bounced (the fix for the
+// admin.hanzo.ai login-bounce; see handleVerify source (3)).
 //
 // Identity resolution is decomplected into three orthogonal sources, tried in
 // order, all collapsing to one predicate (owner == AdminOrg):
@@ -174,13 +181,28 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 		// Browser with a bad/expired bearer — fall through to interactive login.
 	}
 
-	// (3) IAM session cookie — resolve via IAM get-account server-side.
-	if owner, ok := c.iamSessionOwner(r); ok {
+	// (3) IAM session cookie — resolve via IAM get-account server-side. This is a
+	// SOFT identity: an SSO session on *.hanzo.ai may belong to a NON-admin org
+	// (e.g. the caller last signed into console.hanzo.ai as their customer org)
+	// even though the SAME human is a global admin under the `admin` org — Hanzo
+	// staff are deliberately duplicated across their customer org and `admin`.
+	// So an IAM session may only AFFIRM admin (owner == adminOrg → allow); it must
+	// NOT drive the non-admin verdict. "Holds some non-admin session" is not
+	// "is not an admin" — that verdict is authoritative only from the guard's own
+	// cookie (source 1), a validated bearer (source 2), or a completed admin-app
+	// login (handleCallback). A non-admin IAM session therefore falls through to
+	// the admin login below, giving the global admin a chance to authenticate as
+	// their admin identity; a genuine non-admin who logs in is then bounced to the
+	// console by handleCallback (owner != adminOrg). API callers are unaffected
+	// (they never reach an interactive login — see the fail-closed branches).
+	if owner, ok := c.iamSessionOwner(r); ok && owner == c.adminOrg {
 		c.decide(w, r, owner, orig)
 		return
 	}
 
-	// No identity at all.
+	// No admin identity established. API callers fail closed; a browser starts the
+	// interactive admin-org PKCE login (which authoritatively resolves admin vs
+	// non-admin at the callback), rather than being bounced on a soft session.
 	if isAPIClient(r) {
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 		return
