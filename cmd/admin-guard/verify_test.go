@@ -150,6 +150,83 @@ func TestVerifyContentNegotiation(t *testing.T) {
 	}
 }
 
+// TestVerifySoftIAMSessionNeverBounces is the regression for the admin.hanzo.ai
+// login bounce: a browser that arrives with only an *external* IAM SSO session
+// (no guard cookie, no bearer) must NOT be short-circuited to the console just
+// because that session's org is non-admin. Hanzo staff are duplicated across
+// their customer org (e.g. `hanzo`) and the `admin` org; a stale customer-org
+// session must never mask the admin identity. So:
+//   - IAM session owner == adminOrg  → 204 allow.
+//   - IAM session owner != adminOrg  → 302 to the IAM admin login (NOT console),
+//     giving the global admin a chance to authenticate as `admin`; the console
+//     bounce is decided authoritatively only by handleCallback after that login.
+//
+// The guard's iamSessionOwner path calls IAM get-account server-side; we point
+// iamInternal at a stub returning a canned account so no live IAM is needed.
+func TestVerifySoftIAMSessionNeverBounces(t *testing.T) {
+	cases := []struct {
+		name         string
+		accountOwner string // owner in the stubbed get-account response
+		wantStatus   int
+		wantLocation string
+	}{
+		{
+			name:         "admin-org IAM session → 204 allow",
+			accountOwner: "admin",
+			wantStatus:   http.StatusNoContent,
+		},
+		{
+			name:         "non-admin IAM session → 302 admin login, NOT console",
+			accountOwner: "hanzo",
+			wantStatus:   http.StatusFound,
+			wantLocation: "https://hanzo.id/v1/iam/oauth/authorize",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if !strings.HasSuffix(r.URL.Path, "/v1/iam/get-account") {
+					http.NotFound(w, r)
+					return
+				}
+				w.Header().Set("Content-Type", "application/json")
+				fmt.Fprintf(w, `{"status":"ok","data":{"owner":%q}}`, tc.accountOwner)
+			}))
+			defer iam.Close()
+
+			cfg := testConfig()
+			cfg.iamInternal = iam.URL
+
+			r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.Header.Set("X-Forwarded-Host", "admin.hanzo.ai")
+			r.Header.Set("X-Forwarded-Uri", "/")
+			r.Header.Set("Accept", "text/html")
+			// A raw IAM session cookie (any value): iamSessionOwner forwards the
+			// Cookie header to get-account, which our stub answers unconditionally.
+			r.Header.Set("Cookie", "hanzo_session=stub")
+			w := httptest.NewRecorder()
+
+			cfg.handleVerify(w, r)
+
+			if w.Code != tc.wantStatus {
+				t.Fatalf("status=%d want %d; loc=%s body=%s", w.Code, tc.wantStatus, w.Header().Get("Location"), w.Body.String())
+			}
+			if loc := w.Header().Get("Location"); tc.wantLocation != "" && !strings.HasPrefix(loc, tc.wantLocation) {
+				t.Errorf("Location=%q, want prefix %q", loc, tc.wantLocation)
+			}
+			// A non-admin soft session must NEVER be sent to the console.
+			if loc := w.Header().Get("Location"); strings.HasPrefix(loc, cfg.consoleURL) {
+				t.Errorf("soft IAM session bounced to console (%q) — the regression", loc)
+			}
+			if tc.wantStatus == http.StatusNoContent && w.Header().Get("X-Admin-Guard") != "allow" {
+				t.Errorf("admin allow: missing X-Admin-Guard=allow")
+			}
+		})
+	}
+}
+
 // TestVerifyRejectsTamperedCookie asserts a forged/edited guard cookie does not
 // authenticate: the HMAC check fails, so a tampered admin claim is treated as no
 // identity (→ 401 for an API caller), never allowed through.

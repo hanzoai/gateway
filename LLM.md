@@ -229,9 +229,23 @@ Global admin = IAM user whose org (`owner`) equals the admin org (IAM
 
 Endpoints:
 - `GET /__guard/verify` — forward-auth target. 2xx = allow (global admin);
-  302 = redirect (non-admin → `CONSOLE_URL`; anonymous browser → IAM PKCE login).
-  API callers (Bearer/Basic, non-html Accept) fail closed with 401/403 instead
-  of an interactive redirect.
+  302 = redirect (authoritatively-resolved non-admin → `CONSOLE_URL`; anonymous
+  browser → IAM PKCE login). API callers (Bearer/Basic, non-html Accept) fail
+  closed with 401/403 instead of an interactive redirect.
+  - **The three identity sources are not symmetric on the DENY direction (fixes
+    the admin.hanzo.ai login bounce, guard ≥ 0.1.2).** The console bounce is
+    authoritative only from source (1) the guard's own signed cookie or from a
+    completed admin-app login (`handleCallback`, `owner != AdminOrg`). Source (3)
+    the incidental IAM SSO session (resolved via `get-account`) may only AFFIRM
+    admin (`owner == AdminOrg` → allow); a NON-admin IAM session does NOT bounce —
+    it falls through to the admin PKCE login. Why: Hanzo staff are duplicated
+    across their customer org (`hanzo`) and the `admin` org, so a stale
+    customer-org SSO session (`owner=hanzo`) must not mask the same human's admin
+    identity (`owner=admin`) and 302 a global admin to `console.hanzo.ai`. No
+    escalation — a genuine non-admin (e.g. a tenant `isAdmin`, `owner=maxpower`)
+    still cannot pass: after the admin login, `handleCallback` resolves
+    `owner != admin` and bounces them to the console. Regression:
+    `cmd/admin-guard/verify_test.go` `TestVerifySoftIAMSessionNeverBounces`.
 - `GET /__guard/callback` — OAuth2 Authorization-Code + PKCE callback.
 - `GET /__guard/logout`, `GET /__guard/healthz`.
 
