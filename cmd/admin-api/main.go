@@ -16,7 +16,7 @@
 //
 // Identity is resolved exactly like the rest of the platform: a Bearer/Basic
 // JWT validated through iamauth, or the first-party session cookie minted by
-// cloud-api (forwarded to /v1/get-account). Either way the predicate is the
+// cloud (forwarded to /v1/get-account). Either way the predicate is the
 // same single fact — owner == AdminOrg — the same one admin-guard enforces at
 // the edge.
 package main
@@ -48,7 +48,7 @@ type config struct {
 	iamInternal  string
 	iamClientID  string
 	iamSecret    string
-	cloudURL     string // cloud-api: session check (/v1/get-account)
+	cloudURL     string // cloud: session check (/v1/get-account)
 	commerceURL  string
 	commerceTok  string
 	platformURL  string
@@ -72,7 +72,7 @@ func loadConfig() *config {
 		iamInternal: strings.TrimRight(envOr("IAM_INTERNAL_URL", "http://iam.hanzo.svc.cluster.local"), "/"),
 		iamClientID: os.Getenv("IAM_CLIENT_ID"),
 		iamSecret:   os.Getenv("IAM_CLIENT_SECRET"),
-		cloudURL:    strings.TrimRight(envOr("CLOUD_API_URL", "http://cloud-api.hanzo.svc.cluster.local:8000"), "/"),
+		cloudURL:    strings.TrimRight(envOr("CLOUD_API_URL", "http://cloud.hanzo.svc.cluster.local:8000"), "/"),
 		commerceURL: strings.TrimRight(envOr("COMMERCE_URL", "http://commerce.hanzo.svc.cluster.local:8001"), "/"),
 		commerceTok: os.Getenv("COMMERCE_SERVICE_TOKEN"),
 		platformURL: strings.TrimRight(envOr("PLATFORM_URL", "http://platform.hanzo.svc.cluster.local:4000"), "/"),

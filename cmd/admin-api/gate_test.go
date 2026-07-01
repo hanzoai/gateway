@@ -10,7 +10,7 @@ import (
 	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
-// fakeCloudAPI stands in for cloud-api's GET /v1/get-account. It echoes a
+// fakeCloudAPI stands in for cloud's GET /v1/get-account. It echoes a
 // fixed account so the data-layer gate resolves a browser session exactly as
 // it does in production.
 func fakeCloudAPI(t *testing.T, account map[string]any) *httptest.Server {

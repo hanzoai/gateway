@@ -378,7 +378,7 @@ func DefaultAuthConfig() AuthConfig {
 
 	billingToken := os.Getenv("COMMERCE_SERVICE_TOKEN")
 
-	// Billing enforcement is the single responsibility of cloud-api's
+	// Billing enforcement is the single responsibility of cloud's
 	// balance_gate, which resolves hk- API keys, applies per-model pricing,
 	// and exempts service keys — none of which the edge gateway can see.
 	// The gateway must NOT double-gate balance, so billing is OFF by default.
@@ -570,7 +570,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		}
 
 		// API keys (hk-*, sk-*, fw_*, hz_*, pk-*) are validated by the
-		// backend services directly (cloud-api, commerce, etc.), not by
+		// backend services directly (cloud, commerce, etc.), not by
 		// the gateway. Pass them through without JWT validation.
 		if isAPIKey(token) {
 			c.Next()

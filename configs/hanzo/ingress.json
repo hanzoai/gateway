@@ -89,7 +89,7 @@
       "backends": [
         {
           "path": "/",
-          "url": "http://cloud-api.hanzo.svc.cluster.local:8000"
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
         }
       ]
     },
@@ -260,7 +260,7 @@
       "backends": [
         {
           "path": "/",
-          "url": "http://cloud-api.hanzo.svc.cluster.local:8000"
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
         }
       ]
     },

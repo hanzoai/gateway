@@ -62,13 +62,13 @@
     {
      "url_pattern": "/v1/memory/{action}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -122,13 +122,13 @@
     {
      "url_pattern": "/v1/memory/{action}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -180,13 +180,13 @@
     {
      "url_pattern": "/v1/chat",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -218,13 +218,13 @@
     {
      "url_pattern": "/v1/chat/completions",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -256,13 +256,13 @@
     {
      "url_pattern": "/v1/completions",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -294,13 +294,13 @@
     {
      "url_pattern": "/v1/models",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -332,13 +332,13 @@
     {
      "url_pattern": "/v1/messages",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -724,13 +724,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -784,13 +784,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -844,13 +844,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -904,13 +904,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -962,13 +962,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -1000,13 +1000,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -1038,13 +1038,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -1076,13 +1076,13 @@
     {
      "url_pattern": "/v1/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op",
      "extra_config": {
       "github.com/hanzoai/gateway/zap": {
        "node_id": "gateway",
-       "peer_addr": "cloud-api.hanzo.svc.cluster.local:9651",
+       "peer_addr": "cloud.hanzo.svc.cluster.local:9651",
        "no_discovery": true,
        "timeout_ms": 120000
       }
@@ -8576,7 +8576,7 @@
     {
      "url_pattern": "/v1/get-global-providers",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8626,7 +8626,7 @@
     {
      "url_pattern": "/v1/get-providers",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8656,7 +8656,7 @@
     {
      "url_pattern": "/v1/get-provider",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8688,7 +8688,7 @@
     {
      "url_pattern": "/v1/add-provider",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8740,7 +8740,7 @@
     {
      "url_pattern": "/v1/update-provider",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8790,7 +8790,7 @@
     {
      "url_pattern": "/v1/pricing-policy",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8822,7 +8822,7 @@
     {
      "url_pattern": "/v1/o11y/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -8874,7 +8874,7 @@
     {
      "url_pattern": "/v1/o11y/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9060,7 +9060,7 @@
     {
      "url_pattern": "/v1/evals/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9112,7 +9112,7 @@
     {
      "url_pattern": "/v1/evals/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9164,7 +9164,7 @@
     {
      "url_pattern": "/v1/ml/models",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9216,7 +9216,7 @@
     {
      "url_pattern": "/v1/ml/models",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9268,7 +9268,7 @@
     {
      "url_pattern": "/v1/ml/models/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9320,7 +9320,7 @@
     {
      "url_pattern": "/v1/ml/models/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9372,7 +9372,7 @@
     {
      "url_pattern": "/v1/ml/models/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9424,7 +9424,7 @@
     {
      "url_pattern": "/v1/ml/models/{name}/predict",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9476,7 +9476,7 @@
     {
      "url_pattern": "/v1/train/jobs",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9528,7 +9528,7 @@
     {
      "url_pattern": "/v1/train/jobs",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9580,7 +9580,7 @@
     {
      "url_pattern": "/v1/train/jobs/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9632,7 +9632,7 @@
     {
      "url_pattern": "/v1/train/jobs/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9684,7 +9684,7 @@
     {
      "url_pattern": "/v1/train/experiments",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9736,7 +9736,7 @@
     {
      "url_pattern": "/v1/train/experiments",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9788,7 +9788,7 @@
     {
      "url_pattern": "/v1/train/experiments/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9840,7 +9840,7 @@
     {
      "url_pattern": "/v1/train/experiments/{name}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9892,7 +9892,7 @@
     {
      "url_pattern": "/v1/train/experiments/{name}/trials",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9942,7 +9942,7 @@
     {
      "url_pattern": "/v1/ml/health",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -9972,7 +9972,7 @@
     {
      "url_pattern": "/v1/train/health",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10004,7 +10004,7 @@
     {
      "url_pattern": "/v1/product/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10056,7 +10056,7 @@
     {
      "url_pattern": "/v1/product/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10108,7 +10108,7 @@
     {
      "url_pattern": "/v1/licensing/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10160,7 +10160,7 @@
     {
      "url_pattern": "/v1/licensing/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10212,7 +10212,7 @@
     {
      "url_pattern": "/v1/provisioning/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
@@ -10264,7 +10264,7 @@
     {
      "url_pattern": "/v1/provisioning/{path}",
      "host": [
-      "http://cloud-api.hanzo.svc.cluster.local:8000"
+      "http://cloud.hanzo.svc.cluster.local:8000"
      ],
      "encoding": "no-op"
     }
