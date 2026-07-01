@@ -4,7 +4,7 @@
 // rearchitecture: when the gateway runs as the HTTP edge (the legacy
 // KrakenD `run` path the prod container's CMD drives), api.hanzo.ai's
 // /v1/chat/completions and the rest of apiHanzoAIEndpoints MUST be
-// proxied straight to cloud-api over HTTP — NOT 404'd because the only
+// proxied straight to cloud over HTTP — NOT 404'd because the only
 // live surface was a ZAP relay to backends that don't exist
 // (cloud:9090 is cloud's health listener; the base service is absent).
 //
@@ -24,10 +24,10 @@ import (
 )
 
 // newAPIEdge builds a minimal gin engine wired exactly like the
-// production HTTP edge for the cloud-api passthrough concern: the CORS
+// production HTTP edge for the cloud passthrough concern: the CORS
 // preflight middleware, then hostProxyMiddleware. Auth is intentionally
 // left out so the test isolates the ROUTING decision (the auth gate is
-// covered by auth_middleware_test.go). The cloud-api target is pointed
+// covered by auth_middleware_test.go). The cloud target is pointed
 // at a local httptest backend via GATEWAY_CLOUD_API_URL. The engine is
 // served from a real httptest.Server (not httptest.NewRecorder) because
 // httputil.ReverseProxy requires a CloseNotifier-capable ResponseWriter.
@@ -52,7 +52,7 @@ func newAPIEdge(t *testing.T, backend string) *httptest.Server {
 }
 
 // TestHostProxy_APIEndpoints_RouteToCloudAPI is the core regression guard.
-// Every apiHanzoAIEndpoints prefix on api.hanzo.ai must reach cloud-api
+// Every apiHanzoAIEndpoints prefix on api.hanzo.ai must reach cloud
 // (HTTP 200 from the stub), never the NoRoute 404 sentinel.
 func TestHostProxy_APIEndpoints_RouteToCloudAPI(t *testing.T) {
 	var gotPaths []string
@@ -93,18 +93,18 @@ func TestHostProxy_APIEndpoints_RouteToCloudAPI(t *testing.T) {
 			body := readAll(t, resp)
 
 			if resp.StatusCode == http.StatusNotFound {
-				t.Fatalf("%s returned 404 (unrouted) — must proxy to cloud-api; body=%q", p, body)
+				t.Fatalf("%s returned 404 (unrouted) — must proxy to cloud; body=%q", p, body)
 			}
 			if resp.StatusCode != http.StatusOK {
-				t.Fatalf("%s: got status %d, want 200 from cloud-api stub; body=%q", p, resp.StatusCode, body)
+				t.Fatalf("%s: got status %d, want 200 from cloud stub; body=%q", p, resp.StatusCode, body)
 			}
 			if !strings.Contains(body, `"ok":true`) {
-				t.Fatalf("%s: response %q did not come from cloud-api stub", p, body)
+				t.Fatalf("%s: response %q did not come from cloud stub", p, body)
 			}
 		})
 	}
 
-	// The passthrough proxy must forward the path unchanged (cloud-api
+	// The passthrough proxy must forward the path unchanged (cloud
 	// speaks /v1/* natively — no /api/ prefix, no rewrite).
 	for i, want := range paths {
 		if i >= len(gotPaths) {
@@ -116,9 +116,9 @@ func TestHostProxy_APIEndpoints_RouteToCloudAPI(t *testing.T) {
 	}
 }
 
-// TestHostProxy_NonAPIHost_NotProxiedToCloudAPI ensures the cloud-api
+// TestHostProxy_NonAPIHost_NotProxiedToCloudAPI ensures the cloud
 // passthrough is scoped to api.hanzo.ai only — a /v1/* path on some
-// other host must not be hijacked to cloud-api.
+// other host must not be hijacked to cloud.
 func TestHostProxy_NonAPIHost_NotProxiedToCloudAPI(t *testing.T) {
 	hit := false
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +141,7 @@ func TestHostProxy_NonAPIHost_NotProxiedToCloudAPI(t *testing.T) {
 	_ = readAll(t, resp)
 
 	if hit {
-		t.Fatal("cloud-api backend was hit for a non-api.hanzo.ai host")
+		t.Fatal("cloud backend was hit for a non-api.hanzo.ai host")
 	}
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("non-api host /v1/chat/completions: got %d, want 404 (unrouted sentinel)", resp.StatusCode)
@@ -160,7 +160,7 @@ func readAll(t *testing.T, resp *http.Response) string {
 }
 
 // TestCloudAPIURL_Override pins the env-override + safe-fallback contract
-// for the cloud-api target resolver.
+// for the cloud target resolver.
 func TestCloudAPIURL_Override(t *testing.T) {
 	t.Run("default when unset", func(t *testing.T) {
 		t.Setenv("GATEWAY_CLOUD_API_URL", "")

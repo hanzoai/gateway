@@ -28,7 +28,7 @@ var (
 // External clients (e.g. dev CLI) connect here with TLS-wrapped ZAP binary.
 // Each accepted TLS connection is transparently proxied to the internal ZAP
 // node (started by the ZapBackendFactory pool on the internal port), which
-// handles the ZAP handshake, message dispatch, and forwarding to cloud-api.
+// handles the ZAP handshake, message dispatch, and forwarding to cloud.
 func StartZapListener(cfg ZapListenerConfig) error {
 	if cfg.Port == 0 {
 		// Canonical embedded-ZAP port is 9999 (matches zaphttp_listener.go,
