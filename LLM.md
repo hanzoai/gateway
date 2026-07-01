@@ -114,7 +114,7 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
   backend (session auth); `/v1/get-global-providers` does NOT and is must-gate.
 - **AI / API-KEY** (8): `/v1/chat`, `/v1/chat/completions`, `/v1/completions`,
   `/v1/messages`, `/ai/{path}`, `/v1/ai/{path}`. NO IAM-JWT validator — these
-  use opaque API keys (hk-/sk-) and are billed per-token by cloud-api. Adding
+  use opaque API keys (hk-/sk-) and are billed per-token by cloud. Adding
   an `auth/validator` here would 401 every API-key call.
 - **MUST-GATE** (25, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}`,
   `/v1/commerce/{path}`, `/v1/tasks/{path}`, `/v1/insights/{path}`,
@@ -132,8 +132,8 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 any path whose prefix is in `apiHanzoAIEndpoints` (`router_engine.go`:
 `/v1/chat`, `/v1/completions`, `/v1/messages`, `/v1/models`, `/v1/embeddings`,
 `/v1/images`, `/v1/audio`, `/v1/zap`, `/zap`) is reverse-proxied straight to
-cloud-api and **the per-route `auth/validator` in gateway.json is never run**
-(cloud-api enforces the API key instead). So those AI routes' config validator
+cloud and **the per-route `auth/validator` in gateway.json is never run**
+(cloud enforces the API key instead). So those AI routes' config validator
 is effectively inert. NEVER add a must-gate route under one of those prefixes —
 its edge validator would be silently bypassed. Matching is segment-boundaried
 (`matchesAPIEndpoint`: path `== prefix` or `prefix+"/"`), so `/v1/models` does

@@ -116,18 +116,18 @@ These endpoints are fully compatible with the OpenAI API format. Point any OpenA
 
 | Method | Path | Backend | Description |
 |--------|------|---------|-------------|
-| `POST` | `/v1/chat/completions` | cloud-api:8000 | Chat completions (streaming and non-streaming) |
-| `POST` | `/v1/completions` | cloud-api:8000 | Text completions |
-| `POST` | `/v1/messages` | cloud-api:8000 | Anthropic Messages API compatibility |
-| `GET` | `/v1/models` | cloud-api:8000 | List available models |
-| `POST` | `/v1/embeddings` | cloud-api:8000 | Text embedding generation |
-| `POST` | `/v1/images/generations` | cloud-api:8000 | Image generation |
-| `POST` | `/v1/audio/transcriptions` | cloud-api:8000 | Audio transcription (Whisper) |
-| `POST` | `/v1/audio/speech` | cloud-api:8000 | Text-to-speech synthesis |
-| `POST` | `/v1/zap` | cloud-api:8000 | Hanzo Zap (structured extraction) |
-| `POST` | `/v1/async-invoke` | cloud-api:8000 | Async inference (long-running jobs) |
-| `GET` | `/v1/async-invoke/{id}/status` | cloud-api:8000 | Poll async job status |
-| `GET` | `/v1/async-invoke/{id}` | cloud-api:8000 | Retrieve async job result |
+| `POST` | `/v1/chat/completions` | cloud:8000 | Chat completions (streaming and non-streaming) |
+| `POST` | `/v1/completions` | cloud:8000 | Text completions |
+| `POST` | `/v1/messages` | cloud:8000 | Anthropic Messages API compatibility |
+| `GET` | `/v1/models` | cloud:8000 | List available models |
+| `POST` | `/v1/embeddings` | cloud:8000 | Text embedding generation |
+| `POST` | `/v1/images/generations` | cloud:8000 | Image generation |
+| `POST` | `/v1/audio/transcriptions` | cloud:8000 | Audio transcription (Whisper) |
+| `POST` | `/v1/audio/speech` | cloud:8000 | Text-to-speech synthesis |
+| `POST` | `/v1/zap` | cloud:8000 | Hanzo Zap (structured extraction) |
+| `POST` | `/v1/async-invoke` | cloud:8000 | Async inference (long-running jobs) |
+| `GET` | `/v1/async-invoke/{id}/status` | cloud:8000 | Poll async job status |
+| `GET` | `/v1/async-invoke/{id}` | cloud:8000 | Retrieve async job result |
 
 ### Platform Service Routes (`api.hanzo.ai`)
 
@@ -136,7 +136,7 @@ All platform routes are available at both `/{service}/*` and `/v1/{service}/*`.
 | Path prefix | Backend | Description |
 |-------------|---------|-------------|
 | `/auth/*` | iam:8000 | IAM, authentication, OAuth |
-| `/cloud/*` | cloud-api:8000 | Cloud API (projects, deployments) |
+| `/cloud/*` | cloud:8000 | Cloud API (projects, deployments) |
 | `/commerce/*` | commerce:8001 | Commerce (orders, payments, products) |
 | `/analytics/*` | analytics | Unified analytics and events |
 | `/billing/*` | billing | Usage metering and invoicing |
@@ -167,7 +167,7 @@ All platform routes are available at both `/{service}/*` and `/v1/{service}/*`.
 
 ## Model Routing
 
-Hanzo Gateway proxies all LLM requests through the Hanzo Cloud API (`cloud-api`), which handles model routing, load balancing, and provider selection. The gateway itself is provider-agnostic -- it forwards authenticated requests and streams responses back to the client.
+Hanzo Gateway proxies all LLM requests through the Hanzo Cloud API (`cloud`), which handles model routing, load balancing, and provider selection. The gateway itself is provider-agnostic -- it forwards authenticated requests and streams responses back to the client.
 
 ### How It Works
 
@@ -504,7 +504,7 @@ The Makefile creates a ConfigMap from the JSON file and triggers a rolling resta
       "output_encoding": "no-op",
       "backend": [{
         "url_pattern": "/api/chat/completions",
-        "host": ["http://cloud-api.hanzo.svc.cluster.local:8000"],
+        "host": ["http://cloud.hanzo.svc.cluster.local:8000"],
         "encoding": "no-op"
       }]
     }

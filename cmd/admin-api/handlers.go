@@ -29,7 +29,7 @@ type cachedID struct {
 // gate is the DATA-LAYER superadmin enforcement, independent of the ingress
 // admin-guard ForwardAuth. The predicate is the single platform fact: the
 // caller's org equals AdminOrg. Resolved from a Bearer/Basic JWT (the API path)
-// or the cloud-api first-party session cookie (the browser path). Fail-closed:
+// or the cloud first-party session cookie (the browser path). Fail-closed:
 // no superadmin identity → 403, never god-mode data.
 func (s *server) gate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +54,7 @@ func (s *server) authenticate(r *http.Request) (identity, bool) {
 		}
 		return identity{}, false // a valid non-admin token is a definitive deny
 	}
-	// (2) cloud-api session cookie → /v1/get-account.
+	// (2) cloud session cookie → /v1/get-account.
 	return s.sessionIdentity(r)
 }
 

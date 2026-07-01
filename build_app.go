@@ -63,7 +63,7 @@ type RelayDeps struct {
 //
 //   - forward.Relay(node, gate, pick): decodes each inbound Forward
 //     envelope, runs the auth gate on it (JWT validate + identity inject,
-//     NO body read, NO billing — cloud-api bills the bridged request),
+//     NO body read, NO billing — cloud bills the bridged request),
 //     re-emits the Forward with identity, and forwards to the picked peer,
 //     streaming the backend's Response back verbatim.
 //   - forward.RegisterReversePushHandler(node): routes backend→gateway
