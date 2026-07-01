@@ -221,11 +221,11 @@ func newRewriteProxy(target *url.URL, oldPrefix, newPrefix string) *httputil.Rev
 	return p
 }
 
-// defaultCloudAPIURL is the in-cluster cloud-api (HIP-0106 cloud binary)
+// defaultCloudAPIURL is the in-cluster cloud (HIP-0106 cloud binary)
 // HTTP endpoint that serves /v1/* models traffic natively.
-const defaultCloudAPIURL = "http://cloud-api.hanzo.svc.cluster.local:8000"
+const defaultCloudAPIURL = "http://cloud.hanzo.svc.cluster.local:8000"
 
-// cloudAPIURL resolves the cloud-api HTTP target. Overridable via
+// cloudAPIURL resolves the cloud HTTP target. Overridable via
 // GATEWAY_CLOUD_API_URL for operators (alternate service DNS) and tests
 // (httptest backend). Falls back to defaultCloudAPIURL when unset or
 // unparseable so a malformed override can never silently break routing.
@@ -257,10 +257,10 @@ var apiCloudHosts = map[string]bool{
 // backend based on hostname and path prefix. Supports WebSocket upgrades
 // natively via httputil.ReverseProxy.
 func hostProxyMiddleware() gin.HandlerFunc {
-	// api.hanzo.ai routes /v1/* and /zap directly to cloud-api as-is.
+	// api.hanzo.ai routes /v1/* and /zap directly to cloud as-is.
 	// Cloud-api speaks /v1/* natively (no /api/ prefix), so no path rewrite.
 	// The target is overridable via GATEWAY_CLOUD_API_URL (operator/test) and
-	// defaults to the in-cluster cloud-api service. This is the HTTP relay to
+	// defaults to the in-cluster cloud service. This is the HTTP relay to
 	// the real model backend (HIP-0106 cloud binary at :8000) — the proven
 	// completions path; the ZAP relay (build_app.go) is optional and is only
 	// needed when ingress speaks ZAP, never for HTTP serving.
@@ -287,7 +287,7 @@ func hostProxyMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Unified cloud API hosts: forward EVERY path to cloud-api, unchanged
+		// Unified cloud API hosts: forward EVERY path to cloud, unchanged
 		// (cloud speaks /v1/* natively — no rewrite). Stateless passthrough; cloud
 		// owns all routing.
 		if apiCloudHosts[host] {

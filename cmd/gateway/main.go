@@ -19,7 +19,7 @@
 //     X-User-Id, X-User-IsAdmin, X-User-Permissions) onto the envelope — and
 //     forward to the picked backend, streaming the Response back verbatim.
 //     The gate never reads the request body; billing is deferred to
-//     cloud-api's own balance gate.
+//     cloud's own balance gate.
 //  3. Route ZAP push frames from the backend back to the originating client
 //     (SSE / WebSocket) via forward's reverse-push handler.
 //
@@ -99,7 +99,7 @@ func main() {
 	// The relay is the gateway's real work: it lives on the ZAP node, not
 	// on an HTTP router. It authenticates each inbound Forward envelope,
 	// injects identity, and forwards to base/cloud over ZAP. Billing is
-	// deferred to cloud-api's own balance gate (HIP-0110). The picker dials
+	// deferred to cloud's own balance gate (HIP-0110). The picker dials
 	// backends lazily on first use (and best-effort warms them now), so an
 	// absent backend degrades only the requests routed to it, never boot.
 	pick := gateway.NewLazyPicker(zapNode, logger, cfg.BaseZAPAddr, cfg.CloudZAPAddr)
