@@ -13,7 +13,7 @@
 // math (computePermissionsBitField / permissionBits). No second copy.
 //
 // Billing is NOT enforced here. The gateway is authn + identity injection
-// only; cloud-api's own prepaid balance gate bills the bridged request.
+// only; cloud's own prepaid balance gate bills the bridged request.
 // This split is deliberate (HIP-0110): the relay must not read f.Body and
 // must not block on a per-request Commerce round-trip — it stamps identity
 // and forwards. The gate therefore touches f.Path and f.Headers only.
@@ -40,7 +40,7 @@ import (
 //   - no token      -> allow with no identity, UNLESS cfg.RequireAuth, in
 //     which case deny 401 (the edge is the authn boundary)
 //   - API key       -> allow, no JWT identity (validated downstream by the
-//     backend: cloud-api, commerce, base…)
+//     backend: cloud, commerce, base…)
 //   - invalid JWT   -> deny 401
 //   - valid JWT      -> inject identity, allow
 //
@@ -91,7 +91,7 @@ func newGate(cfg AuthConfig) forward.Gate {
 					"Authentication required"), nil
 			}
 			// No credential: forward with no edge identity. The backend
-			// applies its own policy (and cloud-api its balance gate).
+			// applies its own policy (and cloud its balance gate).
 			return nil, nil
 		}
 
