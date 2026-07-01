@@ -241,17 +241,16 @@ func cloudAPIURL() *url.URL {
 	return u
 }
 
-// apiCloudHosts are the hosts whose ENTIRE surface is the unified cloud API.
-// Both resolve to the same hanzoai/cloud binary (HIP-0106), which owns ALL
-// /v1/* routing — AI inference top-level (/v1/chat, /v1/messages, …) plus every
-// per-service control plane (/v1/cloud, /v1/iam, /v1/kms, /v1/o11y, …). The
-// gateway is a STATELESS edge: auth + ratelimit + meter already ran in the
-// upstream middleware, so for these hosts it forwards "/*" straight to cloud
-// with NO per-route allow-list. ONE routing source of truth = cloud's mount
-// table, not a second map here.
+// apiCloudHosts is the host whose ENTIRE surface is the unified cloud API.
+// ONE API host — api.hanzo.ai (no .cloud.). It resolves to the hanzoai/cloud
+// binary (HIP-0106), which owns ALL /v1/* routing — AI inference top-level
+// (/v1/chat, /v1/messages, …) plus every per-service control plane (/v1/cloud,
+// /v1/iam, /v1/kms, /v1/o11y, …). The gateway is a STATELESS edge: auth +
+// ratelimit + meter already ran in the upstream middleware, so it forwards "/*"
+// straight to cloud with NO per-route allow-list. ONE routing source of truth =
+// cloud's mount table, not a second map here.
 var apiCloudHosts = map[string]bool{
-	"api.hanzo.ai":       true,
-	"api.cloud.hanzo.ai": true,
+	"api.hanzo.ai": true,
 }
 
 // hostProxyMiddleware intercepts requests and routes them to the correct
