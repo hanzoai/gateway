@@ -11,13 +11,12 @@ spec:
   # gateway Service, which applies global IAM-JWT + rate-limit and then dispatches
   # by host/path from routes.yaml (redirects + backends). This is why the console
   # Service (console2) no longer runs its own Ingress.
-  #   api.hanzo.ai / api.cloud.hanzo.ai → cloud package (cloud-api), gated.
+  #   api.hanzo.ai → cloud package (cloud-api), gated. ONE API host — no .cloud.
   #   cloud.hanzo.ai / admin.hanzo.ai   → console2 SPA at "/" + gated /v1.
   #   console.hanzo.ai / console2.hanzo.ai → 301 → cloud.hanzo.ai (routes.yaml).
   tls:
   - hosts:
     - api.hanzo.ai
-    - api.cloud.hanzo.ai
     - cloud.hanzo.ai
     - admin.hanzo.ai
     - console.hanzo.ai
@@ -34,8 +33,6 @@ spec:
             name: gateway
             port:
               number: 8080
-  - host: api.cloud.hanzo.ai
-    http: *gateway
   - host: cloud.hanzo.ai
     http: *gateway
   - host: admin.hanzo.ai
