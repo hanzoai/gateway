@@ -27,9 +27,9 @@ redirects:
   # Legacy console hosts → the one canonical Cloud Console.
   console.hanzo.ai: https://cloud.hanzo.ai
   console2.hanzo.ai: https://cloud.hanzo.ai
-  # Legacy API alias → the one canonical gated API host. (api.cloud.hanzo.ai is
-  # NOT a redirect — it is a real route to the cloud package below, == api.hanzo.ai.)
+  # Legacy API hosts → the ONE canonical gated API host (no .cloud., no cloud-api.).
   cloud-api.hanzo.ai: https://api.hanzo.ai
+  api.cloud.hanzo.ai: https://api.hanzo.ai
   api.commerce.hanzo.ai: https://commerce.hanzo.ai/api
   admin.commerce.hanzo.ai: https://commerce.hanzo.ai/admin
   store.commerce.hanzo.ai: https://commerce.hanzo.ai/store
@@ -93,12 +93,6 @@ routes:
       backend: http://base-site.hanzo.svc.cluster.local:80
 
   # --- hanzo.ai services ---
-  # api.cloud.hanzo.ai == api.hanzo.ai — both front the one cloud package
-  # (hanzoai/cloud / cloud-api), gated by this gateway's global auth + rate-limit.
-  api.cloud.hanzo.ai:
-    - prefix: /
-      backend: http://cloud-api.hanzo.svc.cluster.local:8000
-
   # admin.hanzo.ai → the same console2 app (admin surface is host-resolved inside).
   admin.hanzo.ai:
     - prefix: /v1/
