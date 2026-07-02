@@ -1,4 +1,4 @@
-// Copyright © 2026 Hanzo AI. MIT License.
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // Per-connection memory profile for the gateway edge. Measures
 // heap-alloc growth while N concurrent HTTP/1.1 clients hold long

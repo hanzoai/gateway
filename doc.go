@@ -1,4 +1,4 @@
-// Copyright © 2026 Hanzo AI. MIT License.
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // Package gateway is the HIP-0106 unified-binary mount surface for
 // the Hanzo Gateway subsystem.

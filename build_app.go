@@ -1,4 +1,4 @@
-// Copyright © 2026 Hanzo AI. MIT License.
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // build_app.go wires the gateway edge per HIP-0110.
 //

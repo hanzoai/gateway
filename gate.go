@@ -1,4 +1,4 @@
-// Copyright © 2026 Hanzo AI. MIT License.
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // gate.go is the gateway relay's authn policy, run on every inbound
 // Forward ENVELOPE per HIP-0110. It is the edge trust boundary: the gate

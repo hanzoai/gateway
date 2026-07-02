@@ -1,0 +1,21 @@
+Hanzo Gateway
+Copyright (c) 2026 Hanzo AI, Inc.
+
+This product includes software from KrakenD Community Edition
+(https://github.com/krakendio/krakend-ce), licensed under Apache-2.0:
+
+    Copyright (c) KrakenD (krakend.io)
+
+The service-assembly source in this repository — executor.go,
+backend_factory.go, handler_factory.go, proxy_factory.go, plugin.go,
+encoding.go, and sd.go — is derived from KrakenD Community Edition and
+carries Hanzo modifications. Modified files are marked as changed.
+
+This product is built on the Lura framework
+(https://github.com/luraproject/lura), licensed under Apache-2.0:
+
+    Copyright (c) 2021 Lura Project, a Series of LF Projects, LLC
+
+Lura (github.com/luraproject/lura/v2) and the KrakenD plugin ecosystem
+(github.com/krakend/krakend-*) are imported as standard Go modules; their
+upstream copyright and license notices are retained within those modules.
