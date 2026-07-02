@@ -3,7 +3,7 @@
 package gateway
 
 import (
-	"github.com/hanzoai/zip"
+	"github.com/zap-proto/zip"
 )
 
 // gatewayMintedKey is the zip.Ctx Locals key under which gateway's auth

@@ -24,7 +24,7 @@ import (
 
 	"github.com/hanzoai/cloud"
 	"github.com/hanzoai/gateway/v2/iamauth"
-	"github.com/hanzoai/zip"
+	"github.com/zap-proto/zip"
 )
 
 // Mount registers the gateway subsystem on app per HIP-0106. The mount
