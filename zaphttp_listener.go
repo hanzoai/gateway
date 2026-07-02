@@ -23,6 +23,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 	zaphttp "github.com/zap-proto/http"
 
 	"github.com/luraproject/lura/v2/logging"
@@ -71,7 +72,9 @@ func startZapHTTPListenerOnce(logger logging.Logger, handler http.Handler) {
 			handler.ServeHTTP(rec, r)
 			logger.Info("[ZAP-WIRE]", r.Method, r.URL.Path, rec.status)
 		})
-		srv := &zaphttp.Server{Addr: addr, Handler: wrapped}
+		// zap-proto/http v0.1.0+ serves a fasthttp.RequestHandler; adapt the
+		// net/http logging wrapper (KrakenD is net/http) to it.
+		srv := &zaphttp.Server{Addr: addr, Handler: fasthttpadaptor.NewFastHTTPHandler(wrapped)}
 		defaultZapHTTPState.server.Store(srv)
 		go func() {
 			logger.Info("[SERVICE: ZAP-HTTP] Listening on", addr)
