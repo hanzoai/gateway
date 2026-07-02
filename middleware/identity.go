@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/hanzoai/zip"
+	"github.com/zap-proto/zip"
 )
 
 // StripIdentityHeaders strips client-supplied X-Org-Id / X-User-Id /
