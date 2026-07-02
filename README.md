@@ -5,7 +5,7 @@
 HTTP gateway: routing, JWT validation, identity strip + mint, rate limit, circuit break, telemetry.
 
 [![Status](https://img.shields.io/badge/status-stable-green)]()
-[![License](https://img.shields.io/badge/license-MIT-blue)]()
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)]()
 
 ## Quick start
 
@@ -70,7 +70,7 @@ High-performance API gateway for Hanzo AI services. Routes 147+ API endpoints ac
 
 [![CI](https://github.com/hanzoai/gateway/actions/workflows/deploy.yml/badge.svg)](https://github.com/hanzoai/gateway/actions/workflows/deploy.yml)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8.svg)](https://go.dev)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/hanzoai/gateway/blob/main/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/hanzoai/gateway/blob/main/LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fhanzoai%2Fgateway-2496ED.svg)](https://github.com/hanzoai/gateway/pkgs/container/gateway)
 
 ## Overview
@@ -561,4 +561,8 @@ See also:
 
 ## License
 
-MIT -- see [LICENSE](LICENSE).
+Apache-2.0 -- see [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+The service-assembly layer is derived from [KrakenD Community Edition](https://github.com/krakendio/krakend-ce)
+and built on the [Lura](https://github.com/luraproject/lura) framework, both
+Apache-2.0. Upstream attributions are preserved in [NOTICE](NOTICE).

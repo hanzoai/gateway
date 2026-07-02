@@ -1,4 +1,4 @@
-// Copyright © 2026 Hanzo AI. MIT License.
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // peer_resolver.go decouples "where a backend lives" (its ZAP address)
 // from "which connected NodeID forward.Relay must Call" (the handshake-
