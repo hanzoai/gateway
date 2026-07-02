@@ -23,8 +23,8 @@ import (
 	zaplib "github.com/luxfi/zap"
 	"github.com/luxfi/zap/forward"
 
-	"github.com/hanzoai/zip"
-	"github.com/hanzoai/zip/middleware"
+	"github.com/zap-proto/zip"
+	"github.com/zap-proto/zip/middleware"
 )
 
 // jwksTTL is the signing-key cache lifetime for the relay gate. Matches the
