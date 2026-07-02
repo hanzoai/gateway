@@ -2,17 +2,19 @@
 //
 // Validates that the koanf-based config parser used by `gateway run -c`
 // accepts the operator-emitted JSON shape (port as int) and surfaces a
-// usable error when the GATEWAY_-prefixed env override is not parseable
-// as the underlying field type.
+// usable error when a config-file env override is not parseable as the
+// underlying field type.
 //
-// Background: the runtime parser is `krakend-koanf` which loads the JSON
-// file then merges every `GATEWAY_<KEY>` env var into the same key
-// space (callback strips the prefix and lowercases). When the env value
-// fails to convert, the error message points at the JSON file path, not
-// at the env var, making misconfigurations look like a bug in the
-// operator-managed ConfigMap. These tests pin the contract end-to-end so
-// any future regression on the JSON-int -> Go-int path is caught at
-// build time.
+// Background: the runtime parser is `krakend-koanf`, which loads the JSON
+// file then merges every `KRAKEND_<KEY>` env var into the same key space
+// (callback strips the prefix and lowercases). That prefix is a hardcoded
+// const upstream — the fork's own service knobs use GATEWAY_ (read via
+// os.Getenv in cmd/gateway), but config-file key overrides flow through
+// koanf's KRAKEND_ provider. When the env value fails to convert, the
+// error message points at the JSON file path, not at the env var, making
+// misconfigurations look like a bug in the operator-managed ConfigMap.
+// These tests pin the contract end-to-end so any future regression on the
+// JSON-int -> Go-int path is caught at build time.
 
 package gateway
 
@@ -64,19 +66,19 @@ func TestPortAsJSONInt(t *testing.T) {
 }
 
 // TestPortFromEnvNumeric — operator deployments may also set
-// GATEWAY_PORT=8080 (always a string at the OS layer). The koanf env
-// provider strips the GATEWAY_ prefix, lowercases, and merges, so
-// `port` ends up as the string "8080". WeaklyTypedInput + StringToInt
+// KRAKEND_PORT=9090 (always a string at the OS layer). The koanf env
+// provider strips the KRAKEND_ prefix, lowercases, and merges, so
+// `port` ends up as the string "9090". WeaklyTypedInput + StringToInt
 // hook must convert this cleanly. Regression guard for future koanf or
 // mapstructure upgrades.
 func TestPortFromEnvNumeric(t *testing.T) {
 	path := loadConfigPath(t, minimalConfig)
 
-	t.Setenv("GATEWAY_PORT", "9090")
+	t.Setenv("KRAKEND_PORT", "9090")
 
 	cfg, err := koanf.New().Parse(path)
 	if err != nil {
-		t.Fatalf("Parse(%q) with GATEWAY_PORT=9090 failed: %v", path, err)
+		t.Fatalf("Parse(%q) with KRAKEND_PORT=9090 failed: %v", path, err)
 	}
 	if cfg.Port != 9090 {
 		t.Fatalf("Port = %d, want 9090 (env override)", cfg.Port)
@@ -84,7 +86,7 @@ func TestPortFromEnvNumeric(t *testing.T) {
 }
 
 // TestPortFromEnvNonNumeric — documents the failure mode operators can
-// trip when GATEWAY_PORT is set to a non-numeric string. The error
+// trip when KRAKEND_PORT is set to a non-numeric string. The error
 // message currently mentions the file path (because koanf attaches it
 // during Parse) but the underlying mapstructure field is `'port'`. We
 // pin both fragments so anyone reading a future error log can track it
@@ -92,11 +94,11 @@ func TestPortFromEnvNumeric(t *testing.T) {
 func TestPortFromEnvNonNumeric(t *testing.T) {
 	path := loadConfigPath(t, minimalConfig)
 
-	t.Setenv("GATEWAY_PORT", "not-a-number")
+	t.Setenv("KRAKEND_PORT", "not-a-number")
 
 	_, err := koanf.New().Parse(path)
 	if err == nil {
-		t.Fatalf("Parse(%q) with GATEWAY_PORT=not-a-number unexpectedly succeeded", path)
+		t.Fatalf("Parse(%q) with KRAKEND_PORT=not-a-number unexpectedly succeeded", path)
 	}
 	msg := err.Error()
 	for _, want := range []string{"'port'", "invalid syntax"} {
