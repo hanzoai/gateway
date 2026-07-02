@@ -93,12 +93,12 @@ routes:
       backend: http://base-site.hanzo.svc.cluster.local:80
 
   # --- hanzo.ai services ---
-  # admin.hanzo.ai → the same console2 app (admin surface is host-resolved inside).
+  # admin.hanzo.ai → the same console app (admin surface is host-resolved inside).
   admin.hanzo.ai:
     - prefix: /v1/
       backend: http://cloud.hanzo.svc.cluster.local:8000
     - prefix: /
-      backend: http://console2.hanzo.svc.cluster.local:4000
+      backend: http://console.hanzo.svc.cluster.local:4000
 
   platform.hanzo.ai:
     - prefix: /sync/
@@ -122,16 +122,16 @@ routes:
     - prefix: /
       backend: http://cloud.hanzo.svc.cluster.local:80
 
-  # Canonical Cloud Console: console2 SPA + the gated cloud /v1 on one origin.
+  # Canonical Cloud Console: console SPA + the gated cloud /v1 on one origin.
   # /v1 → cloud passes through this gateway (global IAM-JWT + rate-limit),
   # so the SPA's same-origin /v1 client is gated without any cross-origin/CORS.
   # Everything else (the Next app + its /ai,/paas,/keys,/admin server routes) →
-  # console2. (Order matters: /v1 before / — first prefix match wins.)
+  # console. (Order matters: /v1 before / — first prefix match wins.)
   cloud.hanzo.ai:
     - prefix: /v1/
       backend: http://cloud.hanzo.svc.cluster.local:8000
     - prefix: /
-      backend: http://console2.hanzo.svc.cluster.local:4000
+      backend: http://console.hanzo.svc.cluster.local:4000
 
   chat.hanzo.ai:
     - prefix: /
