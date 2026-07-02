@@ -2,10 +2,7 @@ module github.com/hanzoai/gateway/v2
 
 go 1.26.4
 
-require (
-	github.com/hanzoai/cloud v0.1.2-0.20260617162928-5a8479c516fe
-	github.com/hanzoai/zip v0.2.1
-)
+require github.com/hanzoai/cloud v0.1.2-0.20260617162928-5a8479c516fe
 
 require (
 	github.com/gin-gonic/gin v1.12.0
@@ -271,6 +268,7 @@ require (
 	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
+	github.com/zap-proto/zip v1.0.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect

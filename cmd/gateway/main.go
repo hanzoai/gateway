@@ -45,8 +45,8 @@ import (
 	zaplib "github.com/luxfi/zap"
 
 	"github.com/hanzoai/gateway/v2"
-	"github.com/hanzoai/zip"
-	"github.com/hanzoai/zip/middleware"
+	"github.com/zap-proto/zip"
+	"github.com/zap-proto/zip/middleware"
 )
 
 const (
@@ -134,13 +134,13 @@ func main() {
 	errCh := make(chan error, 2)
 	go func() {
 		logger.Info("public listener up", "addr", cfg.Listen)
-		if err := app.Listen(cfg.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := app.Listen("http://" + cfg.Listen); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("public listen: %w", err)
 		}
 	}()
 	go func() {
 		logger.Info("health listener up", "addr", cfg.HealthListen)
-		if err := health.Listen(cfg.HealthListen); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := health.Listen("http://" + cfg.HealthListen); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errCh <- fmt.Errorf("health listen: %w", err)
 		}
 	}()

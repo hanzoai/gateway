@@ -1,6 +1,6 @@
 // Package middleware ships gateway-owned middleware for the zip web
 // framework. JWT validation + identity-header stripping live here (and
-// NOT in github.com/hanzoai/zip/middleware) because they are the
+// NOT in github.com/zap-proto/zip/middleware) because they are the
 // gateway subsystem's responsibility per HIP-0106.
 //
 // Other subsystems mounted inside the unified cloud binary trust the
@@ -13,7 +13,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/hanzoai/zip"
+	"github.com/zap-proto/zip"
 
 	gateway "github.com/hanzoai/gateway/v2"
 )
