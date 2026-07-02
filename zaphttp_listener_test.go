@@ -6,10 +6,10 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"strings"
 	"testing"
 	"time"
 
+	"github.com/valyala/fasthttp"
 	zaphttp "github.com/zap-proto/http"
 
 	"github.com/luraproject/lura/v2/logging"
@@ -105,32 +105,40 @@ func TestZapHTTPListener_ServesSameHandler(t *testing.T) {
 	startZapHTTPListenerOnce(logging.NoOp, handler)
 	waitForTCP(t, addr, 2*time.Second)
 
-	body := strings.NewReader(`{"hello":"world"}`)
-	req, err := http.NewRequest(http.MethodPost, "http://"+addr+"/v1/iam/whoami", body)
-	if err != nil {
-		t.Fatalf("NewRequest: %v", err)
-	}
+	// zap-proto/http exposes a fasthttp-style client: Transport.Do fills a
+	// fasthttp.Response from a fasthttp.Request, framed over ZAP-HTTP. This
+	// is the on-the-wire equivalent of the plain-HTTP request the handler
+	// would otherwise receive.
+	tr := zaphttp.NewTransport(addr)
+	defer tr.CloseIdleConnections()
+
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+	resp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(resp)
+
+	req.Header.SetMethod(fasthttp.MethodPost)
+	req.SetRequestURI("/v1/iam/whoami")
 	req.Header.Set("Authorization", "Bearer eyJhbGciOi...")
+	req.SetBodyString(`{"hello":"world"}`)
 
-	resp, err := zaphttp.NewTransport(addr).RoundTrip(req)
-	if err != nil {
-		t.Fatalf("RoundTrip: %v", err)
+	if err := tr.Do(req, resp); err != nil {
+		t.Fatalf("Do: %v", err)
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status=%d want 200", resp.StatusCode)
+	if resp.StatusCode() != fasthttp.StatusOK {
+		t.Fatalf("status=%d want 200", resp.StatusCode())
 	}
-	got, _ := io.ReadAll(resp.Body)
+	got := resp.Body()
 	want := `method=POST path=/v1/iam/whoami auth=Bearer eyJhbGciOi... body={"hello":"world"}`
 	if string(got) != want {
 		t.Errorf("body=%q\nwant=%q", string(got), want)
 	}
-	if resp.Header.Get("X-Echo-Method") != http.MethodPost {
-		t.Errorf("X-Echo-Method=%q want POST", resp.Header.Get("X-Echo-Method"))
+	if m := string(resp.Header.Peek("X-Echo-Method")); m != http.MethodPost {
+		t.Errorf("X-Echo-Method=%q want POST", m)
 	}
-	if resp.Header.Get("X-Echo-Path") != "/v1/iam/whoami" {
-		t.Errorf("X-Echo-Path=%q want /v1/iam/whoami", resp.Header.Get("X-Echo-Path"))
+	if p := string(resp.Header.Peek("X-Echo-Path")); p != "/v1/iam/whoami" {
+		t.Errorf("X-Echo-Path=%q want /v1/iam/whoami", p)
 	}
 }
 

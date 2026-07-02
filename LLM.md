@@ -265,3 +265,47 @@ oauth are left ungated. K8s secrets: `admin-guard-secrets`
 Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
 expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
 NOT GHA.
+
+## Test workflow green (fix/gateway-test-ci)
+
+`.github/workflows/test.yml` was red on every commit while `Build and Deploy`
+stayed green, because the test jobs ran go tooling directly on the
+`hanzo-build-linux-amd64` runner without the environment the Dockerfile builder
+provides. Root causes and fixes:
+
+- Module auth: `go vet`/`go test` fell through to `direct` for private
+  first-party modules (`hanzoai/cloud`, `zap-proto/*`) and died on
+  `git ls-remote ... exit 128` — no git credential. Fixed by mirroring the
+  Dockerfile module env (`GOPRIVATE=zap-proto/*`, `GONOSUMDB=zap-proto/*`,
+  `GOSUMDB=off`, `GOPROXY=proxy,direct`, `GOFLAGS=-mod=mod`) plus a per-job
+  `git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf`
+  step — same GH_PAT the deploy Dockerfile secret uses, same pattern as
+  `hanzoai/ingress` CI.
+- `make: command not found` (127): the runner ships go (setup-go) but not
+  make/wget. `make build` is replaced with a direct `go build -tags legacy`,
+  reading `VERSION` from the Makefile and stamping `lura/v2/core.KrakendVersion`
+  (the User-Agent the integration fixtures assert). The schema wget is dropped —
+  `gateway check` runs fine with the empty embedded schema (`main_legacy.go`
+  already falls back when `schema/schema.json` is absent).
+
+Two tests were compile-/assert-broken and had been masked because go-tests
+never ran (it `needs: go-vet`, which died at module fetch):
+
+- `zaphttp_listener_test.go` called the removed net/http `Transport.RoundTrip`;
+  `zap-proto/http@v0.1.0` is now a fasthttp-style client. Round-trip rewritten to
+  `Transport.Do(*fasthttp.Request, *fasthttp.Response)`. fasthttp promoted to a
+  direct require in go.mod (it already backed `fasthttpadaptor` in
+  `zaphttp_listener.go`); go.sum untouched.
+- `config_loader_test.go` asserted a `GATEWAY_PORT` koanf override, but upstream
+  `krakend-koanf` hardcodes the `KRAKEND_` env prefix (a const, not
+  configurable). Corrected to `KRAKEND_PORT`. The fork's own service knobs
+  (`GATEWAY_LISTEN`, `GATEWAY_SHUTDOWN_TIMEOUT`) use GATEWAY_ via direct
+  os.Getenv — a separate mechanism from koanf config-file key overrides.
+
+Integration divergences (tracked, not fixed here): 12 of 58 lura fixtures in
+`tests/` exercise upstream KrakenD behaviour this edge fork diverges from and are
+`-skip`'d in CI — `cors_1..5` (fork ships its own CORS preflight, not
+`security/cors`), `backend_404`, `cel-1`, `cel-2`, `lua_2`, `router_redirect`,
+`integration_jsonschema`, `negotitate_plain`. 46 integration cases + every unit
+package still gate CI. Re-enable per fixture as the edge binary grows the
+matching component.
