@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // Package gateway — base_ha backend upstream.
 //
 // Implements the `base_ha` upstream kind for Hanzo Base HA clusters
