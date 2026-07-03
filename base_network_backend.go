@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // Package gateway — base-network backend upstream.
 //
 // Implements `base-network://<service>` routing for base/network-enabled
