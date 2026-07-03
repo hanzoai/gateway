@@ -77,16 +77,10 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 
 	// Panic recovery — must run FIRST so any downstream panic returns 500
 	// with CORS headers instead of crashing the connection (502 at ingress).
-	engine.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
-		// Ensure CORS headers so browser sees the error (not a CORS failure)
-		if origin := c.GetHeader("Origin"); origin != "" {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Credentials", "true")
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
-	}))
+	// CORS on the error path is gated by the SAME credentialed-origin allowlist
+	// as the happy path (newCORSOriginAllower, shared with
+	// corsPreflightMiddleware in routes.go).
+	engine.Use(gin.CustomRecovery(corsRecoveryHandler(newCORSOriginAllower())))
 
 	// Branding: wrap the response writer so any residual upstream-SDK-emitted
 	// "X-KRAKEND*" headers are rewritten to our Hanzo-branded equivalents
