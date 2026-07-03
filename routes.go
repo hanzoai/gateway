@@ -324,36 +324,75 @@ func hostProxyMiddleware() gin.HandlerFunc {
 	}
 }
 
-// corsPreflightMiddleware handles OPTIONS preflight requests globally.
-// Must run before any gateway routing to prevent 405/503 on preflight.
-func corsPreflightMiddleware() gin.HandlerFunc {
-	// Exact-match origins. Localhost defaults are baked in for dev; extra
-	// fully-qualified origins (scheme+host[:port]) may be supplied via the
-	// GATEWAY_CORS_ORIGINS env var (comma-separated).
+// newCORSOriginAllower builds the gateway's single credentialed-CORS origin
+// predicate. An origin may be reflected into Access-Control-Allow-Origin
+// alongside Access-Control-Allow-Credentials:true iff it EITHER exact-matches a
+// dev/env origin (the baked-in localhost defaults plus any fully-qualified
+// scheme+host[:port] supplied via GATEWAY_CORS_ORIGINS, comma-separated) OR its
+// hostname suffix-matches a baked-in brand domain (defaultAllowedOrigins — the
+// SAME set the widget security middleware uses — including subdomains, so a
+// browser SPA like https://cowork.hanzo.ai is allowed with no per-origin env).
+//
+// This is the ONE definition of the credentialed-CORS allowlist (DRY). Every
+// site that reflects an Origin with credentials MUST gate on this predicate:
+// the preflight middleware (corsPreflightMiddleware) AND the legacy engine's
+// panic-recovery handler (corsRecoveryHandler in krakend_engine.go). That
+// invariant is what stops a 5xx error path from widening the policy into a
+// wildcard-reflect-with-credentials primitive (Great-Audit F3). The predicate
+// reads the environment once at construction, mirroring the middleware.
+func newCORSOriginAllower() func(origin string) bool {
 	origins := map[string]bool{
 		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
 	}
 	if extra := os.Getenv("GATEWAY_CORS_ORIGINS"); extra != "" {
 		for _, o := range strings.Split(extra, ",") {
-			o = strings.TrimSpace(o)
-			if o != "" {
+			if o = strings.TrimSpace(o); o != "" {
 				origins[o] = true
 			}
 		}
 	}
-	// Brand allowlist — the SAME baked-in set the widget security middleware
-	// uses (defaultAllowedOrigins). Built once. Every Hanzo/Lux/Zoo/Pars
-	// property (and its subdomains) is allowed by hostname suffix-match, so a
-	// browser SPA like https://cowork.hanzo.ai gets its AI preflight answered
-	// without any per-origin env config. One allowlist source (DRY).
 	brandOrigins := widgetAllowedOrigins(defaultAllowedOrigins())
-	originAllowed := func(origin string) bool {
+	return func(origin string) bool {
 		if origins[origin] {
 			return true
 		}
 		return isAllowedOrigin(extractOriginHost(origin), brandOrigins)
 	}
+}
+
+// corsRecoveryHandler is the gateway's panic-recovery CORS shaper: a downstream
+// panic returns a 500 (never a dropped connection / 502 at ingress) and — on
+// the SAME allowlist as the happy path (originAllowed, from
+// newCORSOriginAllower) — reflects the request Origin with
+// Access-Control-Allow-Credentials ONLY for an allowlisted Origin. A
+// non-allowlisted or absent Origin gets NO CORS headers, so a 5xx can never
+// become a wildcard-reflect-with-credentials primitive that would let any site
+// make credentialed cross-origin reads against a session on the error path
+// (Great-Audit F3). Vary:Origin is set whenever the response is
+// origin-dependent so shared caches never serve one origin's ACAO to another.
+//
+// It lives here beside corsPreflightMiddleware — routes.go owns the ONE CORS
+// policy (default build) — and is wired by the legacy engine via
+// gin.CustomRecovery (krakend_engine.go), the same way that engine consumes
+// corsPreflightMiddleware / hostProxyMiddleware from this file.
+func corsRecoveryHandler(originAllowed func(string) bool) gin.RecoveryFunc {
+	return func(c *gin.Context, _ any) {
+		if origin := c.GetHeader("Origin"); origin != "" && originAllowed(origin) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Access-Control-Allow-Credentials", "true")
+			c.Header("Vary", "Origin")
+		}
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": "internal server error",
+		})
+	}
+}
+
+// corsPreflightMiddleware handles OPTIONS preflight requests globally.
+// Must run before any gateway routing to prevent 405/503 on preflight.
+func corsPreflightMiddleware() gin.HandlerFunc {
+	originAllowed := newCORSOriginAllower()
 	return func(c *gin.Context) {
 		origin := c.GetHeader("Origin")
 		if origin == "" || !originAllowed(origin) {
