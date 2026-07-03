@@ -84,9 +84,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -144,9 +144,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -386,9 +386,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -438,9 +438,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -490,9 +490,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -542,9 +542,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -594,9 +594,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -640,9 +640,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -686,9 +686,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -746,9 +746,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -806,9 +806,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -866,9 +866,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -926,9 +926,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1124,9 +1124,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1170,9 +1170,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1216,9 +1216,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1262,9 +1262,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1308,9 +1308,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1354,9 +1354,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1400,9 +1400,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1446,9 +1446,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1489,9 +1489,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1544,9 +1544,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1587,9 +1587,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1639,9 +1639,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1691,9 +1691,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1743,9 +1743,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1798,9 +1798,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1844,9 +1844,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1890,9 +1890,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1936,9 +1936,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -1982,9 +1982,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2034,9 +2034,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2086,9 +2086,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2138,9 +2138,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2190,9 +2190,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2242,9 +2242,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2294,9 +2294,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2346,9 +2346,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2398,9 +2398,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2444,9 +2444,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2490,9 +2490,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2536,9 +2536,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2582,9 +2582,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2628,9 +2628,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2674,9 +2674,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2720,9 +2720,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2766,9 +2766,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2812,9 +2812,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2858,9 +2858,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2904,9 +2904,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2950,9 +2950,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -2996,9 +2996,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3042,9 +3042,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3088,9 +3088,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3134,9 +3134,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3180,9 +3180,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3226,9 +3226,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3272,9 +3272,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3318,9 +3318,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3364,9 +3364,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3410,9 +3410,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3456,9 +3456,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3502,9 +3502,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3548,9 +3548,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3594,9 +3594,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3640,9 +3640,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3686,9 +3686,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3732,9 +3732,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3778,9 +3778,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3824,9 +3824,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3870,9 +3870,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3922,9 +3922,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -3974,9 +3974,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4026,9 +4026,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4078,9 +4078,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4130,9 +4130,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4182,9 +4182,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4234,9 +4234,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4286,9 +4286,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4338,9 +4338,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4390,9 +4390,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4436,9 +4436,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4482,9 +4482,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4528,9 +4528,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4574,9 +4574,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4626,9 +4626,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4678,9 +4678,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4730,9 +4730,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4782,9 +4782,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4828,9 +4828,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4874,9 +4874,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4920,9 +4920,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -4966,9 +4966,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5048,9 +5048,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5100,9 +5100,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5152,9 +5152,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5234,9 +5234,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5286,9 +5286,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5338,9 +5338,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5384,9 +5384,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5430,9 +5430,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5476,9 +5476,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5522,9 +5522,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5568,9 +5568,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5614,9 +5614,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5660,9 +5660,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5706,9 +5706,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5752,9 +5752,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5798,9 +5798,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5844,9 +5844,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5890,9 +5890,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5937,9 +5937,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -5984,9 +5984,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6030,9 +6030,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6076,9 +6076,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6122,9 +6122,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6168,9 +6168,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6214,9 +6214,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6260,9 +6260,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6306,9 +6306,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6352,9 +6352,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6398,9 +6398,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6444,9 +6444,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6490,9 +6490,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6536,9 +6536,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6582,9 +6582,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6628,9 +6628,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6674,9 +6674,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6720,9 +6720,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6766,9 +6766,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6812,9 +6812,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6858,9 +6858,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6904,9 +6904,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6950,9 +6950,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -6996,9 +6996,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7042,9 +7042,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7088,9 +7088,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7134,9 +7134,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7180,9 +7180,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7226,9 +7226,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7272,9 +7272,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7318,9 +7318,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7364,9 +7364,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7410,9 +7410,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7456,9 +7456,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7502,9 +7502,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7548,9 +7548,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7594,9 +7594,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7640,9 +7640,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7686,9 +7686,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7732,9 +7732,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7778,9 +7778,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7824,9 +7824,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7870,9 +7870,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7916,9 +7916,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -7962,9 +7962,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8008,9 +8008,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8054,9 +8054,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8100,9 +8100,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8146,9 +8146,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8192,9 +8192,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8238,9 +8238,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8356,9 +8356,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8402,9 +8402,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8448,9 +8448,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8494,9 +8494,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8540,9 +8540,9 @@
    "extra_config": {
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8590,9 +8590,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8702,9 +8702,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8754,9 +8754,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8836,9 +8836,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8888,9 +8888,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8940,9 +8940,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -8992,9 +8992,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9074,9 +9074,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9126,9 +9126,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9178,9 +9178,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9230,9 +9230,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9282,9 +9282,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9334,9 +9334,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9386,9 +9386,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9438,9 +9438,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9490,9 +9490,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9542,9 +9542,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9594,9 +9594,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9646,9 +9646,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9698,9 +9698,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9750,9 +9750,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9802,9 +9802,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9854,9 +9854,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -9906,9 +9906,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10018,9 +10018,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10070,9 +10070,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10122,9 +10122,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10174,9 +10174,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10226,9 +10226,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10278,9 +10278,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10330,9 +10330,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10382,9 +10382,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10434,9 +10434,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10486,9 +10486,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10538,9 +10538,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
@@ -10590,9 +10590,9 @@
     },
     "auth/validator": {
      "alg": "RS256",
-     "jwk_url": "https://hanzo.id/.well-known/jwks",
+     "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
      "issuer": "https://hanzo.id",
-     "disable_jwk_security": false,
+     "disable_jwk_security": true,
      "propagate_claims": [
       [
        "sub",
