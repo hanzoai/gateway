@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // Package tests implements utility functions to help with API Gateway testing.
 package tests
 
