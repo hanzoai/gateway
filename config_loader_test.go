@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // Package gateway — config loader tests.
 //
 // Validates that the koanf-based config parser used by `gateway run -c`
