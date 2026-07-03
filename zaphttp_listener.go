@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // ZAP-HTTP listener — serves the same fully-wrapped handler chain as the
 // HTTP listener, but over the github.com/zap-proto/http binary protocol.
 //

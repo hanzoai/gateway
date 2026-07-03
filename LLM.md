@@ -8,9 +8,55 @@ Go module: github.com/hanzoai/gateway
 
 ## Build & Run
 ```bash
-go build ./...
+go build ./...                    # default — KrakenD-free, ships the image
+go build -tags legacy ./...       # legacy  — full Lura/KrakenD engine
 go test ./...
 ```
+
+## Framework Ownership — Lura/KrakenD is `legacy`-gated (#29)
+
+The gateway owns its module path (`github.com/hanzoai/gateway/v2`) and its
+default build is **KrakenD-free**. The upstream Lura/KrakenD framework
+(`github.com/luraproject/lura/v2` + `github.com/krakend/*`) is quarantined
+behind the `legacy` build tag and never reaches `go build ./...` or the shipping
+`ghcr.io/hanzoai/gateway` image. Verify:
+
+```
+go list -deps ./cmd/gateway              | grep -c 'krakend\|lura'   # -> 0
+go list -tags legacy -deps ./cmd/gateway | grep -c 'krakend\|lura'   # -> 105
+```
+
+| Build | Command | Lura/KrakenD pkgs | What ships |
+|-------|---------|-------------------|------------|
+| **default** | `go build ./...` | **0** | HIP-0110 ZAP relay + pure reverse-proxy router (`routes.go`, `mount.go`, `build_app.go`, `gate.go`, `auth_middleware.go`) |
+| **legacy** | `go build -tags legacy ./...` | 105 | full Lura/KrakenD gin engine (`krakend_engine.go` + factories) |
+
+Ownership boundary:
+
+| Dependency | Module path | Ownership | Reaches default build? |
+|-----------|-------------|-----------|------------------------|
+| gateway | `github.com/hanzoai/gateway/v2` | **fork — ours, own path** | yes (whole module) |
+| Lura core | `github.com/luraproject/lura/v2` | upstream, pinned | **no** — `legacy`-only |
+| krakend-* (24 pkgs) | `github.com/krakend/*` | upstream, pinned | **no** — `legacy`-only |
+| ZAP edge | `github.com/zap-proto/http`, `github.com/luxfi/zap` | ours/fork | yes (default relay) |
+
+`legacy`-gated files (every lura/krakend importer): `backend_factory`,
+`base_ha_backend`, `base_network_backend`, `encoding`, `executor`,
+`handler_factory`, `plugin`, `proxy_factory`, `rebrand`, `sd`, `zap_backend`,
+`zaphttp_listener`, `krakend_engine` (+ their `_test.go`), the `tests/` Lura
+integration harness, `cmd/gateway-integration`, and
+`cmd/gateway/{main_legacy,rebrand}.go`. The default routing/auth/mount/ZAP-relay
+surface already imports zero krakend/lura.
+
+**Branding**: user-visible KrakenD strings — HTTP (`X-KRAKEND`→`X-Powered-By`,
+backend `User-Agent`→`hanzoai/gateway`) in `rebrand.go`, and the cobra CLI tree
+in `cmd/gateway/rebrand.go` — are scrubbed only in the legacy engine. The
+default build emits no KrakenD strings because it contains no KrakenD.
+
+**Phase-C end state**: when the cloud binary's `gateway.Mount` is the sole edge,
+the entire `legacy` set is deleted and the upstream Lura/KrakenD dependency drops
+out of `go.mod`. Until then it stays compilable under `-tags legacy` for rollout
+safety. Forwards-only: never add a lura/krakend import to a non-`legacy` file.
 
 ## Structure
 ```
@@ -129,7 +175,7 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
   enforced at the Go edge instead (see "Edge auth — landmines").
 
 **GOTCHA — `hostProxyMiddleware` validator bypass**: for host `api.hanzo.ai`,
-any path whose prefix is in `apiHanzoAIEndpoints` (`router_engine.go`:
+any path whose prefix is in `apiHanzoAIEndpoints` (`routes.go`:
 `/v1/chat`, `/v1/completions`, `/v1/messages`, `/v1/models`, `/v1/embeddings`,
 `/v1/images`, `/v1/audio`, `/v1/zap`, `/zap`) is reverse-proxied straight to
 cloud and **the per-route `auth/validator` in gateway.json is never run**

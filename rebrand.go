@@ -1,3 +1,6 @@
+//go:build legacy
+// +build legacy
+
 // Package gateway rebrands every user-visible Lura/KrakenD identifier so that
 // nothing a client or backend sees contains the string "krakend" or "KrakenD".
 //
