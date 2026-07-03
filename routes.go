@@ -1,7 +1,20 @@
+// Copyright © 2026 Hanzo AI. MIT License.
+
+// routes.go is the gateway's pure host/path reverse-proxy routing table and
+// CORS preflight — stdlib + gin + yaml, with ZERO dependency on the upstream
+// Lura/KrakenD SDK. It is the default-build routing surface: the HIP-0110
+// trust-boundary mount (mount.go) loads this table via LoadRoutesFromFile so
+// any path not owned by a co-resident subsystem is proxied to its configured
+// backend, and the standalone binary shares the same table.
+//
+// The legacy Lura/KrakenD gin-engine builder (NewEngine) that also consumed
+// this table used to live alongside it in router_engine.go; it now sits behind
+// the `legacy` build tag in krakend_engine.go so the upstream KrakenD graph
+// stays out of the default build and the shipping image (see that file's
+// header for the full rationale).
 package gateway
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httputil"
@@ -13,23 +26,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
-
-	botdetector "github.com/krakend/krakend-botdetector/v2/gin"
-	httpsecure "github.com/krakend/krakend-httpsecure/v2/gin"
-	lua "github.com/krakend/krakend-lua/v2/router/gin"
-	opencensus "github.com/krakend/krakend-opencensus/v2/router/gin"
-	"github.com/luraproject/lura/v2/config"
-	"github.com/luraproject/lura/v2/core"
-	luragin "github.com/luraproject/lura/v2/router/gin"
-	"github.com/luraproject/lura/v2/transport/http/server"
 )
 
 // RoutesConfig is the YAML structure for gateway routing.
 // Loaded from KMS (GATEWAY_ROUTES_KMS_PATH) or local file (GATEWAY_ROUTES_FILE).
 type RoutesConfig struct {
-	Redirects  map[string]string              `yaml:"redirects" json:"redirects"`
-	Routes     map[string][]RouteEntry        `yaml:"routes" json:"routes"`
-	Subdomains map[string]string              `yaml:"subdomains" json:"subdomains"`
+	Redirects  map[string]string       `yaml:"redirects" json:"redirects"`
+	Routes     map[string][]RouteEntry `yaml:"routes" json:"routes"`
+	Subdomains map[string]string       `yaml:"subdomains" json:"subdomains"`
 }
 
 // RouteEntry maps a path prefix to a backend URL.
@@ -53,10 +57,10 @@ type compiledRoute struct {
 
 // routeTable holds the compiled routing state. Thread-safe for hot-reload.
 type routeTable struct {
-	mu            sync.RWMutex
-	exactRoutes   map[string][]compiledRoute
-	redirects     map[string]string
-	subProxies    []struct {
+	mu          sync.RWMutex
+	exactRoutes map[string][]compiledRoute
+	redirects   map[string]string
+	subProxies  []struct {
 		pattern string
 		proxy   *httputil.ReverseProxy
 	}
@@ -318,129 +322,6 @@ func hostProxyMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-// NewEngine creates a new gin engine with middlewares and routing.
-func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
-	// Inject disable_health into the service config JSON so lura's NewEngine
-	// Must modify the raw JSON bytes because lura parses ExtraConfig from JSON,
-	// not from the map.
-	if cfg.ExtraConfig == nil {
-		cfg.ExtraConfig = map[string]interface{}{}
-	}
-	cfg.ExtraConfig[luragin.Namespace] = map[string]interface{}{
-		"disable_health": true,
-	}
-	engine := luragin.NewEngine(cfg, opt)
-
-	// Disable gin's case-insensitive path redirect — triggers a panic in gin 1.9.1
-	// when routes have mixed static/param nodes (e.g., /v1/ats/assets/:id/quote).
-	// See: https://github.com/gin-gonic/gin/issues/3348
-	engine.RedirectFixedPath = false
-
-	// Load routes from config (KMS or file).
-	if err := loadRoutesFromEnv(); err != nil {
-		opt.Logger.Warning("[SERVICE: Gateway] Failed to load routes:", err)
-		opt.Logger.Warning("[SERVICE: Gateway] No host routing will be available")
-	}
-
-	// Register /healthz directly. Lura's built-in health is disabled
-	// (disable_health: true) to avoid duplicate-route panics, so we must
-	// provide the platform-standard health endpoint.
-	engine.GET("/healthz", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
-
-	// Panic recovery — must run FIRST so any downstream panic returns 500
-	// with CORS headers instead of crashing the connection (502 at ingress).
-	engine.Use(gin.CustomRecovery(func(c *gin.Context, recovered any) {
-		// Ensure CORS headers so browser sees the error (not a CORS failure)
-		if origin := c.GetHeader("Origin"); origin != "" {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Credentials", "true")
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
-	}))
-
-	// Branding: wrap the response writer so any residual upstream-SDK-emitted
-	// "X-KRAKEND*" headers are rewritten to our Hanzo-branded equivalents
-	// before the response reaches the client. Must run right after recovery
-	// so the wrapped writer is in place for every downstream handler.
-	engine.Use(BrandingMiddleware())
-
-	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
-	// returns 405/503 for OPTIONS on gateway-managed endpoints otherwise.
-	engine.Use(corsPreflightMiddleware())
-	engine.Use(NewAuthMiddleware(DefaultAuthConfig()))
-	engine.Use(NewWidgetSecurityMiddleware(DefaultWidgetSecurityConfig()))
-	engine.Use(hostProxyMiddleware())
-
-	engine.NoRoute(func(c *gin.Context) {
-		if c.IsAborted() {
-			return
-		}
-		opencensus.HandlerFunc(&config.EndpointConfig{Endpoint: "NoRoute"}, defaultHandler, nil)(c)
-	})
-	engine.NoMethod(opencensus.HandlerFunc(&config.EndpointConfig{Endpoint: "NoMethod"}, defaultHandler, nil))
-
-	if v, ok := cfg.ExtraConfig[luragin.Namespace]; ok && v != nil {
-		var ginOpts ginOptions
-		if b, err := json.Marshal(v); err == nil {
-			json.Unmarshal(b, &ginOpts)
-		}
-		if ginOpts.ErrorBody.Err404 != nil {
-			engine.NoRoute(func(c *gin.Context) {
-				if c.IsAborted() {
-					return
-				}
-				opencensus.HandlerFunc(&config.EndpointConfig{Endpoint: "NoRoute"}, jsonHandler(404, ginOpts.ErrorBody.Err404), nil)(c)
-			})
-		}
-		if ginOpts.ErrorBody.Err405 != nil {
-			engine.NoMethod(opencensus.HandlerFunc(&config.EndpointConfig{Endpoint: "NoMethod"}, jsonHandler(405, ginOpts.ErrorBody.Err405), nil))
-		}
-	}
-
-	logPrefix := "[SERVICE: Gin]"
-	if err := httpsecure.Register(cfg.ExtraConfig, engine); err != nil && err != httpsecure.ErrNoConfig {
-		opt.Logger.Warning(logPrefix+"[HTTPsecure]", err)
-	} else if err == nil {
-		opt.Logger.Debug(logPrefix + "[HTTPsecure] Successfully loaded module")
-	}
-
-	lua.Register(opt.Logger, cfg.ExtraConfig, engine)
-	botdetector.Register(cfg, opt.Logger, engine)
-
-	return engine
-}
-
-func defaultHandler(c *gin.Context) {
-	// BrandingMiddleware rewrites any X-KRAKEND* headers emitted upstream.
-	// We set the canonical Hanzo headers directly so there is no leak.
-	c.Header(PoweredByHeader, fmt.Sprintf("%s Version %s", BrandName, core.KrakendVersion))
-	c.Header(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
-}
-
-func jsonHandler(status int, v interface{}) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		defaultHandler(c)
-		c.JSON(status, v)
-	}
-}
-
-type engineFactory struct{}
-
-func (engineFactory) NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
-	return NewEngine(cfg, opt)
-}
-
-type ginOptions struct {
-	ErrorBody struct {
-		Err404 interface{} `json:"404"`
-		Err405 interface{} `json:"405"`
-	} `json:"error_body"`
 }
 
 // corsPreflightMiddleware handles OPTIONS preflight requests globally.
