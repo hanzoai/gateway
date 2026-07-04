@@ -14,17 +14,63 @@ permissions:
   id-token: write
 
 jobs:
+  # ONE build for ALL THREE images this repo ships. Previously only the gateway
+  # image was built here, leaving ghcr.io/hanzoai/admin-guard and
+  # ghcr.io/hanzoai/admin-api stale (merged fixes could never deploy). The
+  # matrix decomplects that: each leg builds+pushes one image from its own
+  # Dockerfile against the repo-root context (every Dockerfile does `COPY . /app`
+  # then `go build ./cmd/<x>`, so context MUST be `.`).
+  #
   # Inline build (not the shared reusable workflow): the gateway pulls private
   # cross-repo Go modules (hanzoai/cloud, hanzoai/zip, luxfi/*) that need an
   # authenticated git token at build time. Resolving secrets.GH_PAT in THIS
   # repo's own job context (org secret, ALL visibility) is reliable; the same
   # reference through a reusable workflow's `secrets: inherit` resolves empty.
+  #
+  # TAG SCHEME — per image, and deliberately NOT uniform:
+  #   * gateway keeps its established scheme: `sha-<short>-amd64` on every push
+  #     PLUS `type=ref,event=tag` so a `vX.Y.Z` git tag yields the clean-semver
+  #     image the universe image-update receiver requires.
+  #   * admin-guard / admin-api are `sha-<short>` ONLY. Two hard reasons:
+  #       1. The shared `tags: ['v*']` trigger is single-namespace. If these
+  #          images also carried `type=ref,event=tag`, a gateway `v2.x` release
+  #          tag would ALSO stamp admin-guard:v2.x / admin-api:v2.x — a
+  #          cross-image mis-tag (they live on v0.1.x / 0.1.x series).
+  #       2. The universe image-update receiver rejects `sha-*` / suffixed /
+  #          mutable tags and pins clean semver only, so a sha dispatch for these
+  #          would be refused anyway.
+  #     They deploy via their operator CR (infra/k8s/operator/crs/*) pinning the
+  #     `sha-<short>` tag this build publishes — the one and only way they ship.
   docker:
     runs-on: hanzo-build-linux-amd64
     permissions:
       contents: read
       packages: write
       id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gateway
+            image: ghcr.io/hanzoai/gateway
+            dockerfile: ./Dockerfile
+            build-args: |
+              GO_EXPERIMENT=jsonv2
+            tags: |
+              type=sha,prefix=sha-,suffix=-amd64,format=short
+              type=ref,event=tag
+          - name: admin-guard
+            image: ghcr.io/hanzoai/admin-guard
+            dockerfile: ./cmd/admin-guard/Dockerfile
+            build-args: ""
+            tags: |
+              type=sha,prefix=sha-,format=short
+          - name: admin-api
+            image: ghcr.io/hanzoai/admin-api
+            dockerfile: ./cmd/admin-api/Dockerfile
+            build-args: ""
+            tags: |
+              type=sha,prefix=sha-,format=short
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -37,32 +83,39 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # GH_PAT carries org write:packages, so THIS repo can push the
+          # pre-existing admin-guard / admin-api packages it does not own —
+          # GITHUB_TOKEN only grants write to the gateway package linked to this
+          # repo (hence the 403 those two legs hit on GITHUB_TOKEN). Falls back
+          # to GITHUB_TOKEN when GH_PAT is absent. Same idiom as console/console2
+          # and the gh_token build-secret below (one way).
+          password: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
       - name: Metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/hanzoai/gateway
-          tags: |
-            type=sha,prefix=sha-,suffix=-amd64,format=short
-            type=ref,event=tag
+          images: ${{ matrix.image }}
+          tags: ${{ matrix.tags }}
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          build-args: |
-            GO_EXPERIMENT=jsonv2
+          build-args: ${{ matrix.build-args }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           push: true
           provenance: false
-          cache-from: type=gha,scope=gateway-amd64
-          cache-to: type=gha,scope=gateway-amd64,mode=max
+          cache-from: type=gha,scope=${{ matrix.name }}-amd64
+          cache-to: type=gha,scope=${{ matrix.name }}-amd64,mode=max
           secrets: |
             gh_token=${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
+  # Auto-deploy dispatch is GATEWAY-ONLY: the universe image-update receiver pins
+  # clean semver, which only the gateway leg produces (via type=ref,event=tag on
+  # a vX.Y.Z push). admin-guard/admin-api ship by operator-CR pin of their
+  # sha-<short> tag (see the docker job comment) — no dispatch for them by design.
   dispatch-to-universe:
     needs: docker
     runs-on: hanzo-build-linux-amd64
