@@ -83,7 +83,13 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # GH_PAT carries org write:packages, so THIS repo can push the
+          # pre-existing admin-guard / admin-api packages it does not own —
+          # GITHUB_TOKEN only grants write to the gateway package linked to this
+          # repo (hence the 403 those two legs hit on GITHUB_TOKEN). Falls back
+          # to GITHUB_TOKEN when GH_PAT is absent. Same idiom as console/console2
+          # and the gh_token build-secret below (one way).
+          password: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
       - name: Metadata
         id: meta
         uses: docker/metadata-action@v5
