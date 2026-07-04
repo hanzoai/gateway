@@ -155,14 +155,14 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	orig := originalURL(r)
 
 	// (1) Guard session cookie — the browser fast path.
-	if owner, ok := c.sessionOwner(r); ok {
-		c.decide(w, r, owner, orig)
+	if owner, isAdmin, ok := c.sessionOwner(r); ok {
+		c.decide(w, r, owner, isAdmin, orig)
 		return
 	}
 
-	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner` directly.
+	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner` + `isAdmin`.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		c.decide(w, r, claims.Owner, orig)
+		c.decide(w, r, claims.Owner, claims.IsAdmin, orig)
 		return
 	} else if err != nil && err != iamauth.ErrNoToken {
 		// A token was presented but did not validate. For an API caller, fail
@@ -175,8 +175,8 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// (3) IAM session cookie — resolve via IAM get-account server-side.
-	if owner, ok := c.iamSessionOwner(r); ok {
-		c.decide(w, r, owner, orig)
+	if owner, isAdmin, ok := c.iamSessionOwner(r); ok {
+		c.decide(w, r, owner, isAdmin, orig)
 		return
 	}
 
@@ -189,9 +189,13 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	c.startLogin(w, r, orig)
 }
 
-// decide renders the allow/redirect verdict for a resolved org.
-func (c *config) decide(w http.ResponseWriter, r *http.Request, owner, orig string) {
-	if owner != "" && owner == c.adminOrg {
+// decide renders the allow/redirect verdict for a resolved identity. A global admin
+// is EITHER a member of the reserved admin org (owner == adminOrg) OR any IAM-validated
+// principal whose isAdmin claim is set — matching the console's own global-admin gate
+// (email-domain + IAM admin role), so the superuser z@<brand> (org "hanzo", isAdmin) is
+// admitted here exactly as it is in the console, instead of being bounced to console.
+func (c *config) decide(w http.ResponseWriter, r *http.Request, owner string, isAdmin bool, orig string) {
+	if isAdmin || (owner != "" && owner == c.adminOrg) {
 		// Global admin — allow. Pass the org downstream for app-side auditing.
 		w.Header().Set("X-Org-Id", owner)
 		w.Header().Set("X-Admin-Guard", "allow")
@@ -213,29 +217,37 @@ func (c *config) decide(w http.ResponseWriter, r *http.Request, owner, orig stri
 // sessionOwner returns the org from a valid, unexpired guard session cookie.
 // Cookie value: base64(owner|expiryUnix) "." base64(HMAC). Tamper-evident and
 // time-bounded; no server-side store needed.
-func (c *config) sessionOwner(r *http.Request) (string, bool) {
+func (c *config) sessionOwner(r *http.Request) (owner string, isAdmin bool, ok bool) {
 	ck, err := r.Cookie(c.cookieName)
 	if err != nil {
-		return "", false
+		return "", false, false
 	}
-	payload, ok := c.verifySigned(ck.Value)
-	if !ok {
-		return "", false
+	payload, valid := c.verifySigned(ck.Value)
+	if !valid {
+		return "", false, false
 	}
-	owner, expStr, ok := strings.Cut(payload, "|")
-	if !ok {
-		return "", false
+	// Payload: owner|isAdmin|expiryUnix (HMAC-signed, tamper-evident). A legacy
+	// 2-field owner|expiry cookie parses as isAdmin=false — the owner==adminOrg check
+	// still admits an admin-org member, and any global admin simply re-logs in once.
+	parts := strings.Split(payload, "|")
+	if len(parts) < 2 {
+		return "", false, false
+	}
+	owner = parts[0]
+	expStr := parts[len(parts)-1]
+	if len(parts) >= 3 {
+		isAdmin = parts[1] == "true"
 	}
 	expUnix, err := parseInt(expStr)
 	if err != nil || time.Now().Unix() > expUnix {
-		return "", false
+		return "", false, false
 	}
-	return owner, owner != ""
+	return owner, isAdmin, owner != ""
 }
 
-func (c *config) setSession(w http.ResponseWriter, owner string) {
+func (c *config) setSession(w http.ResponseWriter, owner string, isAdmin bool) {
 	exp := time.Now().Add(c.cookieTTL)
-	payload := fmt.Sprintf("%s|%d", owner, exp.Unix())
+	payload := fmt.Sprintf("%s|%t|%d", owner, isAdmin, exp.Unix())
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
@@ -267,12 +279,12 @@ func (c *config) clearSession(w http.ResponseWriter) {
 // ----------------------------------------------------------------------------
 
 // iamSessionOwner forwards the inbound cookies to IAM get-account and reads the
-// authenticated user's `owner`. This covers a browser that holds an IAM SSO
-// session but has not yet been issued a guard cookie.
-func (c *config) iamSessionOwner(r *http.Request) (string, bool) {
+// authenticated user's `owner` + `isAdmin`. This covers a browser that holds an IAM
+// SSO session but has not yet been issued a guard cookie.
+func (c *config) iamSessionOwner(r *http.Request) (owner string, isAdmin bool, ok bool) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
-		return "", false
+		return "", false, false
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
@@ -280,51 +292,53 @@ func (c *config) iamSessionOwner(r *http.Request) (string, bool) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", nil)
 	if err != nil {
-		return "", false
+		return "", false, false
 	}
 	req.Header.Set("Cookie", cookie)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", false
+		return "", false, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", false
+		return "", false, false
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return "", false
+		return "", false, false
 	}
 	return ownerFromAccount(body)
 }
 
-// ownerFromAccount extracts the user's org from an IAM get-account response.
-// IAM (Casdoor) get-account returns the User object either at the top level or
-// wrapped under `data`; the org slug is the `owner` field. An error/unsigned
-// response has status:"error" and no owner.
-func ownerFromAccount(body []byte) (string, bool) {
+// ownerFromAccount extracts the user's org + global-admin flag from an IAM
+// get-account response. IAM (Casdoor) returns the User object either at the top
+// level or wrapped under `data`; the org slug is `owner` and the global-admin flag
+// is `isAdmin`. An error/unsigned response has status:"error" and no owner.
+func ownerFromAccount(body []byte) (owner string, isAdmin bool, ok bool) {
 	var top struct {
-		Status string `json:"status"`
-		Owner  string `json:"owner"`
-		Data   struct {
-			Owner string `json:"owner"`
+		Status  string `json:"status"`
+		Owner   string `json:"owner"`
+		IsAdmin bool   `json:"isAdmin"`
+		Data    struct {
+			Owner   string `json:"owner"`
+			IsAdmin bool   `json:"isAdmin"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &top); err != nil {
-		return "", false
+		return "", false, false
 	}
 	if top.Status == "error" {
-		return "", false
+		return "", false, false
 	}
 	if top.Owner != "" {
-		return top.Owner, true
+		return top.Owner, top.IsAdmin, true
 	}
 	if top.Data.Owner != "" {
-		return top.Data.Owner, true
+		return top.Data.Owner, top.Data.IsAdmin, true
 	}
-	return "", false
+	return "", false, false
 }
 
 // ----------------------------------------------------------------------------
@@ -398,19 +412,19 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// Clear the state cookie.
 	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: c.cookieDomain, MaxAge: -1, Secure: true, HttpOnly: true})
 
-	owner, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
+	owner, isAdmin, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
 	if err != nil {
 		log.Printf("admin-guard: token exchange failed: %v", err)
 		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
 
-	if owner != c.adminOrg {
+	if owner != c.adminOrg && !isAdmin {
 		// Authenticated non-admin: do NOT set an admin session; send to console.
 		http.Redirect(w, r, c.consoleURL, http.StatusFound)
 		return
 	}
-	c.setSession(w, owner)
+	c.setSession(w, owner, isAdmin)
 	if returnTo == "" || !strings.HasPrefix(returnTo, "https://") {
 		returnTo = c.consoleURL
 	}
@@ -419,7 +433,7 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 
 // exchange swaps the auth code for tokens and resolves the org from the ID
 // token (validated via iamauth) or, failing that, the userinfo endpoint.
-func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (string, error) {
+func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (owner string, isAdmin bool, err error) {
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("code", code)
@@ -433,46 +447,47 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
+		return "", false, fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
 	}
 	var tok struct {
 		AccessToken string `json:"access_token"`
 		IDToken     string `json:"id_token"`
 	}
 	if err := json.Unmarshal(body, &tok); err != nil {
-		return "", fmt.Errorf("decode token response: %w", err)
+		return "", false, fmt.Errorf("decode token response: %w", err)
 	}
 
-	// Prefer the ID token's validated `owner` claim.
+	// Prefer the ID token's validated `owner` + `isAdmin` claims.
 	if tok.IDToken != "" {
 		if claims, verr := c.validator.ValidateRaw(tok.IDToken); verr == nil && claims.Owner != "" {
-			return claims.Owner, nil
+			return claims.Owner, claims.IsAdmin, nil
 		}
 	}
 	if tok.AccessToken != "" {
 		if claims, verr := c.validator.ValidateRaw(tok.AccessToken); verr == nil && claims.Owner != "" {
-			return claims.Owner, nil
+			return claims.Owner, claims.IsAdmin, nil
 		}
 	}
-	// Fallback: call userinfo with the access token.
+	// Fallback: call userinfo with the access token (owner only; isAdmin defaults
+	// false, so an admin-org member still passes and any other global admin re-logs).
 	if tok.AccessToken != "" {
 		if owner, ok := c.userinfoOwner(ctx, tok.AccessToken); ok {
-			return owner, nil
+			return owner, false, nil
 		}
 	}
-	return "", fmt.Errorf("could not resolve owner from token or userinfo")
+	return "", false, fmt.Errorf("could not resolve owner from token or userinfo")
 }
 
 func (c *config) userinfoOwner(ctx context.Context, accessToken string) (string, bool) {
