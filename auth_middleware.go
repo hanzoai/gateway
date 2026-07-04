@@ -622,15 +622,34 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		if claims.IsAdmin {
 			c.Request.Header.Set("X-User-IsAdmin", "true")
 		}
+		// Mint the PLATFORM superadmin signal ONLY for a real global admin — the
+		// spoof-proof header commerce's money/cross-org gates read. Stripped on
+		// ingress (stripIdentityHeaders → iamauth.StripIdentityHeaders), minted here
+		// only from the validated GlobalAdmin() claim, so it can't be forged.
+		if claims.GlobalAdmin() {
+			c.Request.Header.Set("X-User-IsGlobalAdmin", "true")
+		}
 
-		// Mint X-User-Permissions from the validated JWT. isAdmin implies
-		// the Admin|Live bits (commerce's permission.Admin|permission.Live);
-		// the explicit "permissions" claim is OR'd on top. Absent claim +
-		// non-admin user → header is omitted, which commerce parses as
-		// bit.Field(0) — fail-closed by design (commerce CLAUDE.md).
+		// Mint X-User-Permissions from the validated JWT.
+		//
+		// The Admin bit is the MONEY/admin authority: commerce gates every
+		// credit-creating and card-charging billing endpoint on
+		// TokenRequired(permission.Admin), and bit.Field.Has is intersection
+		// semantics — so whoever carries Admin satisfies those gates. It is
+		// therefore GLOBAL-admin-only. An org-level admin (claims.IsAdmin — an org
+		// OWNER like maxpower carries it within their own org) must NOT mint free
+		// balance or charge cards platform-wide; granting them Admin was a
+		// free-money hole (live-proven as Dave/maxpower). Live (real-money, not
+		// sandbox) mode is orthogonal to authority and stays on IsAdmin so a normal
+		// org owner's own real Square top-up keeps working. The explicit
+		// "permissions" claim is OR'd on top. Absent claim + non-admin → header
+		// omitted → commerce parses bit.Field(0), fail-closed (commerce CLAUDE.md).
 		var extraBits int64
 		if claims.IsAdmin {
-			extraBits = permissionBits["admin"] | permissionBits["live"]
+			extraBits |= permissionBits["live"]
+		}
+		if claims.GlobalAdmin() {
+			extraBits |= permissionBits["admin"]
 		}
 		if bits, set := computePermissionsBitField(claims.Permissions, extraBits); set {
 			c.Request.Header.Set("X-User-Permissions", strconv.FormatInt(bits, 10))

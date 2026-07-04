@@ -114,12 +114,20 @@ func newGate(cfg AuthConfig) forward.Gate {
 		f.UserID = claims.UserID()
 		f.IsAdmin = claims.IsAdmin
 
-		// X-User-Permissions bit-field: isAdmin implies Admin|Live (same as
-		// the gin middleware), the explicit "permissions" claim is OR'd on
+		// X-User-Permissions bit-field (same policy as the gin middleware and
+		// gate — one grant rule, three transports). The Admin (money/admin)
+		// bit is GLOBAL-admin-only: commerce gates every credit-creating and
+		// card-charging billing endpoint on TokenRequired(permission.Admin),
+		// so granting Admin to an org-level admin (claims.IsAdmin — an org
+		// owner) was a free-money hole. Live (real-money mode) is orthogonal
+		// and stays on IsAdmin. The explicit "permissions" claim is OR'd on
 		// top. Absent/unmapped -> 0, which the backend reads as no rights.
 		var extraBits int64
 		if claims.IsAdmin {
-			extraBits = permissionBits["admin"] | permissionBits["live"]
+			extraBits |= permissionBits["live"]
+		}
+		if claims.GlobalAdmin() {
+			extraBits |= permissionBits["admin"]
 		}
 		bits, _ := computePermissionsBitField(claims.Permissions, extraBits)
 		f.Permissions = bits

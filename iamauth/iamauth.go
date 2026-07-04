@@ -41,9 +41,34 @@ type Claims struct {
 	Phone             string          `json:"phone"`        // IAM E.164
 	PhoneNumber       string          `json:"phone_number"` // OIDC standard
 	Type              string          `json:"type"`
-	IsAdmin           bool            `json:"isAdmin"`
+	IsAdmin           bool            `json:"isAdmin"`       // ORG-level admin (an org owner) — NEVER the money/superadmin bit
+	IsGlobalAdmin     bool            `json:"isGlobalAdmin"` // PLATFORM superadmin — the money/admin authority
 	Roles             json.RawMessage `json:"roles"`
 	Permissions       json.RawMessage `json:"permissions"`
+}
+
+// AdminOrg is the org slug Hanzo IAM seeds platform (global) admins into. It is
+// the SAME constant commerce's auth.IAMClaims.GlobalAdmin() honors, so the
+// global-admin predicate means byte-for-byte the same thing on both sides of the
+// trust boundary (gateway mints, commerce enforces).
+const AdminOrg = "admin"
+
+// GlobalAdmin reports whether these claims belong to a Hanzo PLATFORM (global)
+// admin — the ONLY principal that may mint free balance or charge cards
+// platform-wide. Two independent signals, either suffices:
+//   - the explicit isGlobalAdmin JWT claim; or
+//   - membership in the global admin org (owner == AdminOrg).
+//
+// Plain IsAdmin is deliberately NOT trusted: it is an ORG-level role (an org
+// owner carries IsAdmin=true within their own org). Gating the money/admin
+// permission bit on it let any org owner satisfy commerce's
+// TokenRequired(permission.Admin) money gates → unlimited free balance. This
+// mirrors commerce/auth.IAMClaims.GlobalAdmin() exactly.
+func (c *Claims) GlobalAdmin() bool {
+	if c == nil {
+		return false
+	}
+	return c.IsGlobalAdmin || strings.EqualFold(strings.TrimSpace(c.Owner), AdminOrg)
 }
 
 // UserID resolves the canonical user identifier: sub, then
@@ -432,6 +457,7 @@ var MintedIdentityHeaders = []string{
 	"X-User-Email",
 	"X-Phone-Number",
 	"X-User-IsAdmin",
+	"X-User-IsGlobalAdmin",
 }
 
 // StripIdentityHeaders removes every client-supplied identity header. The
@@ -445,6 +471,12 @@ func StripIdentityHeaders(r *http.Request) {
 	r.Header.Del("X-User-Email")
 	r.Header.Del("X-Phone-Number")
 	r.Header.Del("X-User-IsAdmin")
+	// PLATFORM superadmin flag — commerce's GetIAMClaims reads it straight off the
+	// request and GlobalAdmin() trusts it, so a forged "X-User-IsGlobalAdmin: true"
+	// would grant the money/admin authority downstream. It is minted only from a
+	// validated GlobalAdmin() claim (InjectIdentity), so a client value MUST be
+	// stripped here.
+	r.Header.Del("X-User-IsGlobalAdmin")
 	// X-Project-Id selects a tenant/project scope but is NOT minted from any
 	// validated claim (no project claim exists in the IAM token yet). A client
 	// value is therefore unauthenticated and forgeable, so strip it — a backend
@@ -480,5 +512,11 @@ func InjectIdentity(r *http.Request, c *Claims) {
 	}
 	if c.IsAdmin {
 		r.Header.Set("X-User-IsAdmin", "true")
+	}
+	// Mint the PLATFORM superadmin signal ONLY for a real global admin — the
+	// spoof-proof header commerce's money/cross-org gates read (it was stripped
+	// above). Org-level IsAdmin never sets it.
+	if c.GlobalAdmin() {
+		r.Header.Set("X-User-IsGlobalAdmin", "true")
 	}
 }
