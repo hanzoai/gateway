@@ -1,7 +1,8 @@
 // admin-guard is the single forward-auth gate that restricts Hanzo's RAW
 // global-admin surfaces (platform.hanzo.ai, studio, commerce-admin, the raw
-// KMS admin UI, the IAM management UI) to GLOBAL ADMINS ONLY — an IAM user
-// whose org (`owner`) is the admin org (IAM `IsGlobalAdmin`: owner == AdminOrg).
+// KMS admin UI, the IAM management UI) to GLOBAL ADMINS ONLY — an IAM user who is
+// either a member of the admin org (owner == AdminOrg) OR carries the IAM `isAdmin`
+// claim (the superuser z@<brand>, whose primary org is a brand org like "hanzo").
 //
 // It is consumed by hanzoai/ingress (Traefik) as a ForwardAuth middleware:
 // the ingress forwards each request's headers to GET /__guard/verify and
@@ -16,7 +17,7 @@
 // surface, console.hanzo.ai.
 //
 // Identity resolution is decomplected into three orthogonal sources, tried in
-// order, all collapsing to one predicate (owner == AdminOrg):
+// order, all collapsing to one predicate (isAdmin || owner == AdminOrg):
 //
 //  1. the guard's own signed session cookie (set after a prior PKCE login) —
 //     the browser fast path, shared across *.hanzo.ai via a parent-domain cookie;
