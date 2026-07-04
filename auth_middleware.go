@@ -611,6 +611,14 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// derivative of the JWT and may be consumed by services that need them.
 		c.Request.Header.Set("X-User-Id", userID)
 		c.Request.Header.Set("X-Org-Id", orgID)
+		// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
+		// exactly like X-Org-Id from `owner`. Absent/default project mints nothing
+		// (minimal-canonical form) — downstream resolves the default and keeps
+		// today's single-project behavior. The client copy was already stripped
+		// (stripIdentityHeaders), so this is never forgeable.
+		if project := claims.MintedProject(); project != "" {
+			c.Request.Header.Set("X-Project-Id", project)
+		}
 		if roles := extractRoleNames(claims.Roles); roles != "" {
 			c.Request.Header.Set("X-Roles", roles)
 		}
