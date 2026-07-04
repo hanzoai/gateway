@@ -354,6 +354,11 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 
 	q := url.Values{}
 	q.Set("client_id", c.clientID)
+	// Pin the reserved admin org so a user who is a member of BOTH a tenant org
+	// and the admin org resolves to their admin-org identity (owner==adminOrg),
+	// which handleCallback requires. Without this, a login defaults to the user's
+	// home org and the guard denies + bounces to the tenant console.
+	q.Set("organization", c.adminOrg)
 	q.Set("response_type", "code")
 	q.Set("scope", "openid profile email")
 	q.Set("redirect_uri", c.callbackURI(r))
