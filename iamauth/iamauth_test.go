@@ -123,6 +123,52 @@ func TestInjectIdentity(t *testing.T) {
 	if r.Header.Get("X-User-IsAdmin") != "true" {
 		t.Fatalf("X-User-IsAdmin: got %q", r.Header.Get("X-User-IsAdmin"))
 	}
+	// An ORG-level admin (owner="hanzo") is NOT a platform admin: the superadmin
+	// header (the money authority commerce reads) must NOT be minted.
+	if r.Header.Get("X-User-IsGlobalAdmin") != "" {
+		t.Fatalf("X-User-IsGlobalAdmin minted for org-level admin: got %q", r.Header.Get("X-User-IsGlobalAdmin"))
+	}
+}
+
+// TestInjectIdentity_GlobalAdminHeader proves the superadmin header is minted for
+// a real global admin (owner=="admin") and for the explicit isGlobalAdmin claim.
+func TestInjectIdentity_GlobalAdminHeader(t *testing.T) {
+	// Admin-org membership.
+	r := req(nil)
+	InjectIdentity(r, &Claims{Owner: "admin", IsAdmin: true})
+	if r.Header.Get("X-User-IsGlobalAdmin") != "true" {
+		t.Fatalf("admin-org: X-User-IsGlobalAdmin: got %q want true", r.Header.Get("X-User-IsGlobalAdmin"))
+	}
+	// Explicit claim, any org.
+	r = req(nil)
+	InjectIdentity(r, &Claims{Owner: "maxpower", IsGlobalAdmin: true})
+	if r.Header.Get("X-User-IsGlobalAdmin") != "true" {
+		t.Fatalf("explicit flag: X-User-IsGlobalAdmin: got %q want true", r.Header.Get("X-User-IsGlobalAdmin"))
+	}
+}
+
+// TestClaims_GlobalAdmin pins the platform-admin predicate: only the explicit
+// isGlobalAdmin claim or membership in the AdminOrg qualifies. A plain org-level
+// IsAdmin (an org owner) must NOT — that was the free-money hole. This mirrors
+// commerce/auth.IAMClaims.GlobalAdmin() so the trust boundary agrees end to end.
+func TestClaims_GlobalAdmin(t *testing.T) {
+	cases := []struct {
+		name   string
+		claims *Claims
+		want   bool
+	}{
+		{"nil", nil, false},
+		{"admin-org", &Claims{Owner: "admin"}, true},
+		{"admin-org-mixedcase", &Claims{Owner: "Admin"}, true},
+		{"explicit-flag", &Claims{Owner: "maxpower", IsGlobalAdmin: true}, true},
+		{"org-admin-not-global", &Claims{Owner: "maxpower", IsAdmin: true}, false},
+		{"plain-user", &Claims{Owner: "hanzo"}, false},
+	}
+	for _, tc := range cases {
+		if got := tc.claims.GlobalAdmin(); got != tc.want {
+			t.Fatalf("%s: GlobalAdmin()=%v want %v", tc.name, got, tc.want)
+		}
+	}
 }
 
 func TestClaims_UserIDFallback(t *testing.T) {
