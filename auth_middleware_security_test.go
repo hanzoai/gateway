@@ -336,6 +336,52 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	}
 }
 
+// TestValidAuth_MintsProjectFromClaim proves the org SUB-SCOPE X-Project-Id is
+// minted from the validated JWT `project` claim (exactly like X-Org-Id from
+// `owner`) and a forged client X-Project-Id can never survive. With no project
+// claim the header is omitted (default project), preserving single-project behavior.
+func TestValidAuth_MintsProjectFromClaim(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotProject string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotProject = c.Request.Header.Get("X-Project-Id")
+		c.Status(http.StatusOK)
+	})
+
+	// (a) JWT carries a non-default project → minted; forged header dropped.
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Owner = "acme-corp"
+	claims.Project = "research"
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims))
+	req.Header.Set("X-Project-Id", "victim-project") // forgery attempt
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("valid JWT should get 200, got %d", w.Code)
+	}
+	if gotProject != "research" {
+		t.Errorf("SECURITY: X-Project-Id = %q, want %q (from JWT project claim, not the forged header)", gotProject, "research")
+	}
+
+	// (b) No project claim → default project → header omitted.
+	gotProject = "sentinel"
+	claims2 := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims2.Owner = "acme-corp"
+	req2 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req2.Host = "api.hanzo.ai"
+	req2.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims2))
+	req2.Header.Set("X-Project-Id", "victim-project") // forgery attempt
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if gotProject != "" {
+		t.Errorf("SECURITY: X-Project-Id = %q, want empty (no project claim ⟹ default, forged header dropped)", gotProject)
+	}
+}
+
 // --- Test 6: No X-Identity Header Passthrough on Any Auth Path ---
 
 func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
@@ -789,7 +835,9 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		"X-Tenant-Id",
 		"X-Tenant-ID",
 		"X-Org",
-		// Forgeable project/tenant scope selector — not minted from any claim.
+		// Org sub-scope selector: a raw client copy is forgeable and MUST be
+		// stripped on ingress; the trusted value is re-minted from the validated
+		// JWT `project` claim (InjectIdentity / auth_middleware), never trusted raw.
 		"X-Project-Id",
 		// Vendor-prefixed legacy headers
 		"X-Hanzo-Role",
