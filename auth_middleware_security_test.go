@@ -781,6 +781,7 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		"X-User-Email",
 		"X-Phone-Number",
 		"X-User-IsAdmin",
+		"X-User-IsGlobalAdmin", // PLATFORM superadmin (money authority) — MUST be stripped
 		// Legacy non-canonical identity headers
 		"X-User-Role",  // singular
 		"X-User-Roles", // plural (renamed to X-Roles)
@@ -1407,6 +1408,90 @@ func TestPermissions_ForgedHeaderStripped(t *testing.T) {
 	}
 }
 
+// --- Test 21b: org-level admin is NOT granted the Admin money bit ---
+//
+// The free-money regression. An org OWNER (owner="hanzo", isAdmin=true) is an
+// ORG-level admin, not a platform admin. Commerce gates every credit-creating
+// and card-charging billing endpoint on TokenRequired(permission.Admin); before
+// the fix the gateway minted Admin|Live (20) for any isAdmin JWT, so an org owner
+// satisfied those gates and minted unlimited free balance (live-proven as
+// Dave/maxpower). The gateway must now mint ONLY Live (4) for an org-level admin.
+func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotPerms, gotGlobalAdmin string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		gotGlobalAdmin = c.Request.Header.Get("X-User-IsGlobalAdmin")
+		c.Status(http.StatusOK)
+	})
+
+	// Org owner: isAdmin=true, owner="hanzo" (NOT the admin org), no explicit
+	// permissions claim → the ONLY bits are the isAdmin-derived ones.
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.IsAdmin = true
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+	// Attacker also forges the platform-superadmin header — MUST be stripped.
+	req.Header.Set("X-User-IsGlobalAdmin", "true")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	// Live (4) only — NOT Admin|Live (20).
+	if gotPerms != "4" {
+		t.Errorf("SECURITY: org-admin X-User-Permissions = %q, want %q (Live only, no Admin money bit)", gotPerms, "4")
+	}
+	// The forged platform-superadmin header must not survive; an org admin is
+	// not a global admin, so the gateway must not mint it either.
+	if gotGlobalAdmin != "" {
+		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty (org admin is not global; forged value must be stripped)", gotGlobalAdmin)
+	}
+}
+
+// --- Test 21c: a real global admin DOES get Admin|Live + the superadmin header ---
+func TestPermissions_GlobalAdminGetsAdminBitAndHeader(t *testing.T) {
+	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
+	defer jwksServer.Close()
+
+	var gotPerms, gotGlobalAdmin string
+	r.GET("/api/test", func(c *gin.Context) {
+		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		gotGlobalAdmin = c.Request.Header.Get("X-User-IsGlobalAdmin")
+		c.Status(http.StatusOK)
+	})
+
+	// Global admin: owner=="admin". Full Admin|Live and the minted superadmin header.
+	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
+	claims.Owner = "admin"
+	claims.IsAdmin = true
+	token := tj.signToken(t, claims)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req.Host = "api.hanzo.ai"
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	}
+	if gotPerms != "20" {
+		t.Errorf("global-admin X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
+	}
+	if gotGlobalAdmin != "true" {
+		t.Errorf("global-admin X-User-IsGlobalAdmin = %q, want %q", gotGlobalAdmin, "true")
+	}
+}
+
 // --- Test 22: X-User-Permissions minted from permissions claim ---
 
 func TestPermissions_MintedFromClaim(t *testing.T) {
@@ -1556,22 +1641,27 @@ func TestPermissions_MintedFromNumericClaim(t *testing.T) {
 	}
 }
 
-// --- Test 25: isAdmin claim auto-mints Admin|Live ---
-
+// --- Test 25: a GLOBAL admin's isAdmin auto-mints Admin|Live ---
+//
+// The Admin (money) bit is minted from isAdmin ONLY for a platform (global)
+// admin — here owner=="admin". An org-level admin gets Live only; that half of
+// the contract is TestPermissions_OrgAdminGetsNoAdminBit (the free-money
+// regression). Global-admin tooling keeps its Admin|Live so it still works.
 func TestPermissions_IsAdminMintsAdminLive(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
 	now := time.Now()
-	// No "permissions" claim, but isAdmin=true → gateway mints Admin|Live.
+	// No "permissions" claim, isAdmin=true, owner=="admin" (global admin org)
+	// → gateway mints Admin|Live.
 	claims := map[string]interface{}{
 		"iss":     "https://hanzo.id",
 		"sub":     "z",
 		"aud":     []string{"https://api.hanzo.ai"},
 		"iat":     now.Add(-1 * time.Minute).Unix(),
 		"exp":     now.Add(10 * time.Minute).Unix(),
-		"owner":   "hanzo",
+		"owner":   "admin",
 		"isAdmin": true,
 	}
 	token := tj.signToken(t, claims)
