@@ -35,6 +35,7 @@ type Claims struct {
 	jwt.Claims
 
 	Owner             string          `json:"owner"`              // org slug
+	Project           string          `json:"project"`            // project scope within the org (optional; empty ⟹ default project)
 	Name              string          `json:"name"`               // display name
 	PreferredUsername string          `json:"preferred_username"` // fallback id
 	Email             string          `json:"email"`
@@ -81,6 +82,27 @@ func (c *Claims) UserID() string {
 		return c.PreferredUsername
 	}
 	return c.Name
+}
+
+// DefaultProject is the reserved id of every org's default project. It is the
+// wire-contract value shared with cloud (clients/principal.DefaultProject): an
+// absent project claim and the literal "default" denote the SAME scope. The edge
+// therefore omits X-Project-Id for it (minimal-canonical form — absent header ⟺
+// default project), so downstream keying keeps today's un-suffixed keys.
+const DefaultProject = "default"
+
+// MintedProject returns the project id to stamp into X-Project-Id, or "" when the
+// edge must OMIT the header. The project rides in the validated JWT `project`
+// claim, scoped to the caller's org exactly like `owner` — trusted, not forgeable.
+// The default project (absent claim, or the literal "default") mints nothing,
+// mirroring how X-User-IsAdmin / X-User-Email are omitted at their zero value;
+// downstream then resolves the default and preserves single-project behavior.
+func (c *Claims) MintedProject() string {
+	p := strings.TrimSpace(c.Project)
+	if p == "" || p == DefaultProject {
+		return ""
+	}
+	return p
 }
 
 // Config is the edge validation configuration.
@@ -453,6 +475,7 @@ func IsAPIKey(token string) bool {
 var MintedIdentityHeaders = []string{
 	"X-User-Id",
 	"X-Org-Id",
+	"X-Project-Id",
 	"X-Roles",
 	"X-User-Permissions",
 	"X-User-Email",
@@ -478,12 +501,13 @@ func StripIdentityHeaders(r *http.Request) {
 	// validated GlobalAdmin() claim (InjectIdentity), so a client value MUST be
 	// stripped here.
 	r.Header.Del("X-User-IsGlobalAdmin")
-	// X-Project-Id selects a tenant/project scope but is NOT minted from any
-	// validated claim (no project claim exists in the IAM token yet). A client
-	// value is therefore unauthenticated and forgeable, so strip it — a backend
-	// must never authorize on a caller-controlled project id (cross-project
-	// IDOR). When IAM carries a project claim, mint it here after the strip,
-	// exactly like X-Org-Id.
+	// X-Project-Id is an org SUB-SCOPE (a project WITHIN the validated org). A raw
+	// client value is forgeable, so strip it unconditionally here — then, exactly
+	// like X-Org-Id from `owner`, InjectIdentity re-mints it from the validated JWT
+	// `project` claim (trusted: IAM scopes the claim to the caller's org). Absent /
+	// default project mints nothing (minimal-canonical form), preserving today's
+	// single-project behavior. A backend still authorizes only on this minted id,
+	// never on a caller-controlled one (cross-project IDOR).
 	r.Header.Del("X-Project-Id")
 	// Non-canonical legacy identity headers.
 	r.Header.Del("X-User-Role")
@@ -508,6 +532,13 @@ func StripIdentityHeaders(r *http.Request) {
 func InjectIdentity(r *http.Request, c *Claims) {
 	r.Header.Set("X-User-Id", c.UserID())
 	r.Header.Set("X-Org-Id", c.Owner)
+	// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
+	// exactly like X-Org-Id from `owner`. Omitted for the default project so the
+	// header is present iff a non-default project is in scope (StripIdentityHeaders
+	// already dropped any forgeable client copy).
+	if project := c.MintedProject(); project != "" {
+		r.Header.Set("X-Project-Id", project)
+	}
 	if c.Email != "" {
 		r.Header.Set("X-User-Email", c.Email)
 	}
