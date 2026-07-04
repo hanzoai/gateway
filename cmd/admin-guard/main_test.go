@@ -2,53 +2,6 @@ package main
 
 import "testing"
 
-// TestOwnerFromAccountIsAdmin proves the guard extracts the global-admin flag from
-// get-account, so z@hanzo.ai (org "hanzo", NOT the reserved "admin" org, but isAdmin)
-// is recognized as a global admin — the bug that bounced them to console.hanzo.ai.
-func TestOwnerFromAccountIsAdmin(t *testing.T) {
-	cases := []struct {
-		name        string
-		body        string
-		wantOwner   string
-		wantIsAdmin bool
-	}{
-		{"superuser: hanzo org + isAdmin", `{"owner":"hanzo","name":"z","isAdmin":true}`, "hanzo", true},
-		{"wrapped isAdmin", `{"status":"ok","data":{"owner":"hanzo","isAdmin":true}}`, "hanzo", true},
-		{"normal user: no isAdmin", `{"owner":"maxpower","name":"dave"}`, "maxpower", false},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			owner, isAdmin, ok := ownerFromAccount([]byte(tc.body))
-			if !ok || owner != tc.wantOwner || isAdmin != tc.wantIsAdmin {
-				t.Fatalf("ownerFromAccount(%s) = (%q,%v,%v), want (%q,%v,true)", tc.body, owner, isAdmin, ok, tc.wantOwner, tc.wantIsAdmin)
-			}
-		})
-	}
-}
-
-// decideVerdict is the pure admit/deny at the heart of the guard: a global admin is
-// EITHER an admin-org member OR any isAdmin principal (matches the console gate).
-func decideVerdict(owner, adminOrg string, isAdmin bool) bool {
-	return isAdmin || (owner != "" && owner == adminOrg)
-}
-
-func TestDecideAllowsGlobalAdmin(t *testing.T) {
-	cases := []struct {
-		owner, adminOrg string
-		isAdmin, allow  bool
-	}{
-		{"admin", "admin", false, true},     // admin-org member (legacy path)
-		{"hanzo", "admin", true, true},      // z@hanzo.ai: brand org + isAdmin → ADMIT (the fix)
-		{"maxpower", "admin", false, false}, // normal org, not admin → deny (redirect to console)
-		{"", "admin", false, false},         // anonymous → deny
-	}
-	for _, tc := range cases {
-		if got := decideVerdict(tc.owner, tc.adminOrg, tc.isAdmin); got != tc.allow {
-			t.Errorf("decide(owner=%q admin=%q isAdmin=%v) = %v, want %v", tc.owner, tc.adminOrg, tc.isAdmin, got, tc.allow)
-		}
-	}
-}
-
 func TestOwnerFromAccount(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -64,7 +17,7 @@ func TestOwnerFromAccount(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			owner, _, ok := ownerFromAccount([]byte(tc.body))
+			owner, ok := ownerFromAccount([]byte(tc.body))
 			if owner != tc.wantOwner || ok != tc.wantOK {
 				t.Fatalf("ownerFromAccount(%s) = (%q,%v), want (%q,%v)", tc.body, owner, ok, tc.wantOwner, tc.wantOK)
 			}
