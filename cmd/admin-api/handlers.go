@@ -65,7 +65,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	}
 	key := hashStr(cookie)
 	if id, ok := s.cacheGet(key); ok {
-		return id, id.Owner == s.cfg.adminOrg || id.IsGlobalAdmin
+		return id, id.Owner == s.cfg.adminOrg
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
@@ -104,7 +104,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	if d.Type == "anonymous-user" || d.IsForbidden {
 		return identity{}, false
 	}
-	if d.Owner != s.cfg.adminOrg && !d.IsGlobalAdmin {
+	if d.Owner != s.cfg.adminOrg {
 		return identity{}, false
 	}
 	id := identity{Owner: d.Owner, Name: d.Name, Email: d.Email, DisplayName: nz(d.DisplayName, d.Name), IsGlobalAdmin: true}
