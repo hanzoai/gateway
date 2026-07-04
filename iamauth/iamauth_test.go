@@ -128,6 +128,11 @@ func TestInjectIdentity(t *testing.T) {
 	if r.Header.Get("X-User-IsGlobalAdmin") != "" {
 		t.Fatalf("X-User-IsGlobalAdmin minted for org-level admin: got %q", r.Header.Get("X-User-IsGlobalAdmin"))
 	}
+	// No project claim ⟹ default project ⟹ X-Project-Id omitted (present iff
+	// a non-default project is in scope), preserving single-project behavior.
+	if v := r.Header.Get("X-Project-Id"); v != "" {
+		t.Fatalf("X-Project-Id must be omitted for the default project, got %q", v)
+	}
 }
 
 // TestInjectIdentity_GlobalAdminHeader proves the superadmin header is minted for
@@ -168,6 +173,22 @@ func TestClaims_GlobalAdmin(t *testing.T) {
 		if got := tc.claims.GlobalAdmin(); got != tc.want {
 			t.Fatalf("%s: GlobalAdmin()=%v want %v", tc.name, got, tc.want)
 		}
+	}
+}
+
+// TestInjectIdentity_Project: a non-default `project` claim is minted into
+// X-Project-Id exactly like `owner`→X-Org-Id; the literal default is omitted.
+func TestInjectIdentity_Project(t *testing.T) {
+	r := req(nil)
+	InjectIdentity(r, &Claims{Owner: "acme", Project: "research"})
+	if got := r.Header.Get("X-Project-Id"); got != "research" {
+		t.Fatalf("X-Project-Id: got %q, want %q", got, "research")
+	}
+	// The literal default project mints nothing (absent header ⟺ default scope).
+	r = req(nil)
+	InjectIdentity(r, &Claims{Owner: "acme", Project: DefaultProject})
+	if got := r.Header.Get("X-Project-Id"); got != "" {
+		t.Fatalf("X-Project-Id must be omitted for %q, got %q", DefaultProject, got)
 	}
 }
 
