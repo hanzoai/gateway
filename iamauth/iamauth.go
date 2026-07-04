@@ -107,6 +107,7 @@ var DefaultAudiences = []string{
 	"hanzo-console",
 	"hanzo-chat",
 	"hanzo-id",
+	"hanzo-admin-guard",
 	"cowork",
 	"https://api.hanzo.ai",
 }
