@@ -67,6 +67,8 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	cfg, closeJWKS := gateConfig(t, tj, true)
 	defer closeJWKS()
 
+	// An ORG-level admin (validClaims owner="hanzo", IsAdmin=true — an org owner).
+	// The money/admin bit MUST NOT be granted; only Live (real-money mode).
 	claims := validClaims(cfg.Issuer, cfg.Audiences[0])
 	claims.IsAdmin = true
 	token := tj.signToken(t, claims)
@@ -93,14 +95,42 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	if !f.IsAdmin {
 		t.Error("IsAdmin: got false want true")
 	}
-	// isAdmin -> Admin|Live bits.
-	wantBits := permissionBits["admin"] | permissionBits["live"]
-	if f.Permissions != wantBits {
-		t.Errorf("Permissions: got %d want %d", f.Permissions, wantBits)
+	// Org-level admin -> Live ONLY (the Admin money bit is global-admin-only).
+	if wantBits := permissionBits["live"]; f.Permissions != wantBits {
+		t.Errorf("org-admin Permissions: got %d want %d (Live only, no Admin bit)", f.Permissions, wantBits)
+	}
+	if f.Permissions&permissionBits["admin"] != 0 {
+		t.Errorf("org-admin was granted the Admin money bit (perms=%d) — free-money hole", f.Permissions)
 	}
 	// The gate must not have touched the body.
 	if string(f.Body) != string(bodyBefore) {
 		t.Errorf("gate mutated f.Body: got %q want %q", f.Body, bodyBefore)
+	}
+}
+
+// TestGateGlobalAdminGetsAdminBit proves the OTHER side of the money gate: a
+// real PLATFORM (global) admin — owner=="admin" — DOES get the Admin|Live bits,
+// so legitimate admin/service tooling keeps working.
+func TestGateGlobalAdminGetsAdminBit(t *testing.T) {
+	tj := newTestJWKS(t)
+	cfg, closeJWKS := gateConfig(t, tj, true)
+	defer closeJWKS()
+
+	claims := validClaims(cfg.Issuer, cfg.Audiences[0])
+	claims.Owner = "admin" // global admin org
+	claims.IsAdmin = true
+	token := tj.signToken(t, claims)
+
+	gate := newGate(cfg)
+	f := forwardWithHeaders(t, "/v1/chat/completions", map[string][]string{
+		"Authorization": {"Bearer " + token},
+	})
+	if deny, err := gate(context.Background(), &f); err != nil || deny != nil {
+		t.Fatalf("global-admin JWT unexpectedly denied: deny=%v err=%v", deny, err)
+	}
+	wantBits := permissionBits["admin"] | permissionBits["live"]
+	if f.Permissions != wantBits {
+		t.Errorf("global-admin Permissions: got %d want %d (Admin|Live)", f.Permissions, wantBits)
 	}
 }
 
