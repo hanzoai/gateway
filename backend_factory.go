@@ -17,7 +17,6 @@ import (
 	metrics "github.com/krakend/krakend-metrics/v2/gin"
 	oauth2client "github.com/krakend/krakend-oauth2-clientcredentials/v2"
 	opencensus "github.com/krakend/krakend-opencensus/v2"
-	otellura "github.com/krakend/krakend-otel/lura"
 	pubsub "github.com/krakend/krakend-pubsub/v2"
 	ratelimit "github.com/krakend/krakend-ratelimit/v3/proxy"
 	"github.com/luraproject/lura/v2/config"
@@ -51,8 +50,6 @@ func newRequestExecutorFactory(logger logging.Logger) func(*config.Backend) clie
 		}
 
 		clientFactory = httpcache.NewHTTPClient(cfg, clientFactory)
-		clientFactory = otellura.InstrumentedHTTPClientFactory(clientFactory, cfg)
-		// TODO: check what happens if we have both, opencensus and otel enabled ?
 		return opencensus.HTTPRequestExecutorFromConfig(clientFactory, cfg)
 	}
 	return httprequestexecutor.HTTPRequestExecutor(logger, requestExecutorFactory)
@@ -72,7 +69,6 @@ func internalNewBackendFactory(ctx context.Context, requestExecutorFactory func(
 	backendFactory = cb.BackendFactory(backendFactory, logger)
 	backendFactory = metricCollector.BackendFactory("backend", backendFactory)
 	backendFactory = opencensus.BackendFactory(backendFactory)
-	backendFactory = otellura.BackendFactory(backendFactory)
 	// ZAP transport: zero-copy binary protocol for internal services
 	backendFactory = ZapBackendFactory(logger, backendFactory)
 	// base-network: shard-aware routing over base/network-enabled services
