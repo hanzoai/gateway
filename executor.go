@@ -27,17 +27,15 @@ import (
 	opencensus "github.com/krakend/krakend-opencensus/v2"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/datadog"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/influxdb"
-	// jaeger exporter dropped: upstream uses an opencensus/Thrift API combo
-	// incompatible with current jaeger-client-go. Migration path is OTel
-	// (kotel below) + ZAP for inter-service.
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/ocagent"
+	// jaeger, ocagent, and stackdriver exporters dropped — and krakend-otel
+	// (OTLP) removed entirely — because each ships telemetry over gRPC
+	// (ocagent/stackdriver dial an OpenCensus/gRPC agent; krakend-otel's OTLP
+	// collector exporter is gRPC-only), and Hanzo services speak ZAP/HTTP/WS,
+	// never gRPC. Legacy-build telemetry rides opencensus (prometheus/datadog/
+	// influx/xray/zipkin) + ZAP for inter-service.
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/prometheus"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/stackdriver"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/xray"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/zipkin"
-	kotel "github.com/krakend/krakend-otel"
-	otellura "github.com/krakend/krakend-otel/lura"
-	otelgin "github.com/krakend/krakend-otel/router/gin"
 	pubsub "github.com/krakend/krakend-pubsub/v2"
 	"github.com/luraproject/lura/v2/async"
 	"github.com/luraproject/lura/v2/config"
@@ -201,18 +199,12 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 
 		bpf := e.BackendFactory.NewBackendFactory(ctx, logger, metricCollector)
 		pf := e.ProxyFactory.NewProxyFactory(logger, bpf, metricCollector)
-		// we move the proxy factory out of the default proxy factory to make
-		// sure that is always the outer middleware and that wraps any internal
-		// proxy layer middleware:
-		pf = otellura.ProxyFactory(pf)
 
 		agentPing := make(chan string, len(cfg.AsyncAgents))
 
 		handlerF := e.HandlerFactory.NewHandlerFactory(logger, metricCollector, tokenRejecterFactory)
-		handlerF = otelgin.New(handlerF)
 
 		runServerChain := serverhttp.RunServerWithLoggerFactory(logger)
-		runServerChain = otellura.GlobalRunServer(logger, runServerChain)
 		runServerChain = router.RunServerFunc(e.RunServerFactory.NewRunServer(logger, runServerChain))
 
 		// Start the inbound ZAP listener (TLS 1.3+PQ) for external clients.
@@ -421,12 +413,6 @@ func (m *MetricsAndTraces) Register(ctx context.Context, cfg config.ServiceConfi
 		}
 	} else {
 		l.Debug("[SERVICE: OpenCensus] Service correctly registered")
-	}
-
-	if shutdownFn, err := kotel.Register(ctx, l, cfg); err == nil {
-		m.shutdownFn = shutdownFn
-	} else {
-		l.Error(fmt.Sprintf("[SERVICE: OpenTelemetry] cannot register exporters: %s", err.Error()))
 	}
 
 	return metricCollector
