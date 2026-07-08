@@ -89,7 +89,12 @@ func TestStripList_CoversAllMinted(t *testing.T) {
 	}
 }
 
-func TestStripIdentityHeaders_LegacyAndVendor(t *testing.T) {
+// TestStripIdentityHeaders_NeutralExactAndVendorBackstop: neutral identity headers
+// are stripped by exact name; a NON-identity header survives; and the gateway's
+// Go-side defensive backstop still deletes any stray vendor-prefixed header
+// (brand-neutral: it only deletes vendor junk, on every deployment). The ingress
+// strip needs no wildcard because identity headers are all neutral now.
+func TestStripIdentityHeaders_NeutralExactAndVendorBackstop(t *testing.T) {
 	r := req(map[string]string{
 		"X-User-Id":     "forged",
 		"X-Org-Id":      "forged",
