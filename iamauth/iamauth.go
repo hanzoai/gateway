@@ -484,18 +484,29 @@ var MintedIdentityHeaders = []string{
 	"X-User-IsGlobalAdmin",
 }
 
-// StripIdentityHeaderNames is the AUTHORITATIVE set of exact identity headers the
-// edge mints (or a backend consumes) and therefore MUST strip on ingress so a
-// forged value can never survive. Single source of truth: StripIdentityHeaders
-// iterates it, and any external stripper (e.g. the ingress `waitlist-strip`
-// middleware fronting a DIRECT-to-backend route) MUST cover exactly this set —
-// generate that config from here (`waitlist-guard -print-strip-middleware`) so
-// the two cannot drift. Forwards-only: append, never remove.
+// StripIdentityHeaderNames is the AUTHORITATIVE, COMPLETE set of identity headers
+// the edge mints (or a backend consumes) and therefore MUST strip on ingress so a
+// forged value can never survive. Every name is BRAND-NEUTRAL and EXACT — there
+// are deliberately NO X-VENDOR-* wildcard families (no X-IAM-*, no X-HANZO-*): the
+// shared edge also fronts Lux/Zoo-branded deployments, so a hardcoded vendor
+// prefix is wrong there, AND an exact-name-only set is the whole set an ingress
+// `headers` middleware can strip (Traefik cannot wildcard). Single source of truth:
+// StripIdentityHeaders iterates it, and the ingress `waitlist-strip` is generated
+// from it (`waitlist-guard -print-strip-middleware`) so the two cannot drift — with
+// no wildcard family, the generated strip now covers the FULL set with no gap.
+// Forwards-only: append, never remove.
 //
 //   - X-User-IsGlobalAdmin: commerce GetIAMClaims reads it off the request and
 //     GlobalAdmin() trusts it → a forged "true" grants money/admin authority.
+//   - X-Org-Id: the per-org billing/tenant selector (commerce, cloud metering) —
+//     re-minted from the validated JWT only; a raw client value is cross-org IDOR.
 //   - X-Project-Id: org SUB-SCOPE, minted from a validated claim; a raw client
 //     value is a cross-project IDOR.
+//
+// The legacy vendor-prefixed identity headers (X-IAM-Org-Id, X-Hanzo-Org, …) have
+// been RENAMED to these neutral names at every setter + consumer, so no identity
+// header uses a vendor prefix anymore — which is exactly what lets the ingress
+// (Traefik, exact-name only) strip the FULL identity set with no wildcard gap.
 var StripIdentityHeaderNames = []string{
 	"X-User-Id",
 	"X-Org-Id",
@@ -506,7 +517,7 @@ var StripIdentityHeaderNames = []string{
 	"X-User-IsAdmin",
 	"X-User-IsGlobalAdmin",
 	"X-Project-Id",
-	// Non-canonical legacy identity headers.
+	// Non-canonical legacy identity headers (still exact-name, still neutral).
 	"X-User-Role",
 	"X-User-Roles",
 	"X-User-Name",
@@ -515,18 +526,21 @@ var StripIdentityHeaderNames = []string{
 	"X-Org",
 }
 
-// StripIdentityHeaderPrefixes are vendor-prefixed identity families stripped by
-// PREFIX. NOTE: a Traefik `headers` middleware (customRequestHeaders) can only
-// remove EXACT header names — it CANNOT wildcard these. A backend placed behind
-// the waitlist-guard on a DIRECT route (bypassing the gateway) is therefore NOT
-// protected against a forged X-IAM-*/X-HANZO-* header by the ingress strip alone;
-// route any such money/identity-consuming host THROUGH the gateway (which runs
-// this full Go strip + re-mint) instead of direct-to-Service.
+// StripIdentityHeaderPrefixes is the gateway's Go-side DEFENSE-IN-DEPTH: it deletes
+// ANY stray vendor-prefixed header at the API chokepoint. This is brand-NEUTRAL —
+// it only ever DELETES vendor junk (never mints/requires it), so it is correct on
+// every deployment the shared edge fronts (Hanzo, Lux, Zoo). Identity headers are
+// all neutral now (see StripIdentityHeaderNames), so this no longer catches any
+// IDENTITY header — it is a backstop against a forged vendor header a backend might
+// someday read (TestAllAuthPaths_NoXIdentityPassthrough). It is a GATEWAY-only Go
+// strip; the ingress waitlist-strip needs no wildcard because the identity set it
+// generates from StripIdentityHeaderNames is already complete + exact.
 var StripIdentityHeaderPrefixes = []string{"X-IAM-", "X-HANZO-"}
 
-// StripIdentityHeaders removes every client-supplied identity header. The edge is
-// the sole authority for these; this MUST run before any bypass path so a forged
-// value can never survive.
+// StripIdentityHeaders removes every client-supplied identity header (exact neutral
+// names) plus, defensively, any stray vendor-prefixed header. The edge is the sole
+// authority for identity; this MUST run before any bypass path so a forged value
+// can never survive.
 func StripIdentityHeaders(r *http.Request) {
 	for _, h := range StripIdentityHeaderNames {
 		r.Header.Del(h)

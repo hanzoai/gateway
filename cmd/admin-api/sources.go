@@ -164,7 +164,7 @@ func (a *aggregator) syncPlatform(ctx context.Context) {
 		drift := boolish(m, "drift") || (declared != "" && running != "" && !strings.Contains(running, declared) && declared != running)
 		rows = append(rows, productRow{
 			Name: name, Kind: "app", Org: firstStr(m, "org", "organization", "owner"),
-			Cluster: firstStr(m, "cluster", "target", "clusterName"),
+			Cluster:     firstStr(m, "cluster", "target", "clusterName"),
 			DeclaredTag: declared, RunningTag: running, Health: health, Drift: b2u(drift),
 			Updated: time.Now(),
 		})
@@ -193,7 +193,7 @@ func (a *aggregator) syncCommerce(ctx context.Context, orgs []string) {
 
 	for _, org := range orgs {
 		hdr := map[string]string{
-			"Accept": "application/json", "Authorization": "Bearer " + a.cfg.commerceTok, "X-Hanzo-Org": org,
+			"Accept": "application/json", "Authorization": "Bearer " + a.cfg.commerceTok, "X-Org-Id": org,
 		}
 		// Current balance → credits_cents snapshot for today.
 		var bal struct {

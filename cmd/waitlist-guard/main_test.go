@@ -333,9 +333,10 @@ func TestStripMiddlewareCoversAuthoritativeSet(t *testing.T) {
 			t.Fatalf("generated waitlist-strip is MISSING %q — ingress strip would drift from the guard", h)
 		}
 	}
-	// The wildcard families cannot be expressed in Traefik; the generator must warn.
-	if !strings.Contains(out, "X-IAM-") || !strings.Contains(out, "gateway") {
-		t.Fatal("generator must warn that X-IAM-*/X-HANZO-* need gateway routing")
+	// Brand-neutral end state: the generated strip must NOT contain any vendor
+	// prefix — it is exact-name only, covering the full set with no wildcard gap.
+	if strings.Contains(strings.ToUpper(out), "X-IAM-") || strings.Contains(strings.ToUpper(out), "X-HANZO-") {
+		t.Fatal("generated strip still contains a vendor-prefixed header — not brand-neutral")
 	}
 }
 
