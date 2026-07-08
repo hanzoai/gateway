@@ -312,6 +312,47 @@ Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
 expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
 NOT GHA.
 
+## waitlist-guard — approval forward-auth gate (cmd/waitlist-guard)
+
+Same forward-auth mechanism as admin-guard but the OPPOSITE surface: it fronts
+the CONSUMER product hosts (console/billing/app/chat/team + gate api.hanzo.ai)
+and lets through only APPROVED identities (IAM `User.IsApproved`: fail-open on an
+absent `approvalStatus` property, gated only on an explicit `"pending"`; admins
+always approved). Verdicts: 204 allow · 302→`WAITLIST_URL` (unapproved browser) ·
+403 (unapproved API) · 302→IAM PKCE login (anonymous browser). Image
+`ghcr.io/hanzoai/waitlist-guard`. Approval is stamped at signup in
+`iam object.AddUser` (EVERY route: password/SSO/social/web3/email-code), so the
+gate is not bypassable via a non-password signup.
+
+Hardening vs the admin-guard clone (Red rework):
+- **NO org pin.** `startLogin` must NOT set `organization=admin` (admin-guard
+  does — it needs the admin identity). Consumer users log in under their own org;
+  pinning admin would break their login. Global admins still resolve `owner==admin`.
+- **Fail-OPEN on IAM 5xx** (`GUARD_FAIL_OPEN_ON_IAM_ERROR`, default true). `iamGet`
+  is tri-state — `iamOK` / `iamUnavailable` (transport err or 5xx) / `iamDenied`
+  (4xx). An authenticated caller (valid JWT or IAM session) whose approval lookup
+  hits `iamUnavailable` is let THROUGH so an IAM blip never blackholes the money
+  path; a 4xx never fails open; anonymous never fails open. The durable fast path
+  is the HMAC-signed guard cookie (8h) — it short-circuits IAM entirely.
+- **Inbound identity strip.** `handleVerify` runs `iamauth.StripIdentityHeaders`
+  (+ `stripWaitlistHeaders`) up front so a forged `X-Org-Id`/`X-Waitlist-*` can't
+  be read by the guard. The AUTHORITATIVE upstream strip is the ingress headers
+  middleware (must strip these before forwardAuth; the guard re-mints `X-Org-Id`
+  via authResponseHeaders on allow).
+- **Forwarded-Host allowlist.** `safeHost`/`hostAllowed` honor `X-Forwarded-Host`
+  only for the cookie-domain suffix (or explicit `GUARD_ALLOWED_HOSTS`), else fall
+  back to `r.Host` — a spoofed forwarded host can't steer `redirect_uri`/`returnTo`.
+
+Config adds over admin-guard: `WAITLIST_URL`, `GUARD_FAIL_OPEN_ON_IAM_ERROR`,
+`GUARD_ALLOWED_HOSTS`, `IAM_CLIENT_ID=hanzo-waitlist-guard`. Secrets:
+`waitlist-guard-secrets` (GUARD_HMAC_KEY + IAM_CLIENT_SECRET). NetworkPolicy must
+pin the gated services (paas:3000 etc) to ingress-only so the guard can't be
+bypassed by hitting a Service ClusterIP directly. Tests:
+`cmd/waitlist-guard/main_test.go` (fail-open tri-state, inbound strip, host
+allowlist, no-org-pin, session forgery, approval predicate). Build via arcd
+BuildKit Job (`cmd/waitlist-guard/Dockerfile`), NOT GHA. **Not wired to prod** —
+cutover is a supervised one-host canary (see universe waitlist-guard docs).
+
 ## Test workflow green (fix/gateway-test-ci)
 
 `.github/workflows/test.yml` was red on every commit while `Build and Deploy`
