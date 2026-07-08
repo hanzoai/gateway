@@ -6,13 +6,13 @@
 //
 // Two orthogonal concerns, one binary:
 //
-//   1. aggregate — sources (IAM, platform, commerce) → datastore. A background
-//      ticker plus an on-demand POST /v1/admin/sync.
-//   2. serve — /v1/admin/* reads over the `admin` db. Every request is gated to
-//      a Hanzo superadmin (owner == AdminOrg), enforced at the DATA LAYER here
-//      independently of the ingress admin-guard ForwardAuth. Defense in depth:
-//      a request that slips past the edge still cannot read god-mode data
-//      without a superadmin session or JWT. Fail-closed.
+//  1. aggregate — sources (IAM, platform, commerce) → datastore. A background
+//     ticker plus an on-demand POST /v1/admin/sync.
+//  2. serve — /v1/admin/* reads over the `admin` db. Every request is gated to
+//     a Hanzo superadmin (owner == AdminOrg), enforced at the DATA LAYER here
+//     independently of the ingress admin-guard ForwardAuth. Defense in depth:
+//     a request that slips past the edge still cannot read god-mode data
+//     without a superadmin session or JWT. Fail-closed.
 //
 // Identity is resolved exactly like the rest of the platform: a Bearer/Basic
 // JWT validated through iamauth, or the first-party session cookie minted by
@@ -45,14 +45,14 @@ type config struct {
 	dsDatabase string
 
 	// Source backends for the aggregator.
-	iamInternal  string
-	iamClientID  string
-	iamSecret    string
-	cloudURL     string // cloud: session check (/v1/get-account)
-	commerceURL  string
-	commerceTok  string
-	platformURL  string
-	platformTok  string
+	iamInternal string
+	iamClientID string
+	iamSecret   string
+	cloudURL    string // cloud: session check (/v1/get-account)
+	commerceURL string
+	commerceTok string
+	platformURL string
+	platformTok string
 
 	syncInterval time.Duration
 
