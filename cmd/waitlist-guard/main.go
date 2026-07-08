@@ -64,6 +64,23 @@ type config struct {
 	// (owner == adminOrg) is ALWAYS approved. Default "admin".
 	adminOrg string
 
+	// failOpen decides the verdict when IAM is UNAVAILABLE (5xx / transport
+	// error) for an ALREADY-AUTHENTICATED caller (valid JWT or IAM session). The
+	// waitlist-guard fronts money-path surfaces (billing/console/app/chat/team),
+	// so a transient IAM blip must NOT blackhole them — an authenticated caller is
+	// let through (fail-OPEN). A DEFINITIVE IAM negative (4xx) and anonymous
+	// callers are unaffected: they never fail open. Default true. This is safe
+	// because (i) the durable fast path is the HMAC-signed guard cookie, which
+	// needs no IAM call at all, and (ii) downstream money-path services enforce
+	// their own JWT/API-key auth — the guard is never their sole gate.
+	failOpen bool
+
+	// allowedHosts, when non-empty, is the exact set of hosts the guard will
+	// honor from X-Forwarded-Host (defense-in-depth against a spoofed forwarded
+	// host driving redirect_uri / returnTo). Empty ⇒ accept any host that shares
+	// the cookie-domain suffix (e.g. *.hanzo.ai), else fall back to r.Host.
+	allowedHosts map[string]bool
+
 	// Where UNAPPROVED (waitlisted) callers are sent — the viral waitlist landing.
 	waitlistURL string
 
@@ -134,6 +151,8 @@ func loadConfig() *config {
 		clientID:     envOr("IAM_CLIENT_ID", "hanzo-waitlist-guard"),
 		clientSecret: clientSecret,
 		adminOrg:     envOr("IAM_ADMIN_ORG", "admin"),
+		failOpen:     envBool("GUARD_FAIL_OPEN_ON_IAM_ERROR", true),
+		allowedHosts: parseHostSet(os.Getenv("GUARD_ALLOWED_HOSTS")),
 		waitlistURL:  envOr("WAITLIST_URL", "https://waitlist.hanzo.ai"),
 		cookieDomain: envOr("GUARD_COOKIE_DOMAIN", ".hanzo.ai"),
 		cookieName:   envOr("GUARD_COOKIE_NAME", "hanzo_waitlist_guard"),
@@ -142,6 +161,17 @@ func loadConfig() *config {
 		validator:    iamauth.NewValidator(vcfg),
 	}
 }
+
+// iamOutcome is the tri-state result of a server-side IAM call, so callers can
+// distinguish "IAM is DOWN" (fail-OPEN for authed callers) from "IAM says no"
+// (fail-CLOSED) — the two must never collapse to one boolean.
+type iamOutcome int
+
+const (
+	iamOK          iamOutcome = iota // 200 with a usable body
+	iamUnavailable                   // transport error or 5xx — IAM is down
+	iamDenied                        // 4xx / unreadable — a definitive negative
+)
 
 // ----------------------------------------------------------------------------
 // Forward-auth verdict
@@ -155,10 +185,20 @@ func loadConfig() *config {
 // surface; an UNAPPROVED (waitlisted) identity is bounced to the viral waitlist
 // (browser) or 403'd (API); an anonymous browser is sent to IAM PKCE login.
 func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
-	orig := originalURL(r)
+	// Trust boundary: the guard is the sole authority for the identity headers it
+	// mints. Delete every client-supplied copy up front so a forged inbound
+	// `X-Org-Id: admin` / `X-Waitlist-Guard: allow` can never be read by the
+	// guard's own logic (defense in depth). The AUTHORITATIVE strip for the
+	// upstream request is the ingress headers middleware (see the guard's ingress
+	// wiring) — this mirrors it so the two agree.
+	iamauth.StripIdentityHeaders(r)
+	stripWaitlistHeaders(r)
+
+	orig := c.originalURL(r)
 
 	// (1) Guard session cookie — the browser fast path. The signed cookie encodes
-	//     the approved verdict, so no IAM round-trip on the hot path.
+	//     the approved verdict, so no IAM round-trip on the hot path. This is the
+	//     durable IAM-independent path an approved user rides after one login.
 	if owner, approved, ok := c.sessionOwner(r); ok {
 		c.decide(w, r, owner, approved, orig)
 		return
@@ -168,7 +208,20 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	//     NOT the live approval property (a token can lag an approval), so the
 	//     authoritative status comes from IAM. Admins are always approved.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		approved := claims.IsAdmin || claims.Owner == c.adminOrg || c.iamUserApproved(r, claims.Owner+"/"+claims.Name)
+		if claims.IsAdmin || claims.Owner == c.adminOrg {
+			c.decide(w, r, claims.Owner, true, orig)
+			return
+		}
+		approved, outcome := c.iamUserApproved(r, claims.Owner+"/"+claims.Name)
+		switch outcome {
+		case iamUnavailable:
+			// IAM is DOWN and the caller holds a VALID JWT (already authenticated).
+			// Fail-OPEN so a transient IAM blip does not blackhole the money path.
+			approved = c.failOpen
+		case iamDenied:
+			// Definitive IAM negative (4xx) — not approved.
+			approved = false
+		}
 		c.decide(w, r, claims.Owner, approved, orig)
 		return
 	} else if err != nil && err != iamauth.ErrNoToken {
@@ -180,9 +233,21 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// (3) IAM session cookie — resolve owner + approval via IAM get-account.
-	if owner, approved, ok := c.iamSessionApproval(r); ok {
+	switch owner, approved, outcome := c.iamSessionApproval(r); outcome {
+	case iamOK:
 		c.decide(w, r, owner, approved, orig)
 		return
+	case iamUnavailable:
+		// The browser presented an IAM session cookie (some auth signal) but IAM
+		// is down. Fail-OPEN with NO asserted org — the guard cannot vouch for the
+		// owner, so it emits no X-Org-Id; downstream money-path services re-derive
+		// identity from their own JWT check. This keeps the surface reachable
+		// during an IAM blip without asserting an unverified identity.
+		if c.failOpen {
+			c.decide(w, r, "", true, orig)
+			return
+		}
+		// fail-closed mode → fall through to interactive login / deny.
 	}
 
 	// No identity at all.
@@ -282,42 +347,52 @@ func (c *config) clearSession(w http.ResponseWriter) {
 // the authenticated user's `owner` AND approval status in one round-trip. This
 // covers a browser that holds an IAM SSO session but has not yet been issued a
 // guard cookie.
-func (c *config) iamSessionApproval(r *http.Request) (owner string, approved bool, ok bool) {
+func (c *config) iamSessionApproval(r *http.Request) (owner string, approved bool, outcome iamOutcome) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
-		return "", false, false
+		return "", false, iamDenied // no session to resolve
 	}
-	body, ok := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", cookie)
+	body, oc := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", cookie)
+	if oc != iamOK {
+		return "", false, oc
+	}
+	o, a, ok := approvalFromAccount(body, c.adminOrg)
 	if !ok {
-		return "", false, false
+		return "", false, iamDenied
 	}
-	return approvalFromAccount(body, c.adminOrg)
+	return o, a, iamOK
 }
 
 // iamUserApproved resolves a specific user's approval via IAM get-user (the JWT
 // path — the token is validated but its embedded claims may lag a live approval).
-// Fail-closed: on any IAM error it returns false (unapproved) rather than allow.
-func (c *config) iamUserApproved(r *http.Request, id string) bool {
+// Returns the approval AND the IAM outcome so the caller can fail-OPEN on an IAM
+// outage (iamUnavailable) while failing CLOSED on a definitive negative (iamDenied).
+func (c *config) iamUserApproved(r *http.Request, id string) (approved bool, outcome iamOutcome) {
 	if id == "" || id == "/" {
-		return false
+		return false, iamDenied
 	}
 	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/get-user?id=" + url.QueryEscape(id)
-	body, ok := c.iamGet(r, u, r.Header.Get("Cookie"))
-	if !ok {
-		return false
+	body, oc := c.iamGet(r, u, r.Header.Get("Cookie"))
+	if oc != iamOK {
+		return false, oc
 	}
-	_, approved, ok := approvalFromAccount(body, c.adminOrg)
-	return ok && approved
+	_, a, ok := approvalFromAccount(body, c.adminOrg)
+	if !ok {
+		return false, iamDenied
+	}
+	return a, iamOK
 }
 
-// iamGet performs a server-side GET to IAM, forwarding the caller's cookies. The
-// bounded read + timeout mirror the admin-guard get-account call.
-func (c *config) iamGet(r *http.Request, urlStr, cookie string) ([]byte, bool) {
+// iamGet performs a server-side GET to IAM, forwarding the caller's cookies, and
+// classifies the result: iamOK (200 + body), iamUnavailable (transport error or
+// 5xx — IAM is down), or iamDenied (4xx / unreadable). The bounded read + timeout
+// mirror the admin-guard get-account call.
+func (c *config) iamGet(r *http.Request, urlStr, cookie string) ([]byte, iamOutcome) {
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
-		return nil, false
+		return nil, iamDenied // a malformed internal URL is a deploy bug, not an IAM outage — never fail-open on it
 	}
 	if cookie != "" {
 		req.Header.Set("Cookie", cookie)
@@ -325,17 +400,21 @@ func (c *config) iamGet(r *http.Request, urlStr, cookie string) ([]byte, bool) {
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, false
+		return nil, iamUnavailable // transport error — IAM unreachable
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, false
+	switch {
+	case resp.StatusCode == http.StatusOK:
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		if err != nil {
+			return nil, iamUnavailable
+		}
+		return body, iamOK
+	case resp.StatusCode >= 500:
+		return nil, iamUnavailable // IAM 5xx — down/blip; fail-OPEN for authed callers
+	default:
+		return nil, iamDenied // 4xx — definitive negative; fail-CLOSED
 	}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, false
-	}
-	return body, true
 }
 
 // approvalFromAccount extracts (owner, approved) from an IAM get-account /
@@ -404,11 +483,13 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 
 	q := url.Values{}
 	q.Set("client_id", c.clientID)
-	// Pin the reserved admin org so a user who is a member of BOTH a tenant org
-	// and the admin org resolves to their admin-org identity (owner==adminOrg),
-	// which handleCallback requires. Without this, a login defaults to the user's
-	// home org and the guard denies + bounces to the tenant console.
-	q.Set("organization", c.adminOrg)
+	// NO org pin. admin-guard pins organization=admin because it gates RAW admin
+	// surfaces and needs the admin-org identity. The waitlist-guard is the OPPOSITE:
+	// it fronts CONSUMER product surfaces (console/billing/app/chat/team) whose
+	// users log in under THEIR OWN org. Pinning `organization=admin` would force
+	// every consumer login to resolve against the admin org they are not a member
+	// of → login failure / mis-scoped identity. A genuine global admin still
+	// resolves to owner==adminOrg from their own credentials and is approved.
 	q.Set("response_type", "code")
 	q.Set("scope", "openid profile email")
 	q.Set("redirect_uri", c.callbackURI(r))
@@ -601,11 +682,37 @@ func (c *config) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 // originalURL reconstructs the URL the client requested from the ingress's
 // X-Forwarded-* headers (Traefik forward-auth sets these).
-func originalURL(r *http.Request) string {
+func (c *config) originalURL(r *http.Request) string {
 	proto := firstNonEmpty(r.Header.Get("X-Forwarded-Proto"), "https")
-	host := firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host)
 	uri := firstNonEmpty(r.Header.Get("X-Forwarded-Uri"), r.URL.RequestURI())
-	return proto + "://" + host + uri
+	return proto + "://" + c.safeHost(r) + uri
+}
+
+// safeHost returns the request host to use, honoring X-Forwarded-Host ONLY when
+// it passes hostAllowed — otherwise falling back to the connection host. This
+// stops a spoofed X-Forwarded-Host from steering redirect_uri / returnTo to an
+// attacker origin. (The ingress already sets X-Forwarded-Host to the real host;
+// this is defense in depth for a misconfigured or bypassed ingress.)
+func (c *config) safeHost(r *http.Request) string {
+	if xfh := r.Header.Get("X-Forwarded-Host"); xfh != "" && c.hostAllowed(xfh) {
+		return xfh
+	}
+	return r.Host
+}
+
+// hostAllowed reports whether h may be honored from X-Forwarded-Host. With an
+// explicit GUARD_ALLOWED_HOSTS set, only those exact hosts pass; otherwise any
+// host sharing the cookie-domain registrable suffix (e.g. *.hanzo.ai) passes.
+func (c *config) hostAllowed(h string) bool {
+	h = strings.ToLower(strings.TrimSpace(strings.Split(h, ",")[0]))
+	if h == "" {
+		return false
+	}
+	if len(c.allowedHosts) > 0 {
+		return c.allowedHosts[h]
+	}
+	suffix := strings.ToLower(strings.TrimPrefix(c.cookieDomain, "."))
+	return suffix != "" && (h == suffix || strings.HasSuffix(h, "."+suffix))
 }
 
 // callbackURI is the absolute redirect_uri for the host being guarded. Each
@@ -614,8 +721,7 @@ func originalURL(r *http.Request) string {
 // allowlist https://<host>/__guard/callback).
 func (c *config) callbackURI(r *http.Request) string {
 	proto := firstNonEmpty(r.Header.Get("X-Forwarded-Proto"), "https")
-	host := firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host)
-	return proto + "://" + host + callbackPath
+	return proto + "://" + c.safeHost(r) + callbackPath
 }
 
 // isAPIClient reports whether the caller looks like a non-browser API client
@@ -678,6 +784,44 @@ func envOr(k, d string) string {
 		return v
 	}
 	return d
+}
+
+// envBool reads a boolean env var (1/t/true/on ⇒ true, 0/f/false/off ⇒ false),
+// returning the default when unset or unparseable.
+func envBool(k string, d bool) bool {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv(k))) {
+	case "1", "t", "true", "on", "yes":
+		return true
+	case "0", "f", "false", "off", "no":
+		return false
+	default:
+		return d
+	}
+}
+
+// parseHostSet turns a comma-separated host list into a lower-cased set.
+func parseHostSet(v string) map[string]bool {
+	set := map[string]bool{}
+	for _, h := range strings.Split(v, ",") {
+		if h = strings.ToLower(strings.TrimSpace(h)); h != "" {
+			set[h] = true
+		}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	return set
+}
+
+// stripWaitlistHeaders deletes the guard's OWN minted headers from an inbound
+// request so a client can never forge the allow verdict the guard later stamps.
+// Complements iamauth.StripIdentityHeaders (which covers X-Org-Id et al.).
+func stripWaitlistHeaders(r *http.Request) {
+	for h := range r.Header {
+		if ch := http.CanonicalHeaderKey(h); ch == "X-Waitlist-Guard" || strings.HasPrefix(ch, "X-Waitlist-") {
+			r.Header.Del(h)
+		}
+	}
 }
 
 func envDuration(k string, d time.Duration) time.Duration {
