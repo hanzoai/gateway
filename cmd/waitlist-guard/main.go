@@ -79,6 +79,14 @@ type config struct {
 	// validator validates Bearer/Basic JWTs (issuer + audience + expiry) and
 	// exposes claims.owner — the same edge validator the gateway uses.
 	validator *iamauth.Validator
+
+	// modes resolves per-host WAITLIST MODE from the central feature-gate registry
+	// (cloud's GET /v1/featuregate/mode). The guard used to gate purely by being
+	// ATTACHED to a router; now it consults the SAME registry the native cloud
+	// middleware reads, so ONE admin toggle on admin.hanzo.ai opens a service
+	// WITHOUT an ingress edit. Cached with a short TTL; fail-safe (unknown/error →
+	// gated). See mode.go.
+	modes *modeCache
 }
 
 const (
@@ -140,7 +148,23 @@ func loadConfig() *config {
 		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
 		hmacKey:      hmacKey,
 		validator:    iamauth.NewValidator(vcfg),
+		// The central feature-gate registry lives in the unified cloud binary.
+		// In-cluster ClusterIP by default; FEATUREGATE_URL overrides.
+		modes: newModeCache(
+			envOr("FEATUREGATE_URL", "http://cloud-api.hanzo.svc.cluster.local:8000"),
+			envDuration("FEATUREGATE_MODE_TTL", 10*time.Second)),
 	}
+}
+
+// cookieDomainForHost derives the per-request cookie Domain from the host's
+// registrable domain (cookieDomainFor), falling back to the static configured
+// domain for a bare host. A single static domain cannot cover the multi-apex
+// fanout the control plane gates (hanzo.ai / hanzo.app / hanzo.chat).
+func (c *config) cookieDomainForHost(host string) string {
+	if d := cookieDomainFor(host); d != "" {
+		return d
+	}
+	return c.cookieDomain
 }
 
 // ----------------------------------------------------------------------------
@@ -157,18 +181,39 @@ func loadConfig() *config {
 func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	orig := originalURL(r)
 
+	// MONEY-CRITICAL: a Hanzo API-KEY request (paid inference) is possession-gated +
+	// billed downstream, never waitlist-gated. Allow it straight through so the guard
+	// can never bounce a paid call. The real org is minted downstream by the gateway
+	// from the key, so no X-Org-Id is needed on this verdict.
+	if carriesAPIKey(r) {
+		w.Header().Set("X-Waitlist-Guard", "allow")
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
+	// Resolve the host's WAITLIST MODE from the central registry (cached, fail-safe
+	// to gated). When a service is OPEN (mode off), an AUTHENTICATED caller passes
+	// regardless of approval — approval is only consulted while the host is gated.
+	// The mode is evaluated FRESH per request (not baked into the session cookie),
+	// so an admin toggle takes effect within the mode-cache TTL even for a caller
+	// holding a live guard session. Unauthenticated callers still log in first (all
+	// apps require an account) — mode never bypasses authentication.
+	gated := c.modes.gated(r.Context(), hostOf(r))
+
 	// (1) Guard session cookie — the browser fast path. The signed cookie encodes
-	//     the approved verdict, so no IAM round-trip on the hot path.
+	//     the (approval) verdict, so no IAM round-trip on the hot path.
 	if owner, approved, ok := c.sessionOwner(r); ok {
-		c.decide(w, r, owner, approved, orig)
+		c.decide(w, r, owner, approved || !gated, orig)
 		return
 	}
 
 	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner`/`isAdmin` but
 	//     NOT the live approval property (a token can lag an approval), so the
-	//     authoritative status comes from IAM. Admins are always approved.
+	//     authoritative status comes from IAM. Admins are always approved. When the
+	//     host is OPEN (!gated), we skip the IAM approval round-trip entirely (Go
+	//     || short-circuits) — an authenticated caller passes.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		approved := claims.IsAdmin || claims.Owner == c.adminOrg || c.iamUserApproved(r, claims.Owner+"/"+claims.Name)
+		approved := !gated || claims.IsAdmin || claims.Owner == c.adminOrg || c.iamUserApproved(r, claims.Owner+"/"+claims.Name)
 		c.decide(w, r, claims.Owner, approved, orig)
 		return
 	} else if err != nil && err != iamauth.ErrNoToken {
@@ -179,9 +224,11 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 		// Browser with a bad/expired bearer — fall through to interactive login.
 	}
 
-	// (3) IAM session cookie — resolve owner + approval via IAM get-account.
+	// (3) IAM session cookie — resolve owner + approval via IAM get-account. The
+	//     lookup still runs (we need the owner to authenticate the caller + stamp
+	//     X-Org-Id), but on an OPEN host the approval bit is not required to pass.
 	if owner, approved, ok := c.iamSessionApproval(r); ok {
-		c.decide(w, r, owner, approved, orig)
+		c.decide(w, r, owner, approved || !gated, orig)
 		return
 	}
 
@@ -241,7 +288,12 @@ func (c *config) sessionOwner(r *http.Request) (string, bool, bool) {
 	return owner, approvedStr == "1", owner != ""
 }
 
-func (c *config) setSession(w http.ResponseWriter, owner string, approved bool) {
+// setSession writes the signed guard session. domain is the PER-APEX cookie Domain
+// (cookieDomainForHost) so the cookie is accepted on whichever registrable domain
+// the request arrived on — a single static domain cannot cover the multi-apex
+// fanout. The session encodes the REAL approval bit (not the mode): mode is
+// re-evaluated fresh per request in handleVerify, so a later toggle is honored.
+func (c *config) setSession(w http.ResponseWriter, domain, owner string, approved bool) {
 	exp := time.Now().Add(c.cookieTTL)
 	approvedBit := "0"
 	if approved {
@@ -252,7 +304,7 @@ func (c *config) setSession(w http.ResponseWriter, owner string, approved bool) 
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   domain,
 		Expires:  exp,
 		MaxAge:   int(c.cookieTTL.Seconds()),
 		Secure:   true,
@@ -261,12 +313,12 @@ func (c *config) setSession(w http.ResponseWriter, owner string, approved bool) 
 	})
 }
 
-func (c *config) clearSession(w http.ResponseWriter) {
+func (c *config) clearSession(w http.ResponseWriter, domain string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    "",
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   domain,
 		MaxAge:   -1,
 		Secure:   true,
 		HttpOnly: true,
@@ -389,13 +441,16 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 	challenge := pkceChallenge(verifier)
 	nonce := randString(16)
 
-	// state cookie payload: nonce|verifier|returnTo (signed, 10-minute life).
+	// state cookie payload: nonce|verifier|returnTo (signed, 10-minute life). The
+	// Domain is the request host's registrable domain (per-apex) so the browser
+	// accepts it on hanzo.app / hanzo.chat / *.hanzo.ai alike — a static domain is
+	// rejected cross-apex and breaks the callback ("missing state cookie").
 	statePayload := strings.Join([]string{nonce, verifier, returnTo}, "\x1f")
 	http.SetCookie(w, &http.Cookie{
 		Name:     stateCookie,
 		Value:    c.sign(statePayload),
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   c.cookieDomainForHost(hostOf(r)),
 		MaxAge:   600,
 		Secure:   true,
 		HttpOnly: true,
@@ -445,8 +500,9 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	verifier, returnTo := parts[1], parts[2]
-	// Clear the state cookie.
-	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: c.cookieDomain, MaxAge: -1, Secure: true, HttpOnly: true})
+	domain := c.cookieDomainForHost(hostOf(r))
+	// Clear the state cookie (same per-apex domain it was set with).
+	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: domain, MaxAge: -1, Secure: true, HttpOnly: true})
 
 	owner, approved, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
 	if err != nil {
@@ -455,11 +511,13 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set a session encoding the approved verdict either way, so the fast path
-	// works for approved users AND an unapproved user isn't re-prompted to log in
-	// on every request (they get bounced to the waitlist instead).
-	c.setSession(w, owner, approved)
-	if !approved {
+	// Set a session encoding the REAL approval verdict (per-apex domain), so the
+	// fast path works for approved users AND an unapproved user isn't re-prompted
+	// to log in on every request. The host's waitlist mode is re-checked fresh per
+	// request in handleVerify, so an OPEN service lets this authenticated user
+	// straight through even when approved is false.
+	c.setSession(w, domain, owner, approved)
+	if c.modes.gated(r.Context(), hostOf(r)) && !approved {
 		http.Redirect(w, r, c.waitlistURL, http.StatusFound)
 		return
 	}
@@ -591,7 +649,7 @@ func (c *config) userinfoOwner(ctx context.Context, accessToken string) (string,
 }
 
 func (c *config) handleLogout(w http.ResponseWriter, r *http.Request) {
-	c.clearSession(w)
+	c.clearSession(w, c.cookieDomainForHost(hostOf(r)))
 	http.Redirect(w, r, c.waitlistURL, http.StatusFound)
 }
 
