@@ -8909,6 +8909,214 @@
       }
     },
     {
+      "endpoint": "/v1/usage/{path}",
+      "method": "GET",
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/usage/{path}",
+          "host": [
+            "http://cloud.hanzo.svc.cluster.local:8000"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": true,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/usage/{path}",
+      "method": "POST",
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/usage/{path}",
+          "host": [
+            "http://cloud.hanzo.svc.cluster.local:8000"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": true,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/audit",
+      "method": "GET",
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/audit",
+          "host": [
+            "http://cloud.hanzo.svc.cluster.local:8000"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": true,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/audit",
+      "method": "POST",
+      "input_headers": [
+        "Authorization",
+        "Content-Type",
+        "Accept",
+        "X-Request-ID",
+        "X-Org-Id",
+        "X-Project-Id",
+        "X-User-Id",
+        "X-Roles"
+      ],
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "url_pattern": "/v1/audit",
+          "host": [
+            "http://cloud.hanzo.svc.cluster.local:8000"
+          ],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        },
+        "auth/validator": {
+          "alg": "RS256",
+          "jwk_url": "http://iam.hanzo.svc.cluster.local/v1/iam/.well-known/jwks",
+          "issuer": "https://hanzo.id",
+          "disable_jwk_security": true,
+          "propagate_claims": [
+            [
+              "sub",
+              "X-User-Id"
+            ],
+            [
+              "owner",
+              "X-Org-Id"
+            ],
+            [
+              "roles",
+              "X-Roles"
+            ]
+          ]
+        }
+      }
+    },
+    {
       "endpoint": "/v1/insights/{path}",
       "method": "GET",
       "input_headers": [
