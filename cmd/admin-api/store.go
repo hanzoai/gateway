@@ -108,9 +108,9 @@ func (s *store) upsertOrgs(ctx context.Context, rows []orgRow) error {
 }
 
 type userRow struct {
-	Org, Name, Email, Display, Tag string
+	Org, Name, Email, Display, Tag    string
 	IsAdmin, IsGlobalAdmin, Forbidden uint8
-	Created, LastSignin            time.Time
+	Created, LastSignin               time.Time
 }
 
 func (s *store) upsertUsers(ctx context.Context, rows []userRow) error {
