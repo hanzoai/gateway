@@ -107,7 +107,22 @@ const (
 	stateCookie = "hanzo_waitlist_guard_state"
 )
 
+// waitlistMintedHeaders are the guard's OWN response headers (minted on allow).
+// A client must never forge them inbound — stripped by stripWaitlistHeaders and
+// emitted into the generated ingress strip middleware.
+var waitlistMintedHeaders = []string{"X-Waitlist-Guard", "X-Waitlist-Approved"}
+
 func main() {
+	// DRY generator: emit the Traefik `waitlist-strip` middleware from the SINGLE
+	// source of truth (iamauth.StripIdentityHeaderNames + waitlistMintedHeaders) so
+	// the ingress config that fronts a DIRECT-to-backend route cannot drift from
+	// the guard's own strip. Regenerate the universe canary-ingress waitlist-strip
+	// block with: `waitlist-guard -print-strip-middleware`.
+	if len(os.Args) > 1 && os.Args[1] == "-print-strip-middleware" {
+		printStripMiddleware(os.Stdout)
+		return
+	}
+
 	cfg := loadConfig()
 
 	mux := http.NewServeMux()
@@ -131,8 +146,8 @@ func main() {
 
 func loadConfig() *config {
 	hmacKey := []byte(os.Getenv("GUARD_HMAC_KEY"))
-	if len(hmacKey) < 16 {
-		log.Fatal("GUARD_HMAC_KEY must be set to a random secret of >=16 bytes")
+	if len(hmacKey) < 32 {
+		log.Fatal("GUARD_HMAC_KEY must be set to a random secret of >=32 bytes")
 	}
 	clientSecret := os.Getenv("IAM_CLIENT_SECRET")
 	if clientSecret == "" {
@@ -156,7 +171,7 @@ func loadConfig() *config {
 		waitlistURL:  envOr("WAITLIST_URL", "https://waitlist.hanzo.ai"),
 		cookieDomain: envOr("GUARD_COOKIE_DOMAIN", ".hanzo.ai"),
 		cookieName:   envOr("GUARD_COOKIE_NAME", "hanzo_waitlist_guard"),
-		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
+		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 1*time.Hour),
 		hmacKey:      hmacKey,
 		validator:    iamauth.NewValidator(vcfg),
 	}
@@ -238,16 +253,16 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 		c.decide(w, r, owner, approved, orig)
 		return
 	case iamUnavailable:
-		// The browser presented an IAM session cookie (some auth signal) but IAM
-		// is down. Fail-OPEN with NO asserted org — the guard cannot vouch for the
-		// owner, so it emits no X-Org-Id; downstream money-path services re-derive
-		// identity from their own JWT check. This keeps the surface reachable
-		// during an IAM blip without asserting an unverified identity.
-		if c.failOpen {
-			c.decide(w, r, "", true, orig)
-			return
-		}
-		// fail-closed mode → fall through to interactive login / deny.
+		// IAM is down and the ONLY signal here is a raw inbound Cookie — which the
+		// guard has NOT validated (unlike path 2's cryptographically-verified JWT).
+		// Fail-OPEN here would let an ANONYMOUS caller with a junk cookie ride
+		// through during an IAM blip (Red R-4). So DO NOT fail open on an
+		// unvalidated identity: fall through to interactive login / 401. Money-path
+		// resilience during an IAM outage is preserved by the two VALIDATED paths —
+		// the HMAC guard cookie (path 1, no IAM call) and a validated JWT (path 2,
+		// which does fail open). Anonymous never fails open.
+		//
+		// fall through
 	}
 
 	// No identity at all.
@@ -282,9 +297,12 @@ func (c *config) decide(w http.ResponseWriter, r *http.Request, owner string, ap
 // ----------------------------------------------------------------------------
 
 // sessionOwner returns the org + approved verdict from a valid, unexpired guard
-// session cookie. Cookie value: base64(owner|approved|expiryUnix) "." base64(HMAC).
-// Tamper-evident and time-bounded; no server-side store needed. The approved bit
-// is bound into the signed payload so it cannot be forged.
+// session cookie. Cookie value: base64(owner|user|approved|expiryUnix) "." base64(HMAC).
+// Tamper-evident and time-bounded; no server-side store needed. owner + user +
+// the approved bit are all bound into the signed payload so none can be forged and
+// the cookie is bound to the identity it was minted for (no cross-user replay).
+// The TTL bounds the reject-user revocation window (default 1h); a full
+// nonce-vs-IAM revocation check is a tracked fast-follow.
 func (c *config) sessionOwner(r *http.Request) (string, bool, bool) {
 	ck, err := r.Cookie(c.cookieName)
 	if err != nil {
@@ -295,24 +313,25 @@ func (c *config) sessionOwner(r *http.Request) (string, bool, bool) {
 		return "", false, false
 	}
 	parts := strings.Split(payload, "|")
-	if len(parts) != 3 {
+	if len(parts) != 4 {
 		return "", false, false
 	}
-	owner, approvedStr, expStr := parts[0], parts[1], parts[2]
+	owner, user, approvedStr, expStr := parts[0], parts[1], parts[2], parts[3]
 	expUnix, err := parseInt(expStr)
 	if err != nil || time.Now().Unix() > expUnix {
 		return "", false, false
 	}
+	_ = user // bound into the signed payload; carried for revocation (fast-follow)
 	return owner, approvedStr == "1", owner != ""
 }
 
-func (c *config) setSession(w http.ResponseWriter, owner string, approved bool) {
+func (c *config) setSession(w http.ResponseWriter, owner, user string, approved bool) {
 	exp := time.Now().Add(c.cookieTTL)
 	approvedBit := "0"
 	if approved {
 		approvedBit = "1"
 	}
-	payload := fmt.Sprintf("%s|%s|%d", owner, approvedBit, exp.Unix())
+	payload := fmt.Sprintf("%s|%s|%s|%d", owner, user, approvedBit, exp.Unix())
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
@@ -529,7 +548,7 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// Clear the state cookie.
 	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: c.cookieDomain, MaxAge: -1, Secure: true, HttpOnly: true})
 
-	owner, approved, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
+	owner, name, approved, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
 	if err != nil {
 		log.Printf("waitlist-guard: token exchange failed: %v", err)
 		http.Error(w, "login failed", http.StatusBadGateway)
@@ -539,7 +558,7 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// Set a session encoding the approved verdict either way, so the fast path
 	// works for approved users AND an unapproved user isn't re-prompted to log in
 	// on every request (they get bounced to the waitlist instead).
-	c.setSession(w, owner, approved)
+	c.setSession(w, owner, name, approved)
 	if !approved {
 		http.Redirect(w, r, c.waitlistURL, http.StatusFound)
 		return
@@ -550,10 +569,11 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, returnTo, http.StatusFound)
 }
 
-// exchange swaps the auth code for tokens and resolves (owner, approved) from the
-// validated ID/access token claims + an authoritative IAM get-user lookup. Admins
-// (owner==adminOrg or isAdmin) are approved without the lookup.
-func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (string, bool, error) {
+// exchange swaps the auth code for tokens and resolves (owner, user, approved)
+// from the validated ID/access token claims + an authoritative IAM get-user
+// lookup. Admins (owner==adminOrg or isAdmin) are approved without the lookup.
+// The user name is returned so the session cookie can be bound to the identity.
+func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (string, string, bool, error) {
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("code", code)
@@ -567,26 +587,26 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", false, err
+		return "", "", false, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", false, err
+		return "", "", false, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != http.StatusOK {
-		return "", false, fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
+		return "", "", false, fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
 	}
 	var tok struct {
 		AccessToken string `json:"access_token"`
 		IDToken     string `json:"id_token"`
 	}
 	if err := json.Unmarshal(body, &tok); err != nil {
-		return "", false, fmt.Errorf("decode token response: %w", err)
+		return "", "", false, fmt.Errorf("decode token response: %w", err)
 	}
 
 	// Resolve validated claims (owner, name, isAdmin) from the ID or access token.
@@ -607,16 +627,16 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 		}
 	}
 	if owner == "" {
-		return "", false, fmt.Errorf("could not resolve owner from token or userinfo")
+		return "", "", false, fmt.Errorf("could not resolve owner from token or userinfo")
 	}
 
 	// Admins are always approved. Otherwise resolve the authoritative approval
 	// property from IAM get-user (Bearer the freshly-minted access token).
 	if owner == c.adminOrg || isAdmin {
-		return owner, true, nil
+		return owner, name, true, nil
 	}
 	approved := c.getUserApprovedBearer(ctx, owner+"/"+name, tok.AccessToken)
-	return owner, approved, nil
+	return owner, name, approved, nil
 }
 
 // getUserApprovedBearer reads a user's approval from IAM get-user authenticated
@@ -821,6 +841,30 @@ func stripWaitlistHeaders(r *http.Request) {
 		if ch := http.CanonicalHeaderKey(h); ch == "X-Waitlist-Guard" || strings.HasPrefix(ch, "X-Waitlist-") {
 			r.Header.Del(h)
 		}
+	}
+}
+
+// printStripMiddleware writes the Traefik `waitlist-strip` middleware YAML from
+// the authoritative header sets, so the ingress config fronting a direct-to-
+// backend route is GENERATED, never hand-maintained (no drift with the guard's
+// own iamauth.StripIdentityHeaders). Traefik customRequestHeaders can only remove
+// EXACT names — the X-IAM-*/X-HANZO-* prefix families (StripIdentityHeaderPrefixes)
+// CANNOT be wildcarded here, so a money/identity-consuming host MUST route through
+// the gateway (full Go strip) rather than direct-to-Service.
+func printStripMiddleware(w io.Writer) {
+	fmt.Fprintln(w, "# GENERATED by `waitlist-guard -print-strip-middleware` — DO NOT hand-edit.")
+	fmt.Fprintln(w, "# Source of truth: iamauth.StripIdentityHeaderNames + waitlistMintedHeaders.")
+	fmt.Fprintln(w, "# NOTE: Traefik cannot wildcard-strip the X-IAM-*/X-HANZO-* families")
+	fmt.Fprintln(w, "# (iamauth.StripIdentityHeaderPrefixes) — route identity-consuming hosts")
+	fmt.Fprintln(w, "# THROUGH the gateway, which runs the full Go strip + re-mint.")
+	fmt.Fprintln(w, "http:")
+	fmt.Fprintln(w, "  middlewares:")
+	fmt.Fprintln(w, "    waitlist-strip:")
+	fmt.Fprintln(w, "      headers:")
+	fmt.Fprintln(w, "        customRequestHeaders:")
+	names := append(append([]string{}, iamauth.StripIdentityHeaderNames...), waitlistMintedHeaders...)
+	for _, h := range names {
+		fmt.Fprintf(w, "          %s: \"\"\n", h)
 	}
 }
 
