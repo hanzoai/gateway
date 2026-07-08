@@ -484,43 +484,60 @@ var MintedIdentityHeaders = []string{
 	"X-User-IsGlobalAdmin",
 }
 
-// StripIdentityHeaders removes every client-supplied identity header. The
-// edge is the sole authority for these; this MUST run before any bypass
-// path so a forged value can never survive.
-func StripIdentityHeaders(r *http.Request) {
-	r.Header.Del("X-User-Id")
-	r.Header.Del("X-Org-Id")
-	r.Header.Del("X-Roles")
-	r.Header.Del("X-User-Permissions")
-	r.Header.Del("X-User-Email")
-	r.Header.Del("X-Phone-Number")
-	r.Header.Del("X-User-IsAdmin")
-	// PLATFORM superadmin flag — commerce's GetIAMClaims reads it straight off the
-	// request and GlobalAdmin() trusts it, so a forged "X-User-IsGlobalAdmin: true"
-	// would grant the money/admin authority downstream. It is minted only from a
-	// validated GlobalAdmin() claim (InjectIdentity), so a client value MUST be
-	// stripped here.
-	r.Header.Del("X-User-IsGlobalAdmin")
-	// X-Project-Id is an org SUB-SCOPE (a project WITHIN the validated org). A raw
-	// client value is forgeable, so strip it unconditionally here — then, exactly
-	// like X-Org-Id from `owner`, InjectIdentity re-mints it from the validated JWT
-	// `project` claim (trusted: IAM scopes the claim to the caller's org). Absent /
-	// default project mints nothing (minimal-canonical form), preserving today's
-	// single-project behavior. A backend still authorizes only on this minted id,
-	// never on a caller-controlled one (cross-project IDOR).
-	r.Header.Del("X-Project-Id")
+// StripIdentityHeaderNames is the AUTHORITATIVE set of exact identity headers the
+// edge mints (or a backend consumes) and therefore MUST strip on ingress so a
+// forged value can never survive. Single source of truth: StripIdentityHeaders
+// iterates it, and any external stripper (e.g. the ingress `waitlist-strip`
+// middleware fronting a DIRECT-to-backend route) MUST cover exactly this set —
+// generate that config from here (`waitlist-guard -print-strip-middleware`) so
+// the two cannot drift. Forwards-only: append, never remove.
+//
+//   - X-User-IsGlobalAdmin: commerce GetIAMClaims reads it off the request and
+//     GlobalAdmin() trusts it → a forged "true" grants money/admin authority.
+//   - X-Project-Id: org SUB-SCOPE, minted from a validated claim; a raw client
+//     value is a cross-project IDOR.
+var StripIdentityHeaderNames = []string{
+	"X-User-Id",
+	"X-Org-Id",
+	"X-Roles",
+	"X-User-Permissions",
+	"X-User-Email",
+	"X-Phone-Number",
+	"X-User-IsAdmin",
+	"X-User-IsGlobalAdmin",
+	"X-Project-Id",
 	// Non-canonical legacy identity headers.
-	r.Header.Del("X-User-Role")
-	r.Header.Del("X-User-Roles")
-	r.Header.Del("X-User-Name")
-	r.Header.Del("X-Tenant-Id")
-	r.Header.Del("X-Tenant-ID")
-	r.Header.Del("X-Org")
-	// Every legacy vendor-prefixed header.
+	"X-User-Role",
+	"X-User-Roles",
+	"X-User-Name",
+	"X-Tenant-Id",
+	"X-Tenant-ID",
+	"X-Org",
+}
+
+// StripIdentityHeaderPrefixes are vendor-prefixed identity families stripped by
+// PREFIX. NOTE: a Traefik `headers` middleware (customRequestHeaders) can only
+// remove EXACT header names — it CANNOT wildcard these. A backend placed behind
+// the waitlist-guard on a DIRECT route (bypassing the gateway) is therefore NOT
+// protected against a forged X-IAM-*/X-HANZO-* header by the ingress strip alone;
+// route any such money/identity-consuming host THROUGH the gateway (which runs
+// this full Go strip + re-mint) instead of direct-to-Service.
+var StripIdentityHeaderPrefixes = []string{"X-IAM-", "X-HANZO-"}
+
+// StripIdentityHeaders removes every client-supplied identity header. The edge is
+// the sole authority for these; this MUST run before any bypass path so a forged
+// value can never survive.
+func StripIdentityHeaders(r *http.Request) {
+	for _, h := range StripIdentityHeaderNames {
+		r.Header.Del(h)
+	}
 	for key := range r.Header {
 		upper := strings.ToUpper(key)
-		if strings.HasPrefix(upper, "X-IAM-") || strings.HasPrefix(upper, "X-HANZO-") {
-			r.Header.Del(key)
+		for _, p := range StripIdentityHeaderPrefixes {
+			if strings.HasPrefix(upper, p) {
+				r.Header.Del(key)
+				break
+			}
 		}
 	}
 }

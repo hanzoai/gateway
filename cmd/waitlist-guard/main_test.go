@@ -6,7 +6,11 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,6 +18,8 @@ import (
 	"testing"
 	"time"
 
+	gojose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
@@ -48,39 +54,108 @@ func browserReq() *http.Request {
 	return r
 }
 
-// TestFailOpenOnIAM5xx is the money-path resilience invariant: when IAM is DOWN
-// (5xx) an authenticated browser (IAM session cookie) is let THROUGH under
-// fail-open, but is NOT let through when fail-open is disabled; and a DEFINITIVE
-// 4xx negative never fails open regardless.
-func TestFailOpenOnIAM5xx(t *testing.T) {
+// TestPath3NeverFailsOpen (Red R-4): path 3 resolves identity from a RAW inbound
+// cookie the guard has NOT validated. During an IAM outage (5xx) it must NEVER
+// fail open — an anonymous caller with a junk cookie would otherwise ride through.
+// Every IAM outcome × failOpen setting on a mere-cookie request → interactive
+// login (302), never 204 allow.
+func TestPath3NeverFailsOpen(t *testing.T) {
+	for _, iamStatus := range []int{500, 503, 404} {
+		for _, failOpen := range []bool{true, false} {
+			iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(iamStatus)
+			}))
+			c := newTestConfig(iam.URL, failOpen)
+			rec := httptest.NewRecorder()
+			c.handleVerify(rec, browserReq())
+			iam.Close()
+			if rec.Code == http.StatusNoContent || rec.Header().Get("X-Waitlist-Guard") == "allow" {
+				t.Fatalf("path-3 (unvalidated cookie) failed OPEN: iamStatus=%d failOpen=%v code=%d",
+					iamStatus, failOpen, rec.Code)
+			}
+			if rec.Code != http.StatusFound {
+				t.Fatalf("path-3 iamStatus=%d failOpen=%v: code=%d want 302 login", iamStatus, failOpen, rec.Code)
+			}
+		}
+	}
+}
+
+// jwtReq mints an RSA-signed JWT (owner=hanzo, name=alice, non-admin, aud in the
+// validator allowlist) and returns a forward-auth request bearing it — so
+// handleVerify reaches path 2 (validated JWT) with a live get-user lookup.
+func jwtSignerConfig(t *testing.T, iamURL string, failOpen bool) (*config, string) {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("rsa: %v", err)
+	}
+	const kid, iss, aud = "wg-test-key", "https://iam.hanzo.ai", "hanzo-waitlist-guard"
+	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid)
+	signer, err := gojose.NewSigner(gojose.SigningKey{Algorithm: gojose.RS256, Key: key}, opts)
+	if err != nil {
+		t.Fatalf("signer: %v", err)
+	}
+	jwks, _ := json.Marshal(gojose.JSONWebKeySet{Keys: []gojose.JSONWebKey{{
+		Key: &key.PublicKey, KeyID: kid, Algorithm: string(gojose.RS256), Use: "sig",
+	}}})
+	jwksSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(jwks)
+	}))
+	t.Cleanup(jwksSrv.Close)
+
+	now := time.Now()
+	claims := iamauth.Claims{Claims: jwt.Claims{
+		Issuer: iss, Subject: "alice", Audience: jwt.Audience{aud},
+		IssuedAt: jwt.NewNumericDate(now.Add(-time.Minute)),
+		Expiry:   jwt.NewNumericDate(now.Add(10 * time.Minute)),
+	}, Owner: "hanzo", Name: "alice"}
+	raw, err := jwt.Signed(signer).Claims(claims).Serialize()
+	if err != nil {
+		t.Fatalf("sign: %v", err)
+	}
+
+	c := newTestConfig(iamURL, failOpen)
+	c.validator = iamauth.NewValidator(iamauth.Config{
+		JWKSURL: jwksSrv.URL, Issuer: iss, Audiences: []string{aud}, JWKSTTL: time.Minute,
+	})
+	return c, raw
+}
+
+// TestPath2FailOpenOnIAM5xx (Red R-4 counterpart): a VALIDATED JWT is the ONLY
+// signal permitted to fail open. get-user 5xx + failOpen ⇒ allow; 5xx + fail-closed
+// ⇒ deny; a 4xx (definitive) or a live "pending" ⇒ deny regardless; live "approved"
+// ⇒ allow. API client (Bearer) unapproved ⇒ 403, approved ⇒ 204.
+func TestPath2FailOpenOnIAM5xx(t *testing.T) {
 	cases := []struct {
 		name       string
-		iamStatus  int
+		getUser    func(w http.ResponseWriter)
 		failOpen   bool
-		wantStatus int // 204 allow, 302 login/waitlist
-		wantNoOrg  bool
+		wantStatus int
 	}{
-		{"5xx + fail-open ⇒ allow (no org asserted)", 500, true, http.StatusNoContent, true},
-		{"5xx + fail-closed ⇒ login", 503, false, http.StatusFound, false},
-		{"4xx never fails open ⇒ login", 404, true, http.StatusFound, false},
+		{"5xx + fail-open ⇒ allow", func(w http.ResponseWriter) { w.WriteHeader(500) }, true, http.StatusNoContent},
+		{"5xx + fail-closed ⇒ 403", func(w http.ResponseWriter) { w.WriteHeader(503) }, false, http.StatusForbidden},
+		{"4xx never fails open ⇒ 403", func(w http.ResponseWriter) { w.WriteHeader(404) }, true, http.StatusForbidden},
+		{"live pending ⇒ 403", func(w http.ResponseWriter) {
+			_, _ = w.Write([]byte(`{"owner":"hanzo","name":"alice","properties":{"approvalStatus":"pending"}}`))
+		}, true, http.StatusForbidden},
+		{"live approved ⇒ 204", func(w http.ResponseWriter) {
+			_, _ = w.Write([]byte(`{"owner":"hanzo","name":"alice","properties":{"approvalStatus":"approved"}}`))
+		}, true, http.StatusNoContent},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(tc.iamStatus)
-			}))
+			iam := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { tc.getUser(w) }))
 			defer iam.Close()
-			c := newTestConfig(iam.URL, tc.failOpen)
+			c, token := jwtSignerConfig(t, iam.URL, tc.failOpen)
+			r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
+			r.Header.Set("X-Forwarded-Host", "console.hanzo.ai")
+			r.Header.Set("X-Forwarded-Proto", "https")
+			r.Header.Set("Authorization", "Bearer "+token)
 			rec := httptest.NewRecorder()
-			c.handleVerify(rec, browserReq())
+			c.handleVerify(rec, r)
 			if rec.Code != tc.wantStatus {
-				t.Fatalf("status=%d want %d", rec.Code, tc.wantStatus)
-			}
-			if tc.wantNoOrg && rec.Header().Get("X-Org-Id") != "" {
-				t.Fatalf("fail-open allow asserted an org it could not verify: X-Org-Id=%q", rec.Header().Get("X-Org-Id"))
-			}
-			if rec.Code == http.StatusNoContent && rec.Header().Get("X-Waitlist-Guard") != "allow" {
-				t.Fatalf("allow verdict missing X-Waitlist-Guard=allow")
+				t.Fatalf("code=%d want %d", rec.Code, tc.wantStatus)
 			}
 		})
 	}
@@ -241,5 +316,46 @@ func TestSessionForgeryRejected(t *testing.T) {
 	forged := forgedPayload + "." + macB64
 	if _, ok := c.verifySigned(forged); ok {
 		t.Fatal("verifySigned ACCEPTED a forged approved bit — the gate is bypassable")
+	}
+}
+
+// TestStripMiddlewareCoversAuthoritativeSet is the DRY guard: the generated
+// ingress `waitlist-strip` MUST enumerate every exact header the gateway strips
+// (iamauth.StripIdentityHeaderNames) plus the guard's own minted headers, so the
+// ingress config fronting a direct-to-backend route can never silently drift and
+// leave a forgeable identity header (Red H-2).
+func TestStripMiddlewareCoversAuthoritativeSet(t *testing.T) {
+	var buf bytes.Buffer
+	printStripMiddleware(&buf)
+	out := buf.String()
+	for _, h := range append(append([]string{}, iamauth.StripIdentityHeaderNames...), waitlistMintedHeaders...) {
+		if !strings.Contains(out, h+`: ""`) {
+			t.Fatalf("generated waitlist-strip is MISSING %q — ingress strip would drift from the guard", h)
+		}
+	}
+	// The wildcard families cannot be expressed in Traefik; the generator must warn.
+	if !strings.Contains(out, "X-IAM-") || !strings.Contains(out, "gateway") {
+		t.Fatal("generator must warn that X-IAM-*/X-HANZO-* need gateway routing")
+	}
+}
+
+// TestSessionBoundToUser: a valid 4-part session round-trips; a legacy 3-part
+// payload (pre-binding) is rejected (forwards-only, no silent downgrade).
+func TestSessionBoundToUser(t *testing.T) {
+	c := newTestConfig("https://iam.hanzo.ai", true)
+	rec := httptest.NewRecorder()
+	c.setSession(rec, "maxpower", "dave", true)
+	ck := rec.Result().Cookies()[0]
+	r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
+	r.AddCookie(ck)
+	owner, approved, ok := c.sessionOwner(r)
+	if !ok || owner != "maxpower" || !approved {
+		t.Fatalf("round-trip failed: owner=%q approved=%v ok=%v", owner, approved, ok)
+	}
+	// A legacy 3-part payload must not parse.
+	r2 := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
+	r2.AddCookie(&http.Cookie{Name: c.cookieName, Value: c.sign("maxpower|1|9999999999")})
+	if _, _, ok := c.sessionOwner(r2); ok {
+		t.Fatal("legacy 3-part session accepted — binding not enforced")
 	}
 }
