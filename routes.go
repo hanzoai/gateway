@@ -255,6 +255,19 @@ func cloudAPIURL() *url.URL {
 // cloud's mount table, not a second map here.
 var apiCloudHosts = map[string]bool{
 	"api.hanzo.ai": true,
+	// api.cloud.hanzo.ai is the upstream Host the Traefik `console-v1-host` (and
+	// `cloud-api-host`) middlewares rewrite console.hanzo.ai/v1/* and
+	// cloud-api.hanzo.ai/v1/* to before this gateway. Without it here those hosts
+	// fell through to the per-service exactRoutes (which carry /v1/billing,
+	// /v1/commerce, … but NOT the visor control plane), so /v1/gpus, /v1/machines,
+	// /v1/clusters, /v1/fleet 404'd — breaking the console GPUs + Machines pages for
+	// EVERY customer. Treating it as a unified-cloud-API host forwards the WHOLE /v1
+	// surface to cloud (which owns visor + all control-plane routing), exactly like
+	// api.hanzo.ai. SECURITY unchanged: NewAuthMiddleware runs BEFORE the host
+	// passthrough for ALL hosts — it unconditionally strips client identity headers
+	// and re-mints X-Org-Id from the validated JWT — so this carries a gateway-
+	// sanitized request, never a client-trusted X-Org-Id.
+	"api.cloud.hanzo.ai": true,
 }
 
 // hostProxyMiddleware intercepts requests and routes them to the correct
