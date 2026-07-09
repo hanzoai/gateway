@@ -87,6 +87,9 @@ func defaultAllowedOrigins() []string {
 		// Pars
 		"pars.network",
 		"pars.id",
+		// Karma (external customer) — apex covers every subdomain (e.g.
+		// tryon.karma.style) via the suffix match in isAllowedOrigin.
+		"karma.style",
 		// Local dev
 		"localhost",
 	}
