@@ -26,6 +26,19 @@ spec:
   - host: api.hanzo.ai
     http: &gateway
       paths:
+      # Agent Skills Discovery is public + served by the cloud binary (which
+      # white-labels by the preserved Host). This more-specific prefix wins over
+      # `/` in Traefik, so /.well-known/agent-skills bypasses the gateway's IAM
+      # gate and reaches cloud directly, while every other path still flows
+      # through the gateway. One edit on the shared anchor covers every host
+      # below (api/cloud/admin/console/console2.hanzo.ai).
+      - path: /.well-known/agent-skills
+        pathType: Prefix
+        backend:
+          service:
+            name: cloud
+            port:
+              number: 8000
       - path: /
         pathType: Prefix
         backend:
