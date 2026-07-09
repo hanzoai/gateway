@@ -32,6 +32,10 @@ func TestCORSPreflight_BrandAllowlist(t *testing.T) {
 		{"hanzo.chat", "https://hanzo.chat", true},
 		{"lux.network subdomain", "https://app.lux.network", true},
 		{"zoo.ngo apex", "https://zoo.ngo", true},
+		// Karma (external customer) — apex + any subdomain both resolve from the
+		// single "karma.style" allowlist entry (suffix match, like the cowork case).
+		{"karma.style apex", "https://karma.style", true},
+		{"tryon.karma.style subdomain", "https://tryon.karma.style", true},
 		// Localhost default (dev).
 		{"localhost:3000 default", "http://localhost:3000", true},
 		// Not on any allowlist.
