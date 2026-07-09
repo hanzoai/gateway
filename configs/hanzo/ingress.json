@@ -106,6 +106,10 @@
       "host": "api.hanzo.ai",
       "backends": [
         {
+          "path": "/.well-known/agent-skills",
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
+        },
+        {
           "path": "/",
           "url": "http://gateway.hanzo.svc.cluster.local:8080"
         }
@@ -250,6 +254,10 @@
       "host": "chat.hanzo.ai",
       "backends": [
         {
+          "path": "/.well-known/agent-skills",
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
+        },
+        {
           "path": "/",
           "url": "http://chat.hanzo.svc.cluster.local:80"
         }
@@ -277,6 +285,10 @@
       "host": "cloud.lux.network",
       "backends": [
         {
+          "path": "/.well-known/agent-skills",
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
+        },
+        {
           "path": "/",
           "url": "http://lux-cloud-web.bootnode.svc.cluster.local:3001"
         }
@@ -294,6 +306,10 @@
     {
       "host": "console.hanzo.ai",
       "backends": [
+        {
+          "path": "/.well-known/agent-skills",
+          "url": "http://cloud.hanzo.svc.cluster.local:8000"
+        },
         {
           "path": "/",
           "url": "http://console.hanzo.svc.cluster.local:80"
