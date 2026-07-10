@@ -494,6 +494,23 @@ func (c AuthConfig) Validate() error {
 //   - Fail-open: if billing service is unreachable, request proceeds
 //   - If balance <= 0: returns 402 Payment Required
 //
+// isErrorIngestPath matches ONLY the Sentry error-ingest wire endpoints:
+// POST /v1/o11y/api/<project>/envelope/ and POST /v1/o11y/api/<project>/store/.
+// The <project> segment varies, so it is matched by method + prefix + suffix — never
+// a bare prefix — so the o11y read APIs under /v1/o11y/api/vN/… stay JWT-gated.
+// (The trailing slash is the Sentry protocol form; the slash-less variant is
+// tolerated defensively.)
+func isErrorIngestPath(method, path string) bool {
+	if method != http.MethodPost {
+		return false
+	}
+	if !strings.HasPrefix(path, "/v1/o11y/api/") {
+		return false
+	}
+	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
+		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
+}
+
 // Public endpoints (configurable allowlist) bypass all auth checks.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
@@ -538,6 +555,19 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 
 		// Skip auth for public hosts (IAM/login domains)
 		if publicHostSet[host] {
+			c.Next()
+			return
+		}
+
+		// Sentry-SDK error ingest is authenticated by a DSN key at the o11y backend
+		// (not a Hanzo JWT), so it bypasses gateway JWT auth — but ONLY the exact
+		// ingest verbs: POST to /v1/o11y/api/<project>/envelope|store/. This is
+		// deliberately NOT a broad /v1/o11y or /v1/o11y/api allowlist: those would
+		// skip JWT validation on the o11y READ APIs and break the X-Org-Id injection
+		// the reads rely on (fail-closed → reads break). Identity headers were
+		// already stripped above, so the ingest caller cannot spoof a tenant; the
+		// o11y handler resolves the org from the DSN itself.
+		if isErrorIngestPath(c.Request.Method, path) {
 			c.Next()
 			return
 		}
