@@ -649,6 +649,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		if project := claims.MintedProject(); project != "" {
 			c.Request.Header.Set("X-Project-Id", project)
 		}
+		// Mint X-Billing-Account-Id from the validated `billing_account` claim, an
+		// attribution hint mirroring X-Project-Id. Absent/empty mints nothing; the
+		// client copy was already stripped (stripIdentityHeaders), so it is never
+		// forgeable. Cloud + commerce resolve the real debit account server-side.
+		if acct := claims.MintedBillingAccount(); acct != "" {
+			c.Request.Header.Set("X-Billing-Account-Id", acct)
+		}
 		if roles := extractRoleNames(claims.Roles); roles != "" {
 			c.Request.Header.Set("X-Roles", roles)
 		}
