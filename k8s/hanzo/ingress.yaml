@@ -39,7 +39,8 @@ spec:
       # `/` in Traefik, so /.well-known/agent-skills bypasses the gateway's IAM
       # gate and reaches cloud directly, while every other path still flows
       # through the gateway. One edit on the shared anchor covers every host
-      # below (api/cloud/admin/console/console2.hanzo.ai).
+      # below (api/cloud/console/console2.hanzo.ai — admin.hanzo.ai is NOT here,
+      # it is the gated console2-admin surface).
       - path: /.well-known/agent-skills
         pathType: Prefix
         backend:
