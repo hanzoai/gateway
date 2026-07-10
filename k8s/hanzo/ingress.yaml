@@ -7,18 +7,26 @@ metadata:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: ingress
-  # The gateway is the ONE edge router. Every host below terminates at the
-  # gateway Service, which applies global IAM-JWT + rate-limit and then dispatches
-  # by host/path from routes.yaml (redirects + backends). This is why the console
-  # Service (console2) no longer runs its own Ingress.
-  #   api.hanzo.ai → cloud package (cloud), gated. ONE API host — no .cloud.
-  #   cloud.hanzo.ai / admin.hanzo.ai   → console2 SPA at "/" + gated /v1.
-  #   console.hanzo.ai / console2.hanzo.ai → 301 → cloud.hanzo.ai (routes.yaml).
+  # The gateway is the edge router for the AI/LLM API hosts, which terminate at
+  # the gateway Service (global IAM-JWT + rate-limit, then host/path dispatch via
+  # routes.yaml).
+  #   api.hanzo.ai → gateway. ONE API host — no .cloud.
+  #   cloud.hanzo.ai / console.hanzo.ai / console2.hanzo.ai → gateway SPA at "/".
+  #
+  # admin.hanzo.ai is DELIBERATELY NOT claimed here. The operator cockpit is a
+  # ZERO-TRUST surface: it is owned solely by the `console2-admin` Ingress
+  # (universe infra/k8s/admin-console/ingress.yaml) which routes admin.hanzo.ai
+  # to the console SPA (service `console`:4000) + cloud-api behind the
+  # admin-guard@file ForwardAuth gate. Claiming admin.hanzo.ai here too created a
+  # second, UNGUARDED router (gateway:8080) for the same host+path — a
+  # guard-bypass footgun that only survived because Traefik happened to prefer
+  # the gated router on the priority tie. One owner, no dual-routing. admin.hanzo.ai
+  # has its own cert (admin-hanzo-tls) via console2-admin, so it is out of the
+  # gateway-tls SAN set as well.
   tls:
   - hosts:
     - api.hanzo.ai
     - cloud.hanzo.ai
-    - admin.hanzo.ai
     - console.hanzo.ai
     - console2.hanzo.ai
     secretName: gateway-tls
@@ -47,8 +55,6 @@ spec:
             port:
               number: 8080
   - host: cloud.hanzo.ai
-    http: *gateway
-  - host: admin.hanzo.ai
     http: *gateway
   - host: console.hanzo.ai
     http: *gateway
