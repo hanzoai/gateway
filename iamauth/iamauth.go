@@ -36,6 +36,7 @@ type Claims struct {
 
 	Owner             string          `json:"owner"`              // org slug
 	Project           string          `json:"project"`            // project scope within the org (optional; empty ⟹ default project)
+	BillingAccount    string          `json:"billing_account"`    // funding account id (optional attribution hint; empty ⟹ cloud resolves the debit account)
 	Name              string          `json:"name"`               // display name
 	PreferredUsername string          `json:"preferred_username"` // fallback id
 	Email             string          `json:"email"`
@@ -103,6 +104,16 @@ func (c *Claims) MintedProject() string {
 		return ""
 	}
 	return p
+}
+
+// MintedBillingAccount returns the funding account id to stamp into
+// X-Billing-Account-Id, or "" when the edge must OMIT the header. The account
+// rides in the validated JWT `billing_account` claim, scoped to the caller's org
+// exactly like `project` — trusted, not forgeable. Unlike the project claim there
+// is NO reserved default: an absent/empty account simply mints nothing (it is an
+// attribution hint; cloud + commerce resolve the real debit account server-side).
+func (c *Claims) MintedBillingAccount() string {
+	return strings.TrimSpace(c.BillingAccount)
 }
 
 // Config is the edge validation configuration.
@@ -477,6 +488,7 @@ var MintedIdentityHeaders = []string{
 	"X-User-Id",
 	"X-Org-Id",
 	"X-Project-Id",
+	"X-Billing-Account-Id",
 	"X-Roles",
 	"X-User-Permissions",
 	"X-User-Email",
@@ -503,6 +515,8 @@ var MintedIdentityHeaders = []string{
 //     re-minted from the validated JWT only; a raw client value is cross-org IDOR.
 //   - X-Project-Id: org SUB-SCOPE, minted from a validated claim; a raw client
 //     value is a cross-project IDOR.
+//   - X-Billing-Account-Id: funding-account attribution hint, minted from a
+//     validated claim; a raw client value is a cross-account billing forgery.
 //
 // The legacy vendor-prefixed identity headers (X-IAM-Org-Id, X-Hanzo-Org, …) have
 // been RENAMED to these neutral names at every setter + consumer, so no identity
@@ -518,6 +532,7 @@ var StripIdentityHeaderNames = []string{
 	"X-User-IsAdmin",
 	"X-User-IsGlobalAdmin",
 	"X-Project-Id",
+	"X-Billing-Account-Id",
 	// Non-canonical legacy identity headers (still exact-name, still neutral).
 	"X-User-Role",
 	"X-User-Roles",
@@ -570,6 +585,12 @@ func InjectIdentity(r *http.Request, c *Claims) {
 	// already dropped any forgeable client copy).
 	if project := c.MintedProject(); project != "" {
 		r.Header.Set("X-Project-Id", project)
+	}
+	// Mint X-Billing-Account-Id from the validated `billing_account` claim, an
+	// attribution hint mirroring X-Project-Id. Absent/empty mints nothing (no
+	// reserved default); cloud + commerce resolve the real debit account.
+	if acct := c.MintedBillingAccount(); acct != "" {
+		r.Header.Set("X-Billing-Account-Id", acct)
 	}
 	if c.Email != "" {
 		r.Header.Set("X-User-Email", c.Email)
