@@ -29,4 +29,6 @@ CLAUDE.md
 AGENTS.md
 GEMINI.md
 QWEN.md
-admin-guard
+# Compiled admin-guard binary at repo root (from `go build ./cmd/admin-guard`).
+# Anchored so it does NOT ignore the cmd/admin-guard/ source directory.
+/admin-guard
