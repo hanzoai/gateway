@@ -64,15 +64,21 @@ type config struct {
 	// global admin iff their token/account `owner` equals this. Default "admin".
 	adminOrg string
 
-	// Where non-admins (and any non-actionable error) are sent — the unified
-	// client surface.
-	consoleURL string
+	// consoles maps a brand's registrable domain (e.g. "zoo.cloud") to that
+	// brand's client console URL. An authenticated non-admin on a guarded host
+	// is sent to ITS brand's console (zoo→zoo, lux→lux), never a foreign brand.
+	// defaultConsole is the fallback console for an unrecognized host.
+	consoles       map[string]string
+	defaultConsole string
 
-	// cookieDomain scopes the guard session cookie so one admin login covers
-	// every guarded *.hanzo.ai host (e.g. ".hanzo.ai").
-	cookieDomain string
-	cookieName   string
-	cookieTTL    time.Duration
+	// The guard session (and PKCE state) cookie is scoped to the REGISTRABLE
+	// DOMAIN of each request's host, derived PER REQUEST — a browser can only
+	// set a cookie on its own registrable domain, so a single hardcoded
+	// ".hanzo.ai" is dropped by admin.zoo.cloud / admin.lux.network. Deriving it
+	// per host lets one binary white-label every brand (.hanzo.ai, .zoo.cloud,
+	// .lux.network). cookieName/TTL are brand-independent.
+	cookieName string
+	cookieTTL  time.Duration
 
 	// hmacKey signs the guard session + PKCE state cookies.
 	hmacKey []byte
@@ -89,6 +95,14 @@ const (
 	healthPath   = "/__guard/healthz"
 
 	stateCookie = "hanzo_admin_guard_state"
+
+	// defaultConsoleMap white-labels non-admin bounce targets by brand. One
+	// guard binary, every brand — overridable via GUARD_CONSOLES. Keyed by the
+	// registrable domain of the guarded host; the value is that brand's console
+	// (note: lux's console lives on lux.cloud, not lux.network).
+	defaultConsoleMap = "hanzo.ai=https://console.hanzo.ai," +
+		"zoo.cloud=https://console.zoo.cloud," +
+		"lux.network=https://console.lux.cloud"
 )
 
 func main() {
@@ -108,8 +122,8 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("admin-guard listening on %s (adminOrg=%q console=%s cookieDomain=%s iam=%s)",
-		cfg.addr, cfg.adminOrg, cfg.consoleURL, cfg.cookieDomain, cfg.iamPublic)
+	log.Printf("admin-guard listening on %s (adminOrg=%q consoles=%v defaultConsole=%s iam=%s)",
+		cfg.addr, cfg.adminOrg, cfg.consoles, cfg.defaultConsole, cfg.iamPublic)
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -129,18 +143,18 @@ func loadConfig() *config {
 	vcfg := iamauth.ConfigFromEnv()
 
 	return &config{
-		addr:         envOr("GUARD_ADDR", ":8080"),
-		iamPublic:    iamPublic,
-		iamInternal:  envOr("IAM_INTERNAL_URL", "https://iam.hanzo.ai"),
-		clientID:     envOr("IAM_CLIENT_ID", "hanzo-admin-guard"),
-		clientSecret: clientSecret,
-		adminOrg:     envOr("IAM_ADMIN_ORG", "admin"),
-		consoleURL:   envOr("CONSOLE_URL", "https://console.hanzo.ai"),
-		cookieDomain: envOr("GUARD_COOKIE_DOMAIN", ".hanzo.ai"),
-		cookieName:   envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
-		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
-		hmacKey:      hmacKey,
-		validator:    iamauth.NewValidator(vcfg),
+		addr:           envOr("GUARD_ADDR", ":8080"),
+		iamPublic:      iamPublic,
+		iamInternal:    envOr("IAM_INTERNAL_URL", "https://iam.hanzo.ai"),
+		clientID:       envOr("IAM_CLIENT_ID", "hanzo-admin-guard"),
+		clientSecret:   clientSecret,
+		adminOrg:       envOr("IAM_ADMIN_ORG", "admin"),
+		consoles:       parseConsoleMap(envOr("GUARD_CONSOLES", defaultConsoleMap)),
+		defaultConsole: envOr("CONSOLE_URL", "https://console.hanzo.ai"),
+		cookieName:     envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
+		cookieTTL:      envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
+		hmacKey:        hmacKey,
+		validator:      iamauth.NewValidator(vcfg),
 	}
 }
 
@@ -198,12 +212,13 @@ func (c *config) decide(w http.ResponseWriter, r *http.Request, owner, orig stri
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	// Authenticated, but NOT a global admin → unified client surface.
+	// Authenticated, but NOT a global admin → THIS brand's client surface
+	// (zoo→zoo console, lux→lux console), never a foreign brand's console.
 	if isAPIClient(r) {
 		http.Error(w, "global admin required", http.StatusForbidden)
 		return
 	}
-	http.Redirect(w, r, c.consoleURL, http.StatusFound)
+	http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
 }
 
 // ----------------------------------------------------------------------------
@@ -233,14 +248,14 @@ func (c *config) sessionOwner(r *http.Request) (string, bool) {
 	return owner, owner != ""
 }
 
-func (c *config) setSession(w http.ResponseWriter, owner string) {
+func (c *config) setSession(w http.ResponseWriter, r *http.Request, owner string) {
 	exp := time.Now().Add(c.cookieTTL)
 	payload := fmt.Sprintf("%s|%d", owner, exp.Unix())
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   registrableDomain(requestHost(r)),
 		Expires:  exp,
 		MaxAge:   int(c.cookieTTL.Seconds()),
 		Secure:   true,
@@ -249,12 +264,12 @@ func (c *config) setSession(w http.ResponseWriter, owner string) {
 	})
 }
 
-func (c *config) clearSession(w http.ResponseWriter) {
+func (c *config) clearSession(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    "",
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   registrableDomain(requestHost(r)),
 		MaxAge:   -1,
 		Secure:   true,
 		HttpOnly: true,
@@ -345,7 +360,7 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 		Name:     stateCookie,
 		Value:    c.sign(statePayload),
 		Path:     "/",
-		Domain:   c.cookieDomain,
+		Domain:   registrableDomain(requestHost(r)),
 		MaxAge:   600,
 		Secure:   true,
 		HttpOnly: true,
@@ -395,8 +410,8 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	verifier, returnTo := parts[1], parts[2]
-	// Clear the state cookie.
-	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: c.cookieDomain, MaxAge: -1, Secure: true, HttpOnly: true})
+	// Clear the state cookie (same registrable domain it was set on).
+	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: registrableDomain(requestHost(r)), MaxAge: -1, Secure: true, HttpOnly: true})
 
 	owner, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
 	if err != nil {
@@ -406,13 +421,14 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if owner != c.adminOrg {
-		// Authenticated non-admin: do NOT set an admin session; send to console.
-		http.Redirect(w, r, c.consoleURL, http.StatusFound)
+		// Authenticated non-admin: do NOT set an admin session; send to THIS
+		// brand's console (zoo→zoo, lux→lux).
+		http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
 		return
 	}
-	c.setSession(w, owner)
+	c.setSession(w, r, owner)
 	if returnTo == "" || !strings.HasPrefix(returnTo, "https://") {
-		returnTo = c.consoleURL
+		returnTo = c.consoleFor(requestHost(r))
 	}
 	http.Redirect(w, r, returnTo, http.StatusFound)
 }
@@ -502,8 +518,8 @@ func (c *config) userinfoOwner(ctx context.Context, accessToken string) (string,
 }
 
 func (c *config) handleLogout(w http.ResponseWriter, r *http.Request) {
-	c.clearSession(w)
-	http.Redirect(w, r, c.consoleURL, http.StatusFound)
+	c.clearSession(w, r)
+	http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
 }
 
 // ----------------------------------------------------------------------------
@@ -525,8 +541,65 @@ func originalURL(r *http.Request) string {
 // allowlist https://<host>/__guard/callback).
 func (c *config) callbackURI(r *http.Request) string {
 	proto := firstNonEmpty(r.Header.Get("X-Forwarded-Proto"), "https")
-	host := firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host)
-	return proto + "://" + host + callbackPath
+	return proto + "://" + requestHost(r) + callbackPath
+}
+
+// requestHost is the browser-facing host being guarded. The ingress sets
+// X-Forwarded-Host on the forward-auth subrequest; the guard's own callback +
+// login endpoints are served through the same per-host ingress route (so
+// r.Host agrees). Port is stripped so cookie-domain derivation is exact.
+func requestHost(r *http.Request) string {
+	return hostOnly(firstNonEmpty(r.Header.Get("X-Forwarded-Host"), r.Host))
+}
+
+// hostOnly strips any :port and trailing dot from a host[:port].
+func hostOnly(host string) string {
+	if i := strings.IndexByte(host, ':'); i >= 0 {
+		host = host[:i]
+	}
+	return strings.TrimSuffix(host, ".")
+}
+
+// registrableDomain returns the cookie scope for a host: the last two dot-labels
+// with a leading dot (".hanzo.ai" for "admin.hanzo.ai", ".zoo.cloud" for
+// "admin.zoo.cloud"). A browser only accepts a Set-Cookie whose Domain is the
+// registrable domain of the host it is on, so the guard MUST derive this per
+// request rather than pin one ".hanzo.ai" — that pin is silently dropped on
+// admin.zoo.cloud / admin.lux.network, breaking the login (no session sticks).
+// Returns "" (host-only cookie) for a single-label host such as localhost.
+func registrableDomain(host string) string {
+	host = hostOnly(host)
+	labels := strings.Split(host, ".")
+	if len(labels) < 2 {
+		return ""
+	}
+	return "." + strings.Join(labels[len(labels)-2:], ".")
+}
+
+// consoleFor returns the brand console URL for a request host (zoo→zoo console,
+// lux→lux console), defaulting to the primary console for an unrecognized host.
+func (c *config) consoleFor(host string) string {
+	reg := strings.TrimPrefix(registrableDomain(host), ".")
+	if u, ok := c.consoles[reg]; ok && u != "" {
+		return u
+	}
+	return c.defaultConsole
+}
+
+// parseConsoleMap parses a "domain=url,domain=url" list into a brand→console
+// map. Malformed pairs are skipped; the result is never nil.
+func parseConsoleMap(s string) map[string]string {
+	m := make(map[string]string)
+	for _, pair := range strings.Split(s, ",") {
+		k, v, ok := strings.Cut(strings.TrimSpace(pair), "=")
+		if !ok {
+			continue
+		}
+		if k = strings.TrimSpace(k); k != "" {
+			m[k] = strings.TrimSpace(v)
+		}
+	}
+	return m
 }
 
 // isAPIClient reports whether the caller looks like a non-browser API client

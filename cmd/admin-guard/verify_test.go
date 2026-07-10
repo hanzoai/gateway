@@ -30,15 +30,15 @@ import (
 // paths exercised here (no Bearer token ⇒ iamauth returns ErrNoToken).
 func testConfig() *config {
 	return &config{
-		adminOrg:     "admin",
-		consoleURL:   "https://console.hanzo.ai",
-		iamPublic:    "https://hanzo.id",
-		clientID:     "hanzo-admin-guard",
-		cookieName:   "hanzo_admin_guard",
-		cookieDomain: ".hanzo.ai",
-		cookieTTL:    8 * time.Hour,
-		hmacKey:      []byte("0123456789abcdef-test-key"),
-		validator:    iamauth.NewValidator(iamauth.ConfigFromEnv()),
+		adminOrg:       "admin",
+		consoles:       parseConsoleMap(defaultConsoleMap),
+		defaultConsole: "https://console.hanzo.ai",
+		iamPublic:      "https://hanzo.id",
+		clientID:       "hanzo-admin-guard",
+		cookieName:     "hanzo_admin_guard",
+		cookieTTL:      8 * time.Hour,
+		hmacKey:        []byte("0123456789abcdef-test-key"),
+		validator:      iamauth.NewValidator(iamauth.ConfigFromEnv()),
 	}
 }
 
@@ -73,10 +73,10 @@ func TestVerifyContentNegotiation(t *testing.T) {
 			wantStatus: http.StatusNoContent,
 		},
 		{
-			name:       "non-admin cookie + browser → 302 console",
-			cookie:     cfg.guardCookie("acme"),
-			accept:     "text/html",
-			wantStatus: http.StatusFound,
+			name:         "non-admin cookie + browser → 302 console",
+			cookie:       cfg.guardCookie("acme"),
+			accept:       "text/html",
+			wantStatus:   http.StatusFound,
 			wantLocation: "https://console.hanzo.ai",
 		},
 		{
