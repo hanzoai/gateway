@@ -530,6 +530,17 @@ func isSentryIngestPath(method, path string) bool {
 		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
 }
 
+// isIngestPath is the ROUTE-CLASS selector for the tokenless DSN ingest plane:
+// the union of the o11y errortracking wire (isErrorIngestPath) and the Hanzo
+// Sentry wire (isSentryIngestPath). Both are POST-only + suffix-anchored on
+// {envelope,store}, so this selector can NEVER match a read — every Sentry/o11y
+// READ routes to the authed class and stays JWT-gated. Cloud DSN-authenticates
+// this class and resolves the org FROM the DSN; the gateway mints no identity for
+// it. This is the routing selector for class 1 — not a bypass hole in a global gate.
+func isIngestPath(method, path string) bool {
+	return isErrorIngestPath(method, path) || isSentryIngestPath(method, path)
+}
+
 // Public endpoints (configurable allowlist) bypass all auth checks.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
@@ -565,32 +576,46 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// SECURITY: Unconditionally strip client-supplied identity headers.
 		// Only the gateway is authorized to set these after JWT validation.
-		// This MUST be the first action before any bypass path (public hosts,
-		// public paths, API keys, no-token pass-through).
+		// This MUST be the first action, before any route-class dispatch.
+		//
+		// GLOBAL IDENTITY INVARIANT — applies to EVERY class, unconditionally:
+		// identity headers are gateway-MINTED, never client-accepted. Load-bearing,
+		// NOT a bypass-afterthought:
+		//   • Authed class mints X-User-Id / X-Org-Id / X-User-Email unconditionally,
+		//     but X-User-IsGlobalAdmin, X-Project-Id, X-Billing-Account-Id, X-Roles,
+		//     X-Phone-Number, X-User-IsAdmin, X-User-Permissions are minted ONLY when
+		//     the validated JWT asserts them — a forged copy of any of THOSE would
+		//     otherwise survive un-overwritten below → privilege / tenant spoof.
+		//   • Ingest class (class 1) mints NOTHING, so this guarantees no client
+		//     identity ever reaches cloud, which resolves the org solely from the DSN.
+		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
 		stripIdentityHeaders(c.Request)
 
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
 
-		// Skip auth for public hosts (IAM/login domains)
-		if publicHostSet[host] {
+		// ── ROUTE CLASS 1 — tokenless DSN ingest (orthogonal to the authed API) ──
+		// POST /v1/sentry/<project>/{envelope,store}[/] and the o11y errortracking
+		// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
+		// decision, NOT a hole punched in the authed gate: this class has its own
+		// (empty) auth — forward to cloud with NO IAM-JWT gate and NO minted identity;
+		// cloud DSN-authenticates and derives the org FROM the DSN. isIngestPath is
+		// POST-only + suffix-anchored, so every Sentry/o11y READ falls through to the
+		// authed class below and stays JWT-gated.
+		if isIngestPath(c.Request.Method, path) {
 			c.Next()
 			return
 		}
 
-		// Sentry-SDK error ingest is authenticated by a DSN key at the o11y backend
-		// (not a Hanzo JWT), so it bypasses gateway JWT auth — but ONLY the exact
-		// ingest verbs: POST to /v1/o11y/api/<project>/envelope|store/. This is
-		// deliberately NOT a broad /v1/o11y or /v1/o11y/api allowlist: those would
-		// skip JWT validation on the o11y READ APIs and break the X-Org-Id injection
-		// the reads rely on (fail-closed → reads break). Identity headers were
-		// already stripped above, so the ingest caller cannot spoof a tenant; the
-		// o11y handler resolves the org from the DSN itself.
-		// The SAME DSN-key bypass covers the Hanzo Sentry ingest wire under the clean
-		// /v1/sentry/<project>/{envelope,store}/ path (isSentryIngestPath) — the same
-		// byte-tight method+prefix+suffix rule, never a bare /v1/sentry/ prefix, so the
-		// Sentry read APIs stay JWT-gated. Mirrors the cloud gate()'s sibling exemption.
-		if isErrorIngestPath(c.Request.Method, path) || isSentryIngestPath(c.Request.Method, path) {
+		// ── ROUTE CLASS 2 — authed API (every other /v1/*) ──────────────────────
+		// Its own auth chain, below: no-auth allowlist (public IAM/login hosts +
+		// public paths) → IAM-JWT validate (401 if absent-and-required, or invalid) →
+		// MINT the canonical identity headers FROM the validated JWT (overwriting the
+		// stripped slate) → balance gate. On this class the gateway is the SOLE source
+		// of identity; a client-supplied value can never reach a backend.
+
+		// Skip auth for public hosts (IAM/login domains)
+		if publicHostSet[host] {
 			c.Next()
 			return
 		}
