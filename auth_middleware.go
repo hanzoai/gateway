@@ -511,6 +511,25 @@ func isErrorIngestPath(method, path string) bool {
 		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
 }
 
+// isSentryIngestPath matches ONLY the Hanzo Sentry error-ingest wire endpoints:
+// POST /v1/sentry/<project>/envelope/ and POST /v1/sentry/<project>/store/.
+// Byte-identical shape to isErrorIngestPath and to the cloud-side isSentryIngestPath
+// gate (clients/o11y/o11y.go): method + prefix + suffix — NEVER a bare /v1/sentry/
+// prefix — so the Sentry READ APIs (issues, discover, projects, logs, traces, stats)
+// stay JWT-gated. The two allowlists MUST agree so the tokenless ingest the gateway
+// lets through is not then 403'd at cloud. (Trailing slash is the Sentry wire form;
+// the slash-less variant is tolerated defensively.)
+func isSentryIngestPath(method, path string) bool {
+	if method != http.MethodPost {
+		return false
+	}
+	if !strings.HasPrefix(path, "/v1/sentry/") {
+		return false
+	}
+	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
+		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
+}
+
 // Public endpoints (configurable allowlist) bypass all auth checks.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
@@ -567,7 +586,11 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// the reads rely on (fail-closed → reads break). Identity headers were
 		// already stripped above, so the ingest caller cannot spoof a tenant; the
 		// o11y handler resolves the org from the DSN itself.
-		if isErrorIngestPath(c.Request.Method, path) {
+		// The SAME DSN-key bypass covers the Hanzo Sentry ingest wire under the clean
+		// /v1/sentry/<project>/{envelope,store}/ path (isSentryIngestPath) — the same
+		// byte-tight method+prefix+suffix rule, never a bare /v1/sentry/ prefix, so the
+		// Sentry read APIs stay JWT-gated. Mirrors the cloud gate()'s sibling exemption.
+		if isErrorIngestPath(c.Request.Method, path) || isSentryIngestPath(c.Request.Method, path) {
 			c.Next()
 			return
 		}
