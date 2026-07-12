@@ -43,34 +43,33 @@ type Claims struct {
 	Phone             string          `json:"phone"`        // IAM E.164
 	PhoneNumber       string          `json:"phone_number"` // OIDC standard
 	Type              string          `json:"type"`
-	IsAdmin           bool            `json:"isAdmin"`       // ORG-level admin (an org owner) — NEVER the money/superadmin bit
-	IsGlobalAdmin     bool            `json:"isGlobalAdmin"` // PLATFORM superadmin — the money/admin authority
+	IsAdmin           bool            `json:"isAdmin"` // ORG-level admin (an org owner) — NEVER the money/superadmin bit
 	Roles             json.RawMessage `json:"roles"`
 	Permissions       json.RawMessage `json:"permissions"`
 }
 
-// AdminOrg is the org slug Hanzo IAM seeds platform (global) admins into. It is
-// the SAME constant commerce's auth.IAMClaims.GlobalAdmin() honors, so the
-// global-admin predicate means byte-for-byte the same thing on both sides of the
-// trust boundary (gateway mints, commerce enforces).
+// AdminOrg is the reserved org slug Hanzo IAM seeds PLATFORM (sudo) admins into.
+// Platform sudo is ONE predicate — membership in this org — with NO redundant
+// boolean flag. Commerce/cloud/iam gate on the SAME org == AdminOrg, so the
+// platform-sudo predicate means byte-for-byte the same thing on both sides of the
+// trust boundary (gateway mints X-Org-Id from `owner`; subsystems enforce org=="admin").
 const AdminOrg = "admin"
 
-// GlobalAdmin reports whether these claims belong to a Hanzo PLATFORM (global)
-// admin — the ONLY principal that may mint free balance or charge cards
-// platform-wide. Two independent signals, either suffices:
-//   - the explicit isGlobalAdmin JWT claim; or
-//   - membership in the global admin org (owner == AdminOrg).
+// PlatformSudo reports whether these claims belong to a Hanzo PLATFORM (sudo)
+// admin — the ONLY principal that may mint free balance, charge cards, or act
+// cross-org. The signal is the home org: owner == AdminOrg. There is NO separate
+// IsGlobalAdmin/IsSuperAdmin boolean — the org IS the capability (the redundant
+// flag is dropped, per the canonical SuperAdmin ⟺ owner=="admin" model).
 //
-// Plain IsAdmin is deliberately NOT trusted: it is an ORG-level role (an org
-// owner carries IsAdmin=true within their own org). Gating the money/admin
-// permission bit on it let any org owner satisfy commerce's
-// TokenRequired(permission.Admin) money gates → unlimited free balance. This
-// mirrors commerce/auth.IAMClaims.GlobalAdmin() exactly.
-func (c *Claims) GlobalAdmin() bool {
+// Plain IsAdmin is deliberately NOT trusted: it is an ORG-level role (an org owner
+// carries IsAdmin=true within their own org). Gating the money/admin permission bit
+// on it let any org owner satisfy commerce's TokenRequired(permission.Admin) money
+// gates → unlimited free balance.
+func (c *Claims) PlatformSudo() bool {
 	if c == nil {
 		return false
 	}
-	return c.IsGlobalAdmin || strings.EqualFold(strings.TrimSpace(c.Owner), AdminOrg)
+	return strings.EqualFold(strings.TrimSpace(c.Owner), AdminOrg)
 }
 
 // UserID resolves the canonical user identifier: sub, then
@@ -487,6 +486,7 @@ func IsAPIKey(token string) bool {
 var MintedIdentityHeaders = []string{
 	"X-User-Id",
 	"X-Org-Id",
+	"X-User-Owner",
 	"X-Project-Id",
 	"X-Billing-Account-Id",
 	"X-Roles",
@@ -494,7 +494,8 @@ var MintedIdentityHeaders = []string{
 	"X-User-Email",
 	"X-Phone-Number",
 	"X-User-IsAdmin",
-	"X-User-IsGlobalAdmin",
+	// No platform-admin boolean is minted anymore (platform sudo = org == AdminOrg).
+	// The legacy X-User-IsGlobalAdmin stays in the STRIP set below, not here.
 }
 
 // StripIdentityHeaderNames is the AUTHORITATIVE, COMPLETE set of identity headers
@@ -509,8 +510,9 @@ var MintedIdentityHeaders = []string{
 // no wildcard family, the generated strip now covers the FULL set with no gap.
 // Forwards-only: append, never remove.
 //
-//   - X-User-IsGlobalAdmin: commerce GetIAMClaims reads it off the request and
-//     GlobalAdmin() trusts it → a forged "true" grants money/admin authority.
+//   - X-User-IsGlobalAdmin: LEGACY platform-admin header — NO LONGER MINTED (platform
+//     sudo is now org == AdminOrg, no boolean). Kept in the strip set as defense so a
+//     client can never forge one a not-yet-migrated reader might still trust.
 //   - X-Org-Id: the per-org billing/tenant selector (commerce, cloud metering) —
 //     re-minted from the validated JWT only; a raw client value is cross-org IDOR.
 //   - X-Project-Id: org SUB-SCOPE, minted from a validated claim; a raw client
@@ -525,6 +527,7 @@ var MintedIdentityHeaders = []string{
 var StripIdentityHeaderNames = []string{
 	"X-User-Id",
 	"X-Org-Id",
+	"X-User-Owner",
 	"X-Roles",
 	"X-User-Permissions",
 	"X-User-Email",
@@ -579,6 +582,10 @@ func StripIdentityHeaders(r *http.Request) {
 func InjectIdentity(r *http.Request, c *Claims) {
 	r.Header.Set("X-User-Id", c.UserID())
 	r.Header.Set("X-Org-Id", c.Owner)
+	// X-User-Owner = the immutable HOME org (JWT owner), distinct from X-Org-Id (the
+	// EFFECTIVE org; == owner today, masquerade target later). Platform-sudo + billing
+	// key on the home org; stripped on ingress so it is never forgeable.
+	r.Header.Set("X-User-Owner", c.Owner)
 	// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
 	// exactly like X-Org-Id from `owner`. Omitted for the default project so the
 	// header is present iff a non-default project is in scope (StripIdentityHeaders
@@ -598,10 +605,8 @@ func InjectIdentity(r *http.Request, c *Claims) {
 	if c.IsAdmin {
 		r.Header.Set("X-User-IsAdmin", "true")
 	}
-	// Mint the PLATFORM superadmin signal ONLY for a real global admin — the
-	// spoof-proof header commerce's money/cross-org gates read (it was stripped
-	// above). Org-level IsAdmin never sets it.
-	if c.GlobalAdmin() {
-		r.Header.Set("X-User-IsGlobalAdmin", "true")
-	}
+	// NO platform-admin boolean is minted. Platform sudo is org == AdminOrg
+	// (carried by X-Org-Id from the validated `owner`); subsystems gate on that.
+	// The legacy X-User-IsGlobalAdmin header is still stripped on ingress so a
+	// client can never forge it — it is simply never emitted.
 }
