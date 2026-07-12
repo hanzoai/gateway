@@ -126,7 +126,8 @@ func newGate(cfg AuthConfig) forward.Gate {
 		if claims.IsAdmin {
 			extraBits |= permissionBits["live"]
 		}
-		if claims.GlobalAdmin() {
+		// Platform-sudo money/admin authority = home org is the reserved admin org.
+		if claims.PlatformSudo() {
 			extraBits |= permissionBits["admin"]
 		}
 		bits, _ := computePermissionsBitField(claims.Permissions, extraBits)
