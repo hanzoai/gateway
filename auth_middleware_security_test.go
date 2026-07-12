@@ -1505,7 +1505,7 @@ func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 }
 
 // --- Test 21c: a real global admin DOES get Admin|Live + the superadmin header ---
-func TestPermissions_GlobalAdminGetsAdminBitAndHeader(t *testing.T) {
+func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
@@ -1516,7 +1516,7 @@ func TestPermissions_GlobalAdminGetsAdminBitAndHeader(t *testing.T) {
 		c.Status(http.StatusOK)
 	})
 
-	// Global admin: owner=="admin". Full Admin|Live and the minted superadmin header.
+	// Platform sudo: owner=="admin" → full Admin|Live bits, but NO boolean header.
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "admin"
 	claims.IsAdmin = true
@@ -1533,10 +1533,11 @@ func TestPermissions_GlobalAdminGetsAdminBitAndHeader(t *testing.T) {
 		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
 	}
 	if gotPerms != "20" {
-		t.Errorf("global-admin X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
+		t.Errorf("platform-sudo X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
 	}
-	if gotGlobalAdmin != "true" {
-		t.Errorf("global-admin X-User-IsGlobalAdmin = %q, want %q", gotGlobalAdmin, "true")
+	// Platform sudo grants the Admin bit (owner=="admin") but mints NO boolean header.
+	if gotGlobalAdmin != "" {
+		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty — the platform-admin boolean is never minted (sudo = org==admin)", gotGlobalAdmin)
 	}
 }
 
