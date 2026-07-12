@@ -582,10 +582,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// identity headers are gateway-MINTED, never client-accepted. Load-bearing,
 		// NOT a bypass-afterthought:
 		//   • Authed class mints X-User-Id / X-Org-Id / X-User-Email unconditionally,
-		//     but X-User-IsGlobalAdmin, X-Project-Id, X-Billing-Account-Id, X-Roles,
-		//     X-Phone-Number, X-User-IsAdmin, X-User-Permissions are minted ONLY when
-		//     the validated JWT asserts them — a forged copy of any of THOSE would
-		//     otherwise survive un-overwritten below → privilege / tenant spoof.
+		//     but X-Project-Id, X-Billing-Account-Id, X-Roles, X-Phone-Number,
+		//     X-User-IsAdmin, X-User-Permissions are minted ONLY when the validated JWT
+		//     asserts them — a forged copy of any of THOSE would otherwise survive
+		//     un-overwritten below → privilege / tenant spoof. (Legacy X-User-IsGlobalAdmin
+		//     is NEVER minted now — platform sudo is org=="admin" — but stays in the
+		//     strip set so a forged copy is still dropped.)
 		//   • Ingest class (class 1) mints NOTHING, so this guarantees no client
 		//     identity ever reaches cloud, which resolves the org solely from the DSN.
 		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
@@ -689,6 +691,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// derivative of the JWT and may be consumed by services that need them.
 		c.Request.Header.Set("X-User-Id", userID)
 		c.Request.Header.Set("X-Org-Id", orgID)
+		// X-User-Owner = the immutable HOME org (the validated JWT owner), DISTINCT
+		// from X-Org-Id (the EFFECTIVE org: == owner today; the masquerade TARGET later).
+		// Platform-sudo gate + billing debit key on the home org (owner=="admin"); data
+		// scope keys on X-Org-Id. Minted from the JWT only; the client copy was stripped
+		// at ingress, so it is never forgeable.
+		c.Request.Header.Set("X-User-Owner", claims.Owner)
 		// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
 		// exactly like X-Org-Id from `owner`. Absent/default project mints nothing
 		// (minimal-canonical form) — downstream resolves the default and keeps
@@ -715,13 +723,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		if claims.IsAdmin {
 			c.Request.Header.Set("X-User-IsAdmin", "true")
 		}
-		// Mint the PLATFORM superadmin signal ONLY for a real global admin — the
-		// spoof-proof header commerce's money/cross-org gates read. Stripped on
-		// ingress (stripIdentityHeaders → iamauth.StripIdentityHeaders), minted here
-		// only from the validated GlobalAdmin() claim, so it can't be forged.
-		if claims.GlobalAdmin() {
-			c.Request.Header.Set("X-User-IsGlobalAdmin", "true")
-		}
+		// NO platform-admin boolean header is minted. Platform sudo is ONE predicate:
+		// the user's home org is the reserved `admin` org (owner == AdminOrg). There is
+		// no redundant IsGlobalAdmin/IsSuperAdmin flag — the org IS the signal, carried
+		// by X-Org-Id (minted from the validated `owner` claim above). Subsystems gate
+		// platform sudo on org == "admin". The legacy X-User-IsGlobalAdmin header is
+		// still STRIPPED at ingress (iamauth.StripIdentityHeaders) so a client can never
+		// forge it, but it is never minted.
 
 		// Mint X-User-Permissions from the validated JWT.
 		//
@@ -741,7 +749,8 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		if claims.IsAdmin {
 			extraBits |= permissionBits["live"]
 		}
-		if claims.GlobalAdmin() {
+		// The money/admin authority bit is platform-sudo-only: owner == "admin".
+		if claims.PlatformSudo() {
 			extraBits |= permissionBits["admin"]
 		}
 		if bits, set := computePermissionsBitField(claims.Permissions, extraBits); set {
