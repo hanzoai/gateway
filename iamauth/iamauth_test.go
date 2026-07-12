@@ -140,28 +140,26 @@ func TestInjectIdentity(t *testing.T) {
 	}
 }
 
-// TestInjectIdentity_GlobalAdminHeader proves the superadmin header is minted for
-// a real global admin (owner=="admin") and for the explicit isGlobalAdmin claim.
-func TestInjectIdentity_GlobalAdminHeader(t *testing.T) {
-	// Admin-org membership.
+// TestInjectIdentity_NoPlatformAdminHeader proves InjectIdentity mints NO platform-
+// admin boolean header. Platform sudo is org == AdminOrg (carried by X-Org-Id), with
+// no boolean — so even an admin-org principal gets no X-User-IsGlobalAdmin.
+func TestInjectIdentity_NoPlatformAdminHeader(t *testing.T) {
 	r := req(nil)
 	InjectIdentity(r, &Claims{Owner: "admin", IsAdmin: true})
-	if r.Header.Get("X-User-IsGlobalAdmin") != "true" {
-		t.Fatalf("admin-org: X-User-IsGlobalAdmin: got %q want true", r.Header.Get("X-User-IsGlobalAdmin"))
+	if v := r.Header.Get("X-User-IsGlobalAdmin"); v != "" {
+		t.Fatalf("X-User-IsGlobalAdmin must never be minted (platform sudo = org==admin), got %q", v)
 	}
-	// Explicit claim, any org.
-	r = req(nil)
-	InjectIdentity(r, &Claims{Owner: "maxpower", IsGlobalAdmin: true})
-	if r.Header.Get("X-User-IsGlobalAdmin") != "true" {
-		t.Fatalf("explicit flag: X-User-IsGlobalAdmin: got %q want true", r.Header.Get("X-User-IsGlobalAdmin"))
+	// The platform-sudo signal is the org itself, carried by X-Org-Id.
+	if got := r.Header.Get("X-Org-Id"); got != "admin" {
+		t.Fatalf("X-Org-Id: got %q want \"admin\" (the platform-sudo signal)", got)
 	}
 }
 
-// TestClaims_GlobalAdmin pins the platform-admin predicate: only the explicit
-// isGlobalAdmin claim or membership in the AdminOrg qualifies. A plain org-level
-// IsAdmin (an org owner) must NOT — that was the free-money hole. This mirrors
-// commerce/auth.IAMClaims.GlobalAdmin() so the trust boundary agrees end to end.
-func TestClaims_GlobalAdmin(t *testing.T) {
+// TestClaims_PlatformSudo pins the ONE platform-sudo predicate: membership in the
+// reserved AdminOrg (owner=="admin"), case/space-insensitive. There is no boolean
+// flag; a plain org-level IsAdmin (an org owner) must NOT qualify — that was the
+// free-money hole. Mirrors commerce/cloud/iam gating on org == AdminOrg.
+func TestClaims_PlatformSudo(t *testing.T) {
 	cases := []struct {
 		name   string
 		claims *Claims
@@ -170,13 +168,13 @@ func TestClaims_GlobalAdmin(t *testing.T) {
 		{"nil", nil, false},
 		{"admin-org", &Claims{Owner: "admin"}, true},
 		{"admin-org-mixedcase", &Claims{Owner: "Admin"}, true},
-		{"explicit-flag", &Claims{Owner: "maxpower", IsGlobalAdmin: true}, true},
-		{"org-admin-not-global", &Claims{Owner: "maxpower", IsAdmin: true}, false},
+		{"admin-org-spaces", &Claims{Owner: " admin "}, true},
+		{"org-admin-not-platform", &Claims{Owner: "maxpower", IsAdmin: true}, false},
 		{"plain-user", &Claims{Owner: "hanzo"}, false},
 	}
 	for _, tc := range cases {
-		if got := tc.claims.GlobalAdmin(); got != tc.want {
-			t.Fatalf("%s: GlobalAdmin()=%v want %v", tc.name, got, tc.want)
+		if got := tc.claims.PlatformSudo(); got != tc.want {
+			t.Fatalf("%s: PlatformSudo()=%v want %v", tc.name, got, tc.want)
 		}
 	}
 }
