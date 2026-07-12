@@ -22,6 +22,7 @@ type backendSaw struct {
 	org     string
 	user    string
 	glob    string // X-User-IsGlobalAdmin
+	owner   string // X-User-Owner (home org)
 }
 
 func recordingBackend(r *gin.Engine, saw *backendSaw) {
@@ -30,6 +31,7 @@ func recordingBackend(r *gin.Engine, saw *backendSaw) {
 		saw.org = c.Request.Header.Get("X-Org-Id")
 		saw.user = c.Request.Header.Get("X-User-Id")
 		saw.glob = c.Request.Header.Get("X-User-IsGlobalAdmin")
+		saw.owner = c.Request.Header.Get("X-User-Owner")
 		c.Status(http.StatusOK)
 	})
 }
@@ -82,6 +84,7 @@ func TestIngestClass_AuthedMintOverwritesForgedIdentity(t *testing.T) {
 	w := send(r, http.MethodGet, "/v1/sentry/issues", tok, map[string]string{
 		"X-Org-Id":             "victim-org",
 		"X-User-IsGlobalAdmin": "true",
+		"X-User-Owner":         "admin",
 	})
 	if w.Code != http.StatusOK {
 		t.Fatalf("valid-JWT read: got %d, want 200", w.Code)
@@ -92,8 +95,11 @@ func TestIngestClass_AuthedMintOverwritesForgedIdentity(t *testing.T) {
 	if saw.org != "hanzo" {
 		t.Errorf("SECURITY: backend saw X-Org-Id %q, want the JWT owner \"hanzo\" (forge not overwritten)", saw.org)
 	}
+	if saw.owner != "hanzo" {
+		t.Errorf("SECURITY: backend saw X-User-Owner %q, want JWT owner \"hanzo\" (home org from JWT; forged \"admin\" overwritten)", saw.owner)
+	}
 	if saw.glob != "" {
-		t.Errorf("SECURITY: forged X-User-IsGlobalAdmin survived (%q) — the strip is load-bearing for conditionally-minted headers", saw.glob)
+		t.Errorf("SECURITY: forged legacy X-User-IsGlobalAdmin survived (%q) — never minted now (platform sudo = org==admin); the ingress strip must drop a forged copy", saw.glob)
 	}
 }
 
@@ -132,11 +138,12 @@ func TestIngestClass_IngestForwardsNoClientIdentity(t *testing.T) {
 		"X-Org-Id":             "victim-org",
 		"X-User-Id":            "attacker",
 		"X-User-IsGlobalAdmin": "true",
+		"X-User-Owner":         "admin",
 	})
 	if w.Code == http.StatusUnauthorized {
 		t.Fatalf("tokenless ingest was 401; must pass through")
 	}
-	if saw.org != "" || saw.user != "" || saw.glob != "" {
-		t.Errorf("SECURITY: ingest forwarded client identity (org=%q user=%q glob=%q); it must forward none — cloud resolves org from the DSN", saw.org, saw.user, saw.glob)
+	if saw.org != "" || saw.user != "" || saw.glob != "" || saw.owner != "" {
+		t.Errorf("SECURITY: ingest forwarded client identity (org=%q user=%q glob=%q owner=%q); it must forward none — cloud resolves org from the DSN", saw.org, saw.user, saw.glob, saw.owner)
 	}
 }

@@ -108,10 +108,10 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	}
 }
 
-// TestGateGlobalAdminGetsAdminBit proves the OTHER side of the money gate: a
-// real PLATFORM (global) admin — owner=="admin" — DOES get the Admin|Live bits,
-// so legitimate admin/service tooling keeps working.
-func TestGateGlobalAdminGetsAdminBit(t *testing.T) {
+// TestGatePlatformSudoGetsAdminBit proves the OTHER side of the money gate: a
+// PLATFORM-sudo principal — owner=="admin" — DOES get the Admin|Live bits, so
+// legitimate admin/service tooling keeps working. Gated on the org, no boolean.
+func TestGatePlatformSudoGetsAdminBit(t *testing.T) {
 	tj := newTestJWKS(t)
 	cfg, closeJWKS := gateConfig(t, tj, true)
 	defer closeJWKS()
