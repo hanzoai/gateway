@@ -7,7 +7,6 @@ require github.com/hanzoai/cloud v1.786.146-0.20260709002058-f84f5e2eadd0
 require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-jose/go-jose/v4 v4.1.4
-	github.com/hanzoai/datastore-go/v2 v2.45.1
 	github.com/krakend/bloomfilter/v2 v2.1.0
 	github.com/krakend/krakend-amqp/v2 v2.3.0
 	github.com/krakend/krakend-botdetector/v2 v2.3.0
@@ -157,6 +156,7 @@ require (
 	github.com/gorilla/rpc v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
+	github.com/hanzo-ds/native v0.71.0 // indirect
 	github.com/hanzoai/ai v1.802.1-0.20260708185316-0321c35877f0 // indirect
 	github.com/hanzoai/beego/v2 v2.3.10 // indirect
 	github.com/hanzoai/commerce/metering v0.1.4 // indirect
@@ -400,6 +400,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.21.0 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
+	github.com/hanzo-ds/go v1.0.1
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -464,7 +465,7 @@ require (
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
+	github.com/pierrec/lz4/v4 v4.1.27 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
