@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	datastore "github.com/hanzoai/datastore-go/v2"
-	"github.com/hanzoai/datastore-go/v2/lib/driver"
+	datastore "github.com/hanzo-ds/go"
+	"github.com/hanzo-ds/go/lib/driver"
 )
 
 // store is the admin analytics layer: a thin typed surface over the dedicated
