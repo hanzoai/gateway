@@ -155,6 +155,69 @@ func TestInjectIdentity_NoPlatformAdminHeader(t *testing.T) {
 	}
 }
 
+// TestEffectiveOrg pins the ONE org-switch predicate: a requested org is honored
+// only when the subject is a member of it (the home org is always an implicit
+// member), else the request falls back to the home org — a caller can never act
+// beyond its IAM-granted membership set.
+func TestEffectiveOrg(t *testing.T) {
+	c := &Claims{Owner: "acme", Orgs: []Membership{{Org: "acme", Role: "admin"}, {Org: "beta-team", Role: "member"}}}
+	for _, tc := range []struct {
+		name, requested, wantOrg string
+		wantSwitched             bool
+	}{
+		{"no request → home", "", "acme", false},
+		{"request home → home (no switch)", "acme", "acme", false},
+		{"request home case-insensitive → home", "ACME", "acme", false},
+		{"member team → switch", "beta-team", "beta-team", true},
+		{"member team case-insensitive → switch", "Beta-Team", "beta-team", true},
+		{"non-member → fail closed to home", "victim", "acme", false},
+	} {
+		gotOrg, gotSwitched := c.EffectiveOrg(tc.requested)
+		if gotOrg != tc.wantOrg || gotSwitched != tc.wantSwitched {
+			t.Errorf("%s: EffectiveOrg(%q) = (%q, %v), want (%q, %v)", tc.name, tc.requested, gotOrg, gotSwitched, tc.wantOrg, tc.wantSwitched)
+		}
+	}
+}
+
+// TestEffectiveOrg_EmptyMembership proves that with no `orgs` claim (a pre-rollout
+// token) only the home org is ever effective — no request can switch.
+func TestEffectiveOrg_EmptyMembership(t *testing.T) {
+	c := &Claims{Owner: "acme"}
+	if org, sw := c.EffectiveOrg("beta-team"); org != "acme" || sw {
+		t.Fatalf("EffectiveOrg with empty membership = (%q, %v), want (acme, false)", org, sw)
+	}
+}
+
+// TestInjectIdentity_OrgSwitch proves the edge mints X-Org-Id from a VALID member
+// switch (X-Act-As-Org), keeps X-User-Owner on the home org, and consumes the
+// intent header so it never reaches a backend.
+func TestInjectIdentity_OrgSwitch(t *testing.T) {
+	r := req(nil)
+	r.Header.Set(ActAsOrgHeader, "beta-team")
+	InjectIdentity(r, &Claims{Owner: "acme", Orgs: []Membership{{Org: "beta-team", Role: "member"}}})
+	if got := r.Header.Get("X-Org-Id"); got != "beta-team" {
+		t.Errorf("X-Org-Id = %q, want beta-team (honored member switch)", got)
+	}
+	if got := r.Header.Get("X-User-Owner"); got != "acme" {
+		t.Errorf("X-User-Owner = %q, want acme (home unchanged by switch)", got)
+	}
+	if got := r.Header.Get(ActAsOrgHeader); got != "" {
+		t.Errorf("X-Act-As-Org must be consumed, still present: %q", got)
+	}
+}
+
+// TestInjectIdentity_OrgSwitchRefused proves a switch to an org OUTSIDE the
+// membership set fails closed: X-Org-Id stays the home org, so a forged
+// X-Act-As-Org can never reach another tenant's data or balance.
+func TestInjectIdentity_OrgSwitchRefused(t *testing.T) {
+	r := req(nil)
+	r.Header.Set(ActAsOrgHeader, "victim")
+	InjectIdentity(r, &Claims{Owner: "acme", Orgs: []Membership{{Org: "acme", Role: "admin"}}})
+	if got := r.Header.Get("X-Org-Id"); got != "acme" {
+		t.Errorf("X-Org-Id = %q, want acme (non-member switch must fail closed to home)", got)
+	}
+}
+
 // TestClaims_PlatformSudo pins the ONE platform-sudo predicate: membership in the
 // reserved AdminOrg (owner=="admin"), case/space-insensitive. There is no boolean
 // flag; a plain org-level IsAdmin (an org owner) must NOT qualify — that was the
