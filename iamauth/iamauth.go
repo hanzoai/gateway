@@ -29,12 +29,21 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 )
 
+// Membership is one org the subject may act in, plus its coarse role there. It is
+// the unit of the `orgs` membership SET IAM emits so the edge can authorize an
+// org-switch statelessly (X-Org-Id ∈ orgs) with no round-trip.
+type Membership struct {
+	Org  string `json:"org"`            // the org slug the subject may act in
+	Role string `json:"role,omitempty"` // coarse org role: owner | admin | member
+}
+
 // Claims are the JWT claims emitted by Hanzo IAM (hanzo.id). The gateway
 // aliases its hanzoJWTClaims to this type, so the shape is shared.
 type Claims struct {
 	jwt.Claims
 
-	Owner             string          `json:"owner"`              // org slug
+	Owner             string          `json:"owner"`              // HOME org slug (identity + billing anchor)
+	Orgs              []Membership    `json:"orgs"`               // membership set: every org the subject may act in (home + teams)
 	Project           string          `json:"project"`            // project scope within the org (optional; empty ⟹ default project)
 	BillingAccount    string          `json:"billing_account"`    // funding account id (optional attribution hint; empty ⟹ cloud resolves the debit account)
 	Name              string          `json:"name"`               // display name
@@ -46,6 +55,28 @@ type Claims struct {
 	IsAdmin           bool            `json:"isAdmin"` // ORG-level admin (an org owner) — NEVER the money/superadmin bit
 	Roles             json.RawMessage `json:"roles"`
 	Permissions       json.RawMessage `json:"permissions"`
+}
+
+// EffectiveOrg resolves the org a request acts in — the value the edge mints into
+// X-Org-Id — given the org the client REQUESTED (X-Act-As-Org, empty when none).
+// It is the ONE org-switch predicate: the requested org is honored iff the subject
+// is a member of it (the HOME org `owner` is always an implicit member); anything
+// else falls back to the home org. So a caller can only ever act in — and spend
+// from — an org IAM granted, and can never switch beyond its membership set. The
+// bool reports whether an explicit, non-home request was HONORED (false when it
+// was absent, was already home, or was refused for non-membership).
+func (c *Claims) EffectiveOrg(requested string) (string, bool) {
+	home := strings.TrimSpace(c.Owner)
+	requested = strings.TrimSpace(requested)
+	if requested == "" || strings.EqualFold(requested, home) {
+		return home, false
+	}
+	for _, m := range c.Orgs {
+		if org := strings.TrimSpace(m.Org); strings.EqualFold(org, requested) {
+			return org, true // the CANONICAL membership slug, never the client's casing
+		}
+	}
+	return home, false // requested outside the membership set → fail closed to home
 }
 
 // AdminOrg is the reserved org slug Hanzo IAM seeds PLATFORM (sudo) admins into.
@@ -575,16 +606,28 @@ func StripIdentityHeaders(r *http.Request) {
 	}
 }
 
+// ActAsOrgHeader is the request header a client sets to act in a specific org it
+// is a member of (an org-switch). The edge validates it against the token's
+// membership set (Claims.EffectiveOrg), mints X-Org-Id from the result, and drops
+// it — so it is a request INTENT, never a trusted identity header, and can only
+// ever select an org IAM already granted. Absent ⟹ the home org.
+const ActAsOrgHeader = "X-Act-As-Org"
+
 // InjectIdentity sets the core identity headers from validated claims. This
 // is the minimal edge identity (id, org, email, isAdmin) — roles and the
 // permission bit-field stay in the commerce-coupled gateway middleware.
 // Call StripIdentityHeaders first.
 func InjectIdentity(r *http.Request, c *Claims) {
 	r.Header.Set("X-User-Id", c.UserID())
-	r.Header.Set("X-Org-Id", c.Owner)
+	// X-Org-Id = the EFFECTIVE org: the org the client asked to act in
+	// (X-Act-As-Org) when it is in the membership set, else the home org. The
+	// intent header is consumed here so it never reaches a backend.
+	effective, _ := c.EffectiveOrg(r.Header.Get(ActAsOrgHeader))
+	r.Header.Del(ActAsOrgHeader)
+	r.Header.Set("X-Org-Id", effective)
 	// X-User-Owner = the immutable HOME org (JWT owner), distinct from X-Org-Id (the
-	// EFFECTIVE org; == owner today, masquerade target later). Platform-sudo + billing
-	// key on the home org; stripped on ingress so it is never forgeable.
+	// EFFECTIVE org). Platform-sudo + billing key on the home org; stripped on
+	// ingress so it is never forgeable.
 	r.Header.Set("X-User-Owner", c.Owner)
 	// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
 	// exactly like X-Org-Id from `owner`. Omitted for the default project so the
