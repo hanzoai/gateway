@@ -29,7 +29,6 @@ package gateway
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -39,7 +38,6 @@ import (
 	lua "github.com/krakend/krakend-lua/v2/router/gin"
 	opencensus "github.com/krakend/krakend-opencensus/v2/router/gin"
 	"github.com/luraproject/lura/v2/config"
-	"github.com/luraproject/lura/v2/core"
 	luragin "github.com/luraproject/lura/v2/router/gin"
 	"github.com/luraproject/lura/v2/transport/http/server"
 )
@@ -82,11 +80,12 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	// corsPreflightMiddleware in routes.go).
 	engine.Use(gin.CustomRecovery(corsRecoveryHandler(newCORSOriginAllower())))
 
-	// Branding: wrap the response writer so any residual upstream-SDK-emitted
-	// "X-KRAKEND*" headers are rewritten to our Hanzo-branded equivalents
-	// before the response reaches the client. Must run right after recovery
-	// so the wrapped writer is in place for every downstream handler.
-	engine.Use(BrandingMiddleware())
+	// Production response headers: wrap the response writer so the posture
+	// (Server = white-label brand by Host, X-Api-Version, HSTS, nosniff) is
+	// stamped and every framework-leaking header (X-KRAKEND*, X-Powered-By) is
+	// stripped before the response reaches the client. Must run right after
+	// recovery so the wrapped writer is in place for every downstream handler.
+	engine.Use(ProductionHeadersMiddleware())
 
 	// CORS preflight must run BEFORE any routing — Gin's NoMethod handler
 	// returns 405/503 for OPTIONS on gateway-managed endpoints otherwise.
@@ -135,9 +134,10 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 }
 
 func defaultHandler(c *gin.Context) {
-	// BrandingMiddleware rewrites any X-KRAKEND* headers emitted upstream.
-	// We set the canonical Hanzo headers directly so there is no leak.
-	c.Header(PoweredByHeader, fmt.Sprintf("%s Version %s", BrandName, core.KrakendVersion))
+	// The response posture (Server, X-Api-Version, HSTS, nosniff) and all
+	// framework-header stripping are applied by ProductionHeadersMiddleware at
+	// write time. Here we only mark the NoRoute / NoMethod response incomplete
+	// via the de-branded completion header.
 	c.Header(server.CompleteResponseHeaderName, server.HeaderIncompleteResponseValue)
 }
 
