@@ -143,6 +143,17 @@ func (w *prodWriter) WriteString(s string) (int, error) {
 	return w.ResponseWriter.WriteString(s)
 }
 
+// Flush covers the streaming/SSE path: a handler that Flushes before any
+// buffered write would otherwise reach the embedded writer's WriteHeaderNow
+// directly (Go embedding has no virtual dispatch), bypassing stamp(). Stamp
+// first so streamed responses carry the posture and shed the framework headers
+// too. (A hijacked connection — 101 websocket upgrade — carries no HTTP response
+// posture and is intentionally left unstamped.)
+func (w *prodWriter) Flush() {
+	w.stamp()
+	w.ResponseWriter.Flush()
+}
+
 // Ensure interface compliance.
 var _ gin.ResponseWriter = (*prodWriter)(nil)
 var _ http.ResponseWriter = (*prodWriter)(nil)

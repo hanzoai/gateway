@@ -27,6 +27,10 @@ func brandForHost(host string) string {
 	if i := strings.IndexByte(host, ':'); i >= 0 {
 		host = host[:i]
 	}
+	// A fully-qualified Host may carry a trailing root dot ("api.lux.network.");
+	// strip it so the suffix match still resolves the brand instead of failing to
+	// neutral. Mirrors cloud/brand.go BrandForHostOK.
+	host = strings.TrimSuffix(host, ".")
 	best, bestLen := "", -1
 	for _, bd := range brandDomains {
 		if (host == bd.domain || strings.HasSuffix(host, "."+bd.domain)) && len(bd.domain) > bestLen {
