@@ -160,7 +160,7 @@ func TestInjectIdentity_NoPlatformAdminHeader(t *testing.T) {
 // member), else the request falls back to the home org — a caller can never act
 // beyond its IAM-granted membership set.
 func TestEffectiveOrg(t *testing.T) {
-	c := &Claims{Owner: "acme", Orgs: []Membership{{Org: "acme", Role: "admin"}, {Org: "beta-team", Role: "member"}}}
+	c := &Claims{Owner: "acme", Scopes: []Membership{{Scope: "acme", Role: "admin"}, {Scope: "beta-team", Role: "member"}}}
 	for _, tc := range []struct {
 		name, requested, wantOrg string
 		wantSwitched             bool
@@ -194,7 +194,7 @@ func TestEffectiveOrg_EmptyMembership(t *testing.T) {
 func TestInjectIdentity_OrgSwitch(t *testing.T) {
 	r := req(nil)
 	r.Header.Set(ActAsOrgHeader, "beta-team")
-	InjectIdentity(r, &Claims{Owner: "acme", Orgs: []Membership{{Org: "beta-team", Role: "member"}}})
+	InjectIdentity(r, &Claims{Owner: "acme", Scopes: []Membership{{Scope: "beta-team", Role: "member"}}})
 	if got := r.Header.Get("X-Org-Id"); got != "beta-team" {
 		t.Errorf("X-Org-Id = %q, want beta-team (honored member switch)", got)
 	}
@@ -212,7 +212,7 @@ func TestInjectIdentity_OrgSwitch(t *testing.T) {
 func TestInjectIdentity_OrgSwitchRefused(t *testing.T) {
 	r := req(nil)
 	r.Header.Set(ActAsOrgHeader, "victim")
-	InjectIdentity(r, &Claims{Owner: "acme", Orgs: []Membership{{Org: "acme", Role: "admin"}}})
+	InjectIdentity(r, &Claims{Owner: "acme", Scopes: []Membership{{Scope: "acme", Role: "admin"}}})
 	if got := r.Header.Get("X-Org-Id"); got != "acme" {
 		t.Errorf("X-Org-Id = %q, want acme (non-member switch must fail closed to home)", got)
 	}
