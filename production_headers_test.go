@@ -35,6 +35,13 @@ func TestProductionHeadersMiddleware(t *testing.T) {
 		c.Header("X-Powered-By", "hanzoai/gateway Version 2.13.0")
 		c.String(http.StatusOK, "ok")
 	})
+	// Streaming path: Flush BEFORE any buffered write must still stamp the posture
+	// and strip framework headers (exercises the prodWriter.Flush override).
+	r.GET("/stream", func(c *gin.Context) {
+		c.Header("X-KRAKEND", "Version 2.13")
+		c.Writer.Flush()
+		c.String(http.StatusOK, "chunk")
+	})
 
 	cases := map[string]string{
 		"api.hanzo.ai":      "hanzo",
@@ -73,6 +80,26 @@ func TestProductionHeadersMiddleware(t *testing.T) {
 			if w.Header().Get("Server") == bad {
 				t.Errorf("Host %q: Server leaked framework/brand %q", host, bad)
 			}
+		}
+	}
+
+	// Streaming (Flush-before-write) response carries the posture and is stripped.
+	{
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "http://api.zoo.ngo/stream", nil)
+		req.Host = "api.zoo.ngo"
+		r.ServeHTTP(w, req)
+		if got := w.Header().Get("Server"); got != "zoo" {
+			t.Errorf("stream: Server=%q want zoo", got)
+		}
+		if got := w.Header().Get("X-KRAKEND"); got != "" {
+			t.Errorf("stream: X-KRAKEND leaked on Flush path: %q", got)
+		}
+		if got := w.Header().Get("X-Content-Type-Options"); got != "nosniff" {
+			t.Errorf("stream: missing nosniff on Flush path")
+		}
+		if got := w.Header().Get("Strict-Transport-Security"); got == "" {
+			t.Errorf("stream: missing HSTS on Flush path")
 		}
 	}
 
