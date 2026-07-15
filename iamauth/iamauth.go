@@ -29,12 +29,32 @@ import (
 	"github.com/go-jose/go-jose/v4/jwt"
 )
 
-// Membership is one org the subject may act in, plus its coarse role there. It is
-// the unit of the `orgs` membership SET IAM emits so the edge can authorize an
-// org-switch statelessly (X-Org-Id ∈ orgs) with no round-trip.
+// Membership is one SCOPE the subject may act in, plus its coarse role there. It
+// is the unit of the `scopes` membership SET IAM emits so the edge can authorize a
+// scope switch statelessly (the requested scope ∈ scopes) with no round-trip.
+//
+// A scope id is the ONE tenancy vocabulary, shared byte-for-byte with IAM
+// (object.Project.GetId): "<org>" names an org node, "<org>/<project>" names a
+// project node under it, and the parent of "<org>/<project>" is "<org>". Org and
+// project are therefore ONE primitive — a node in the tenancy tree — so ONE set
+// authorizes both switches and there is exactly one vocabulary to reason about
+// (HIP-0111).
 type Membership struct {
-	Org  string `json:"org"`            // the org slug the subject may act in
-	Role string `json:"role,omitempty"` // coarse org role: owner | admin | member
+	Scope string `json:"scope"`          // "<org>" (org node) or "<org>/<project>" (project node)
+	Role  string `json:"role,omitempty"` // coarse role at that scope: owner | admin | member
+}
+
+// scopeSep separates the org from the project in a scope id.
+const scopeSep = "/"
+
+// scope joins an org and a project into a scope id — the ONE way the edge names a
+// tenancy node. An empty project yields the bare org scope, since the org node IS
+// the project-less scope: scope(org, "") == org.
+func scope(org, project string) string {
+	if project == "" {
+		return org
+	}
+	return org + scopeSep + project
 }
 
 // Claims are the JWT claims emitted by Hanzo IAM (hanzo.id). The gateway
@@ -43,8 +63,8 @@ type Claims struct {
 	jwt.Claims
 
 	Owner             string          `json:"owner"`              // HOME org slug (identity + billing anchor)
-	Orgs              []Membership    `json:"orgs"`               // membership set: every org the subject may act in (home + teams)
-	Project           string          `json:"project"`            // project scope within the org (optional; empty ⟹ default project)
+	Scopes            []Membership    `json:"scopes"`             // membership set: every scope the subject may act in (org nodes + project nodes)
+	Project           string          `json:"project"`            // project scope within the HOME org (optional; empty ⟹ default project)
 	BillingAccount    string          `json:"billing_account"`    // funding account id (optional attribution hint; empty ⟹ cloud resolves the debit account)
 	Name              string          `json:"name"`               // display name
 	PreferredUsername string          `json:"preferred_username"` // fallback id
@@ -68,15 +88,70 @@ type Claims struct {
 func (c *Claims) EffectiveOrg(requested string) (string, bool) {
 	home := strings.TrimSpace(c.Owner)
 	requested = strings.TrimSpace(requested)
-	if requested == "" || strings.EqualFold(requested, home) {
+	// An org names a ROOT node, never a sub-scope: a requested id carrying the
+	// separator is not an org, so it can never match a "<org>/<project>" entry and
+	// mint a compound value into X-Org-Id — which keys tenant data AND the billing
+	// subject, neither of which has a meaning for a project node.
+	if requested == "" || strings.Contains(requested, scopeSep) || strings.EqualFold(requested, home) {
 		return home, false
 	}
-	for _, m := range c.Orgs {
-		if org := strings.TrimSpace(m.Org); strings.EqualFold(org, requested) {
-			return org, true // the CANONICAL membership slug, never the client's casing
+	for _, m := range c.Scopes {
+		if s := strings.TrimSpace(m.Scope); strings.EqualFold(s, requested) {
+			return s, true // the CANONICAL membership slug, never the client's casing
 		}
 	}
 	return home, false // requested outside the membership set → fail closed to home
+}
+
+// EffectiveProject resolves the project a request acts in WITHIN org — the value the
+// edge mints into X-Project-Id, "" meaning OMIT the header (⟺ the default project) —
+// given the project the client REQUESTED (X-Act-As-Project, empty when none).
+//
+// It is the project mirror of EffectiveOrg and the ONE project-switch predicate: a
+// requested project is honored iff the subject is a member of the SCOPE
+// scope(org, project). The scope is built from the EFFECTIVE org, so a project is
+// only ever authorized in the org being acted in — another tenant's project can
+// never match — and a label the set does not carry (foreign or invented) is refused
+// rather than minted (HIP-0111).
+//
+// Membership is literal set-inclusion, NOT inheritance from an org entry: since
+// EffectiveOrg already guarantees org is home-or-a-member, an inherited rule would
+// honor EVERY requested label and the predicate would be vacuous. IAM therefore
+// emits a scope entry for each project the subject may act in; the edge is stateless
+// and cannot know a project exists, so a project's EXISTENCE stays cloud's check.
+//
+// Anything else falls back to the BASELINE: the IAM-minted `project` claim, which
+// asserts a project of the HOME org only — so a switched org drops it, since that
+// claim names a project of `owner`, not of the org being acted in. The reserved
+// DefaultProject is the org-level scope every member of org already holds, so it
+// needs no entry and mints nothing. The bool reports whether an explicit, non-
+// baseline request was HONORED.
+func (c *Claims) EffectiveProject(org, requested string) (string, bool) {
+	org = strings.TrimSpace(org)
+	// The `project` claim is IAM's assertion about the HOME org; it is the baseline
+	// only while acting there.
+	baseline := ""
+	if strings.EqualFold(org, strings.TrimSpace(c.Owner)) {
+		baseline = c.MintedProject()
+	}
+	requested = strings.TrimSpace(requested)
+	switch {
+	case requested == "":
+		return baseline, false
+	case strings.EqualFold(requested, DefaultProject):
+		return "", baseline != "" // org-level: held by every member of org, mints nothing
+	case strings.EqualFold(requested, baseline):
+		return baseline, false // already there — not a switch
+	}
+	want := scope(org, requested)
+	for _, m := range c.Scopes {
+		if s := strings.TrimSpace(m.Scope); strings.EqualFold(s, want) {
+			if _, project, ok := strings.Cut(s, scopeSep); ok {
+				return project, true // the CANONICAL project from the set, never the client's casing
+			}
+		}
+	}
+	return baseline, false // requested outside the membership set → fail closed to the baseline
 }
 
 // AdminOrg is the reserved org slug Hanzo IAM seeds PLATFORM (sudo) admins into.
@@ -613,32 +688,75 @@ func StripIdentityHeaders(r *http.Request) {
 // ever select an org IAM already granted. Absent ⟹ the home org.
 const ActAsOrgHeader = "X-Act-As-Org"
 
+// ActAsProjectHeader is the request header a client sets to act in a specific
+// project of the effective org (a project-switch) — the exact mirror of
+// ActAsOrgHeader one level down the tenancy tree. The edge validates it against the
+// same membership set (Claims.EffectiveProject), mints X-Project-Id from the result,
+// and drops it. Absent ⟹ the `project` claim's baseline; the reserved DefaultProject
+// ⟹ org-level (no project header).
+const ActAsProjectHeader = "X-Act-As-Project"
+
+// ActAsHeaderNames is the complete set of act-as INTENT headers. They are INPUTS to
+// the mint, not identity, which is why they are deliberately absent from
+// StripIdentityHeaderNames: the strip runs before the mint, so stripping them at
+// ingress would delete the very values the mint must read. TakeActAs consumes them
+// instead. Forwards-only: append, never remove.
+var ActAsHeaderNames = []string{ActAsOrgHeader, ActAsProjectHeader}
+
+// ActAs is the scope a client ASKED to act in — pure request intent. Each value is
+// validated against the token's membership set before anything is minted from it, so
+// it can only ever select a scope IAM already granted.
+type ActAs struct {
+	Org     string // X-Act-As-Org: the org to act in; "" ⟹ home
+	Project string // X-Act-As-Project: the project to act in within that org; "" ⟹ the claim's baseline
+}
+
+// TakeActAs reads the act-as intent headers and DELETES them, so the intent is
+// consumed exactly once — at ingress, before any route-class dispatch. Every class
+// therefore drops them, including the ones that mint no identity at all (tokenless
+// ingest, API keys, public paths): a request INTENT can never reach a backend, so no
+// backend can ever mistake one for a decision the edge made. This mirrors
+// StripIdentityHeaders' discipline — one take at ingress IS the whole invariant.
+func TakeActAs(r *http.Request) ActAs {
+	a := ActAs{
+		Org:     r.Header.Get(ActAsOrgHeader),
+		Project: r.Header.Get(ActAsProjectHeader),
+	}
+	for _, h := range ActAsHeaderNames {
+		r.Header.Del(h)
+	}
+	return a
+}
+
 // InjectIdentity sets the core identity headers from validated claims. This
 // is the minimal edge identity (id, org, email, isAdmin) — roles and the
 // permission bit-field stay in the commerce-coupled gateway middleware.
 // Call StripIdentityHeaders first.
 func InjectIdentity(r *http.Request, c *Claims) {
 	r.Header.Set("X-User-Id", c.UserID())
+	// The act-as INTENTS are consumed up front, so they never reach a backend even
+	// if a claim below refuses to honor one.
+	actAs := TakeActAs(r)
 	// X-Org-Id = the EFFECTIVE org: the org the client asked to act in
-	// (X-Act-As-Org) when it is in the membership set, else the home org. The
-	// intent header is consumed here so it never reaches a backend.
-	effective, _ := c.EffectiveOrg(r.Header.Get(ActAsOrgHeader))
-	r.Header.Del(ActAsOrgHeader)
+	// (X-Act-As-Org) when it is in the membership set, else the home org.
+	effective, _ := c.EffectiveOrg(actAs.Org)
 	r.Header.Set("X-Org-Id", effective)
 	// X-User-Owner = the immutable HOME org (JWT owner), distinct from X-Org-Id (the
 	// EFFECTIVE org). Platform-sudo + billing key on the home org; stripped on
 	// ingress so it is never forgeable.
 	r.Header.Set("X-User-Owner", c.Owner)
-	// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
-	// exactly like X-Org-Id from `owner`. Omitted for the default project so the
-	// header is present iff a non-default project is in scope (StripIdentityHeaders
-	// already dropped any forgeable client copy).
-	if project := c.MintedProject(); project != "" {
+	// X-Project-Id = the EFFECTIVE project WITHIN that org: the project the client
+	// asked to act in (X-Act-As-Project) when scope(org, project) is in the same
+	// membership set, else the `project` claim's baseline. Omitted for the default
+	// project so the header is present iff a non-default project is in scope
+	// (StripIdentityHeaders already dropped any forgeable client copy).
+	if project, _ := c.EffectiveProject(effective, actAs.Project); project != "" {
 		r.Header.Set("X-Project-Id", project)
 	}
-	// Mint X-Billing-Account-Id from the validated `billing_account` claim, an
-	// attribution hint mirroring X-Project-Id. Absent/empty mints nothing (no
-	// reserved default); cloud + commerce resolve the real debit account.
+	// Mint X-Billing-Account-Id from the validated `billing_account` claim. It is an
+	// attribution HINT and never a payer decision: commerce resolves the payer at
+	// charge time, walking the scope's ordered bindings against live balances, so a
+	// TTL'd token can never freeze who pays (HIP-0111). Absent/empty mints nothing.
 	if acct := c.MintedBillingAccount(); acct != "" {
 		r.Header.Set("X-Billing-Account-Id", acct)
 	}

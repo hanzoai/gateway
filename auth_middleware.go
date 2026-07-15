@@ -550,6 +550,9 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	if !cfg.Enabled {
 		return func(c *gin.Context) {
 			stripIdentityHeaders(c.Request)
+			// Nothing is minted here, so an act-as intent could only ever be read by a
+			// backend as a decision the edge never made. Consume it.
+			iamauth.TakeActAs(c.Request)
 			c.Next()
 		}
 	}
@@ -592,6 +595,15 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		//     identity ever reaches cloud, which resolves the org solely from the DSN.
 		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
 		stripIdentityHeaders(c.Request)
+
+		// Consume the act-as INTENTS (X-Act-As-Org, X-Act-As-Project) — the scope the
+		// client ASKED for. They are inputs to the mint, not identity, so they survive
+		// the strip above (which runs before the mint could read them) and are taken
+		// here instead: unconditionally, before any route-class dispatch, so a class
+		// that mints nothing (ingest, API key, public) still drops them and an intent
+		// can never reach a backend. Each value is authorized against the token's
+		// membership set below; nothing is minted from one until it is.
+		actAs := iamauth.TakeActAs(c.Request)
 
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
@@ -675,8 +687,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// member acts in — and the balance gate below charges — a team org it
 		// belongs to, never one beyond its membership. The intent header is consumed
 		// so it never reaches a backend.
-		orgID, _ := claims.EffectiveOrg(c.Request.Header.Get(iamauth.ActAsOrgHeader))
-		c.Request.Header.Del(iamauth.ActAsOrgHeader)
+		orgID, _ := claims.EffectiveOrg(actAs.Org)
 		userID := claims.Subject
 		// IAM may leave "sub" empty — fall back to preferred_username then name
 		if userID == "" {
@@ -705,18 +716,28 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// scope keys on X-Org-Id. Minted from the JWT only; the client copy was stripped
 		// at ingress, so it is never forgeable.
 		c.Request.Header.Set("X-User-Owner", claims.Owner)
-		// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
-		// exactly like X-Org-Id from `owner`. Absent/default project mints nothing
-		// (minimal-canonical form) — downstream resolves the default and keeps
-		// today's single-project behavior. The client copy was already stripped
+		// Mint the org SUB-SCOPE X-Project-Id from the EFFECTIVE project — the same
+		// membership-set predicate as X-Org-Id, one level down the tenancy tree: the
+		// requested project (X-Act-As-Project) is honored only when the token carries
+		// the scope "<orgID>/<project>", so a foreign or invented label falls back to
+		// the `project` claim's baseline rather than being minted. Absent/default
+		// mints nothing (minimal-canonical form) — downstream resolves the default and
+		// keeps today's single-project behavior. The client copy was already stripped
 		// (stripIdentityHeaders), so this is never forgeable.
-		if project := claims.MintedProject(); project != "" {
+		if project, _ := claims.EffectiveProject(orgID, actAs.Project); project != "" {
 			c.Request.Header.Set("X-Project-Id", project)
 		}
 		// Mint X-Billing-Account-Id from the validated `billing_account` claim, an
 		// attribution hint mirroring X-Project-Id. Absent/empty mints nothing; the
 		// client copy was already stripped (stripIdentityHeaders), so it is never
-		// forgeable. Cloud + commerce resolve the real debit account server-side.
+		// forgeable.
+		//
+		// It is a HINT and never a payer decision. The edge grants it no billing
+		// authority of its own: the balance gate below keys on org/user, never on this
+		// header, so a token asserting an account cannot move the money check to it.
+		// Commerce resolves the payer at CHARGE time by walking the scope's ordered
+		// bindings against live balances — a decision a TTL'd token snapshot must not
+		// freeze, or a revoked/empty account keeps paying until expiry (HIP-0111).
 		if acct := claims.MintedBillingAccount(); acct != "" {
 			c.Request.Header.Set("X-Billing-Account-Id", acct)
 		}
