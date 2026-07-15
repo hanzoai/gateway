@@ -220,8 +220,11 @@ func startNode(logger luxlog.Logger, cfg config) (*zaplib.Node, error) {
 // Tiny on purpose: no auth, no JWT, no ZAP. A bare process check.
 func buildHealthApp() *zip.App {
 	app := zip.New(zip.Config{
-		Logger:                luxlog.New("service", "gateway-health"),
-		ServerHeader:          "-",
+		Logger: luxlog.New("service", "gateway-health"),
+		// Neutral, brand-agnostic Server — never "-" (which falls through to the
+		// fasthttp framework default) and never a single brand. Matches BuildApp
+		// so the two init paths present one posture.
+		ServerHeader:          gateway.NeutralServerBrand,
 		DisableStartupMessage: true,
 		AppName:               "gateway-health",
 	})

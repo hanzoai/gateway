@@ -11,8 +11,9 @@
 //   - core.KrakendHeaderValue "Version x.y"
 //
 // The response header name "X-KRAKEND" is a const in lura/core and cannot be
-// reassigned at runtime; it is stripped and replaced by the BrandingMiddleware
-// below. Everything else is a package-level var and is reassigned in init().
+// reassigned at runtime; it is stripped by the ProductionHeadersMiddleware
+// below (which also stamps the production posture). Everything else is a
+// package-level var and is reassigned in init().
 package gateway
 
 import (
@@ -55,68 +56,93 @@ func init() {
 	server.CompleteResponseHeaderName = CompletedHeader
 }
 
-// BrandingMiddleware strips any residual lura-emitted branding headers that
-// leak through because their names are compile-time consts in lura/core, and
-// replaces them with canonical Hanzo equivalents. Must run before the lura
-// endpoint handler so the wrapped writer is in place by the time lura calls
-// c.Header().
-func BrandingMiddleware() gin.HandlerFunc {
+// ProductionHeadersMiddleware stamps the production response-header posture and
+// strips every upstream-SDK branding header, on every response — happy path,
+// error paths, and NoRoute / NoMethod alike. It wraps the gin ResponseWriter so
+// the headers are set at the last possible moment, before the response reaches
+// the wire.
+//
+// This is the legacy (gin/KrakenD) edge's home for the same posture zip's
+// middleware.ProductionHeaders gives the ZAP-native services: Server is the
+// white-label brand of the request Host (never the framework name, never a
+// single hardcoded brand), X-Api-Version is the brand-neutral build version, and
+// HSTS + nosniff are the security floor. It never emits X-Powered-By or any
+// framework/version string.
+//
+// Must run right after recovery so the wrapped writer is in place for every
+// downstream handler.
+func ProductionHeadersMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Writer = &brandingWriter{ResponseWriter: c.Writer}
+		c.Writer = &prodWriter{ResponseWriter: c.Writer, host: c.Request.Host}
 		c.Next()
 	}
 }
 
-// brandingWriter wraps gin.ResponseWriter and rewrites branding headers at
-// the last possible moment (WriteHeaderNow / Write / WriteString) before the
-// response goes to the wire.
-type brandingWriter struct {
+// prodWriter wraps gin.ResponseWriter and stamps the production posture (and
+// strips upstream branding) at the last possible moment — WriteHeader /
+// WriteHeaderNow / Write / WriteString — before the response goes to the wire.
+type prodWriter struct {
 	gin.ResponseWriter
-	rewritten bool
+	host    string
+	stamped bool
 }
 
-func (w *brandingWriter) rewrite() {
-	if w.rewritten {
+func (w *prodWriter) stamp() {
+	if w.stamped {
 		return
 	}
-	w.rewritten = true
+	w.stamped = true
 	h := w.ResponseWriter.Header()
-	if v := h.Get(legacyBrandHeader); v != "" {
-		h.Del(legacyBrandHeader)
-		h.Set(PoweredByHeader, v)
-	} else if h.Get(PoweredByHeader) == "" {
-		h.Set(PoweredByHeader, fmt.Sprintf("%s Version %s", BrandName, core.KrakendVersion))
-	}
-	// Defense in depth: if lura's var reassignment races with a hot path, strip
-	// the legacy completion header too.
+
+	// Strip every framework-leaking header. X-KRAKEND is a compile-time const in
+	// lura/core (cannot be reassigned), so it is deleted here; X-Powered-By is
+	// never emitted (the standard forbids it) and is stripped defensively; the
+	// completion flag keeps its brand-neutral semantic under a de-branded name.
+	h.Del(legacyBrandHeader) // X-KRAKEND
+	h.Del(PoweredByHeader)   // X-Powered-By
 	if v := h.Get(legacyCompletedHeader); v != "" {
 		h.Del(legacyCompletedHeader)
 		if h.Get(CompletedHeader) == "" {
 			h.Set(CompletedHeader, v)
 		}
 	}
+
+	// Production posture (Stripe/Cloudflare/GitHub-grade):
+	//  - Server: white-label brand of the request Host, else the neutral default.
+	server := brandForHost(w.host)
+	if server == "" {
+		server = NeutralServerBrand
+	}
+	h.Set("Server", server)
+	//  - X-Api-Version: brand-neutral build/version signal for support correlation.
+	if core.KrakendVersion != "" {
+		h.Set("X-Api-Version", core.KrakendVersion)
+	}
+	//  - Security floor (always-safe; the SPA owns its own framing rules).
+	h.Set("X-Content-Type-Options", "nosniff")
+	h.Set("Strict-Transport-Security", hstsPolicy)
 }
 
-func (w *brandingWriter) WriteHeader(status int) {
-	w.rewrite()
+func (w *prodWriter) WriteHeader(status int) {
+	w.stamp()
 	w.ResponseWriter.WriteHeader(status)
 }
 
-func (w *brandingWriter) WriteHeaderNow() {
-	w.rewrite()
+func (w *prodWriter) WriteHeaderNow() {
+	w.stamp()
 	w.ResponseWriter.WriteHeaderNow()
 }
 
-func (w *brandingWriter) Write(p []byte) (int, error) {
-	w.rewrite()
+func (w *prodWriter) Write(p []byte) (int, error) {
+	w.stamp()
 	return w.ResponseWriter.Write(p)
 }
 
-func (w *brandingWriter) WriteString(s string) (int, error) {
-	w.rewrite()
+func (w *prodWriter) WriteString(s string) (int, error) {
+	w.stamp()
 	return w.ResponseWriter.WriteString(s)
 }
 
 // Ensure interface compliance.
-var _ gin.ResponseWriter = (*brandingWriter)(nil)
-var _ http.ResponseWriter = (*brandingWriter)(nil)
+var _ gin.ResponseWriter = (*prodWriter)(nil)
+var _ http.ResponseWriter = (*prodWriter)(nil)
