@@ -16,6 +16,7 @@ func TestBrandForHost(t *testing.T) {
 		"hanzo.cloud":       "hanzo",
 		"studio.hanzo.app":  "hanzo",
 		"api.lux.network":   "lux",
+		"api.lux.network.":  "lux", // trailing FQDN dot still resolves (not neutral)
 		"lux.network":       "lux",
 		"console.lux.cloud": "lux",
 		"api.zoo.ngo":       "zoo",
