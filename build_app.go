@@ -110,9 +110,15 @@ func BuildApp(deps RouterDeps) (*zip.App, error) {
 	if deps.ZAPNode == nil {
 		return nil, errors.New("gateway.BuildApp: nil ZAPNode")
 	}
+	// This is the liveness/readiness HTTP surface only (real client traffic is
+	// the ZAP relay, whose responses carry the backend's own posture). A neutral,
+	// brand-agnostic Server header — never "hanzoai" (which white-label-leaks on
+	// lux/zoo) and never the framework name. The full brand-by-host posture rides
+	// the legacy edge today (ProductionHeadersMiddleware) and, once the zip pin
+	// clears the cloud/zip fiber-fork coupling, middleware.ProductionHeaders here.
 	app := zip.New(zip.Config{
 		Logger:                deps.Logger,
-		ServerHeader:          "hanzoai",
+		ServerHeader:          NeutralServerBrand,
 		DisableStartupMessage: true,
 		AppName:               "gateway",
 	})
