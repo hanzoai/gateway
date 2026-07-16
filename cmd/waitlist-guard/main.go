@@ -582,7 +582,7 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	form.Set("client_secret", c.clientSecret)
 	form.Set("code_verifier", verifier)
 
-	tokenURL := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/oauth/access_token"
+	tokenURL := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/oauth/token"
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
