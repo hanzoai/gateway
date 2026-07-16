@@ -36,7 +36,7 @@ type Claims struct {
 
 	Owner             string          `json:"owner"`              // org slug
 	Project           string          `json:"project"`            // project scope within the org (optional; empty ⟹ default project)
-	BillingAccount    string          `json:"billing_account"`    // funding account id (optional attribution hint; empty ⟹ cloud resolves the debit account)
+	BillingAccount    string          `json:"billing_account"`    // WHO PAYS: `<kind>:<subject>`, signed by IAM (empty ⟹ pre-claim token; Payer falls back)
 	Name              string          `json:"name"`               // display name
 	PreferredUsername string          `json:"preferred_username"` // fallback id
 	Email             string          `json:"email"`
@@ -105,12 +105,21 @@ func (c *Claims) MintedProject() string {
 	return p
 }
 
-// MintedBillingAccount returns the funding account id to stamp into
-// X-Billing-Account-Id, or "" when the edge must OMIT the header. The account
-// rides in the validated JWT `billing_account` claim, scoped to the caller's org
-// exactly like `project` — trusted, not forgeable. Unlike the project claim there
-// is NO reserved default: an absent/empty account simply mints nothing (it is an
-// attribution hint; cloud + commerce resolve the real debit account server-side).
+// MintedBillingAccount returns the account that PAYS, to stamp into
+// X-Billing-Account-Id, or "" when the edge must OMIT the header. It rides in the
+// validated JWT `billing_account` claim, scoped to the caller's org exactly like
+// `project` — trusted, not forgeable.
+//
+// It is AUTHORITATIVE, not a hint. IAM resolves who pays at the identity boundary
+// from the real grant context and signs it (iam/object/billing_account.go); the
+// wire is `<kind>:<subject>` and ai/object.Payer reads it back into the Account it
+// debits. So this is money: the strip on ingress is a security control, not
+// hygiene — a surviving client copy is a caller naming its own payer.
+//
+// Unlike the project claim there is NO reserved default: an absent/empty account
+// mints nothing. That is a token minted before the claim shipped (or one IAM could
+// not attribute), and Payer's legacy rule answers for it — billing the account it
+// always did, never nothing.
 func (c *Claims) MintedBillingAccount() string {
 	return strings.TrimSpace(c.BillingAccount)
 }
@@ -517,8 +526,8 @@ var MintedIdentityHeaders = []string{
 //     re-minted from the validated JWT only; a raw client value is cross-org IDOR.
 //   - X-Project-Id: org SUB-SCOPE, minted from a validated claim; a raw client
 //     value is a cross-project IDOR.
-//   - X-Billing-Account-Id: funding-account attribution hint, minted from a
-//     validated claim; a raw client value is a cross-account billing forgery.
+//   - X-Billing-Account-Id: WHO PAYS, minted from a validated claim; a raw client
+//     value is a caller naming its own payer (Payer debits what this names).
 //
 // The legacy vendor-prefixed identity headers (X-IAM-Org-Id, X-Hanzo-Org, …) have
 // been RENAMED to these neutral names at every setter + consumer, so no identity
