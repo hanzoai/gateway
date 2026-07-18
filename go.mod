@@ -2,7 +2,7 @@ module github.com/hanzoai/gateway/v2
 
 go 1.26.4
 
-require github.com/hanzoai/cloud v1.801.59
+require github.com/hanzoai/cloud v1.801.63
 
 require (
 	github.com/gin-gonic/gin v1.12.0
@@ -51,8 +51,6 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute v1.0.0 // indirect
 	github.com/ProtonMail/go-crypto v1.1.6 // indirect
 	github.com/ThinkInAIXYZ/go-mcp v0.2.24 // indirect
-	github.com/WqyJh/go-cosyvoice v0.1.0 // indirect
-	github.com/WqyJh/go-openai-realtime v0.5.1-0.20250210083616-024eddd5a481 // indirect
 	github.com/alibabacloud-go/alibabacloud-gateway-spi v0.0.5 // indirect
 	github.com/alibabacloud-go/darabonba-openapi v0.1.18 // indirect
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.1.16 // indirect
@@ -93,7 +91,6 @@ require (
 	github.com/consensys/gnark-crypto v0.20.1 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
-	github.com/containerd/log v0.1.0 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/deckarep/golang-set/v2 v2.8.0 // indirect
@@ -153,7 +150,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hanzo-ds/native v0.72.0 // indirect
 	github.com/hanzoai/account v0.2.0 // indirect
-	github.com/hanzoai/ai v1.821.1 // indirect
+	github.com/hanzoai/ai v1.822.3 // indirect
 	github.com/hanzoai/beego v1.12.13 // indirect
 	github.com/hanzoai/beego/v2 v2.4.2 // indirect
 	github.com/hanzoai/csqlite v0.1.0 // indirect
@@ -161,11 +158,16 @@ require (
 	github.com/hanzoai/dashscopego v0.6.0 // indirect
 	github.com/hanzoai/dbx v1.16.0 // indirect
 	github.com/hanzoai/decimal v0.1.1 // indirect
+	github.com/hanzoai/go-cosyvoice v1.0.0 // indirect
+	github.com/hanzoai/go-openai v1.41.0 // indirect
+	github.com/hanzoai/go-openai-realtime v1.0.0 // indirect
+	github.com/hanzoai/go-openai-realtime/contrib/ws-gorilla v1.0.0 // indirect
 	github.com/hanzoai/go-openrouter v1.0.0 // indirect
 	github.com/hanzoai/ha v0.1.1 // indirect
 	github.com/hanzoai/iam v1.31.28 // indirect
 	github.com/hanzoai/money v0.2.1 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
+	github.com/hanzoai/s3-go v1.0.0 // indirect
 	github.com/hanzoai/search-go v0.36.0 // indirect
 	github.com/hanzoai/sqlite v0.3.0 // indirect
 	github.com/hanzoai/tasks v1.51.1 // indirect
@@ -210,11 +212,9 @@ require (
 	github.com/microsoft/go-mssqldb v1.9.5 // indirect
 	github.com/minio/crc64nvme v1.1.1 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/minio/minio-go/v7 v7.0.100 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/sys/sequential v0.6.0 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
-	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/mr-tron/base58 v1.3.0 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/openai/openai-go/v2 v2.1.1 // indirect
@@ -234,7 +234,6 @@ require (
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
-	github.com/sashabaranov/go-openai v1.32.0 // indirect
 	github.com/savsgio/gotils v0.0.0-20240704082632-aef3928b8a38 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
@@ -556,5 +555,3 @@ replace github.com/vulcand/oxy/v2 => github.com/traefik/oxy/v2 v2.0.0-2026012609
 replace github.com/mattn/go-sqlite3 v2.0.3+incompatible => github.com/mattn/go-sqlite3 v1.14.47
 
 replace github.com/krakend/krakend-otel => github.com/hanzoai/krakend-otel v0.13.1
-
-replace github.com/sashabaranov/go-openai => github.com/hanzoai/go-openai v1.40.0
