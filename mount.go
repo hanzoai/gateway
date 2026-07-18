@@ -43,7 +43,8 @@ import (
 //     probes work even with auth fully enabled.
 //
 // Mount is idempotent — calling it twice on the same App will install
-// the middleware twice; cloud.Registry guarantees one call per process.
+// the middleware twice; the cloud composition root (apps.Wire) lists the
+// gateway MountSpec once, so it is mounted exactly once per process.
 func Mount(app *zip.App, deps cloud.Deps) error {
 	if app == nil {
 		return fmt.Errorf("gateway.Mount: nil zip.App")
@@ -167,16 +168,6 @@ func loadRoutesBestEffort(logger interface {
 		return nil
 	}
 	return LoadRoutesFromFile(path)
-}
-
-func init() {
-	cloud.Register("gateway", 80, func(app any, deps cloud.Deps) error {
-		zapp, ok := app.(*zip.App)
-		if !ok {
-			return fmt.Errorf("gateway.Mount: expected *zip.App, got %T", app)
-		}
-		return Mount(zapp, deps)
-	})
 }
 
 func getenv(key, dflt string) string {
