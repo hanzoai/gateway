@@ -668,7 +668,15 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			return
 		}
 
-		orgID := claims.Owner
+		// orgID = the EFFECTIVE org: the org the client asked to act in
+		// (X-Act-As-Org) when it is in the token's membership set, else the home
+		// org (claims.Owner). No header ⟹ home, so a non-switching request is
+		// unchanged; the switch is honored only within the IAM-granted set, so a
+		// member acts in — and the balance gate below charges — a team org it
+		// belongs to, never one beyond its membership. The intent header is consumed
+		// so it never reaches a backend.
+		orgID, _ := claims.EffectiveOrg(c.Request.Header.Get(iamauth.ActAsOrgHeader))
+		c.Request.Header.Del(iamauth.ActAsOrgHeader)
 		userID := claims.Subject
 		// IAM may leave "sub" empty — fall back to preferred_username then name
 		if userID == "" {
