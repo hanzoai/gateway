@@ -1,6 +1,9 @@
 Hanzo Gateway
 Copyright (c) 2026 Hanzo AI, Inc.
 
+Forked from https://github.com/krakendio/krakend-ce (Lura framework
+github.com/luraproject/lura/v2 at v2.12.1).
+
 This product includes software from KrakenD Community Edition
 (https://github.com/krakendio/krakend-ce), licensed under Apache-2.0:
 
@@ -19,3 +22,42 @@ This product is built on the Lura framework
 Lura (github.com/luraproject/lura/v2) and the KrakenD plugin ecosystem
 (github.com/krakend/krakend-*) are imported as standard Go modules; their
 upstream copyright and license notices are retained within those modules.
+
+Upstream KrakenD-CE and Lura ship no NOTICE file; there are no Apache-2.0
+§4(d) attributions to propagate.
+
+DEVIATIONS
+
+The following changes distinguish this fork from upstream KrakenD Community
+Edition and Lura:
+
+  - Derived service-assembly sources (executor.go, backend_factory.go,
+    handler_factory.go, proxy_factory.go, plugin.go, encoding.go, sd.go)
+    carry Hanzo modifications; modified files are marked as changed.
+  - Module path renamed to github.com/hanzoai/gateway/v2; the product is
+    named "Hanzo Gateway".
+  - HTTP response branding rewritten (rebrand.go): the upstream "X-KRAKEND"
+    and "X-Krakend-Completed" headers are replaced by "X-Powered-By"
+    (BrandName "hanzoai/gateway") via BrandingMiddleware.
+  - CLI branding rewritten (cmd/gateway/rebrand.go): root and subcommand
+    help text, the `version` output, the startup banner ("Starting Gateway
+    v..."), and the lint schema URL (gateway.hanzo.ai) replace every
+    user-visible KrakenD string, and the KrakenD ASCII logo is removed.
+  - Hanzo IAM identity wiring added: JWTs are validated against Hanzo IAM
+    JWKS, client-supplied identity headers (X-User-*, X-Org-Id, ...) are
+    stripped, and the canonical identity headers are minted from the JWT
+    (auth_middleware.go, middleware/identity.go, iamauth/iamauth.go, gate.go,
+    trust.go).
+  - Default build is a KrakenD-free in-process ZAP relay (HIP-0110); the
+    upstream Lura/KrakenD gin engine is quarantined behind the `legacy`
+    build tag (krakend_engine.go and its sibling legacy-gated files) and is
+    excluded from the shipped image.
+  - Default-build telemetry runs over OTLP-over-ZAP and the in-process mount
+    under hanzoai/cloud (zap_backend.go, zap_listener.go, zaphttp_listener.go,
+    mount.go).
+  - Base-network backends added: weighted multi-source and high-availability
+    peer routing (base_network_backend.go, base_ha_backend.go,
+    peer_resolver.go).
+  - KMS-driven route loading added (router_kms.go).
+  - Operator binaries added beyond the single upstream binary: cmd/admin-api,
+    cmd/admin-guard, cmd/waitlist-guard, cmd/ingress.
