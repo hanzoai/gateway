@@ -165,6 +165,7 @@ require (
 	github.com/hanzoai/go-openrouter v1.0.0 // indirect
 	github.com/hanzoai/ha v0.1.1 // indirect
 	github.com/hanzoai/iam v1.31.28 // indirect
+	github.com/hanzoai/iam-v1 v1.31.37 // indirect
 	github.com/hanzoai/money v0.2.1 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
 	github.com/hanzoai/s3-go v1.0.0 // indirect
