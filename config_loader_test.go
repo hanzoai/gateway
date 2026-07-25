@@ -8,7 +8,7 @@
 // usable error when a config-file env override is not parseable as the
 // underlying field type.
 //
-// Background: the runtime parser is `krakend-koanf`, which loads the JSON
+// Background: the runtime parser is `the koanf parser`, which loads the JSON
 // file then merges every `KRAKEND_<KEY>` env var into the same key space
 // (callback strips the prefix and lowercases). That prefix is a hardcoded
 // const upstream — the fork's own service knobs use GATEWAY_ (read via
@@ -118,7 +118,7 @@ func TestPortFromEnvNonNumeric(t *testing.T) {
 // operator-generated config.
 func TestOperatorGeneratedConfig(t *testing.T) {
 	body := `{
-  "$schema": "https://www.krakend.io/schema/v2.7/gateway.json",
+  "$schema": "https://gateway.hanzo.ai/schema/v2.7/gateway.json",
   "cache_ttl": "0s",
   "endpoints": [],
   "extra_config": {

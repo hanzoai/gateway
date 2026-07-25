@@ -2,7 +2,7 @@
 //
 // These pin the contract that broke prod in the v2.14.x ZAP-relay
 // rearchitecture: when the gateway runs as the HTTP edge (the legacy
-// KrakenD `run` path the prod container's CMD drives), api.hanzo.ai's
+// legacy `run` path the prod container's CMD drives), api.hanzo.ai's
 // /v1/chat/completions and the rest of apiHanzoAIEndpoints MUST be
 // proxied straight to cloud over HTTP — NOT 404'd because the only
 // live surface was a ZAP relay to backends that don't exist
@@ -41,7 +41,7 @@ func newAPIEdge(t *testing.T, backend string) *httptest.Server {
 	e.Use(hostProxyMiddleware())
 	// Sentinel: if hostProxyMiddleware does NOT abort (i.e. the request
 	// fell through unrouted), gin lands here. In prod this is the
-	// KrakenD NoRoute → 404 the v2.14.x relay-only binary returned for
+	// legacy-engine NoRoute → 404 the v2.14.x relay-only binary returned for
 	// every model call.
 	e.NoRoute(func(c *gin.Context) {
 		c.String(http.StatusNotFound, "unrouted")

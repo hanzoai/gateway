@@ -1,7 +1,7 @@
 // Gateway sets up a complete Hanzo API Gateway ready to serve.
 //
 // LEGACY: superseded by HIP-0110. The canonical entrypoint is main.go
-// (zip+ZAP edge process). This KrakenD-based path remains compilable
+// (zip+ZAP edge process). This Lura-based path remains compilable
 // under the `legacy` build tag for one release cycle so operators have
 // a safety net during the Phase A → Phase C rollout. After the cloud
 // binary's gateway.Mount registration is removed (Phase C), this file
@@ -90,7 +90,7 @@ func main() {
 	cmd.DefaultRoot.Cmd.CompletionOptions.DisableDefaultCmd = true
 
 	// Build the command tree eagerly so subcommands exist when rebrandCLI
-	// walks them. krakend-cobra's Root.Build is sync.Once-guarded, so calling
+	// walks them. the cobra tree's Root.Build is sync.Once-guarded, so calling
 	// it here and letting Execute call it again is a no-op on the second pass.
 	cmd.DefaultRoot.Build()
 	rebrandCLI()

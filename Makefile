@@ -18,7 +18,7 @@ help: ## Show this help
 all: test
 
 # BUILD_TAGS selects the gateway entrypoint. The production HTTP edge runs
-# the KrakenD `run -c gateway.json` path (cmd/gateway/main_legacy.go, tag
+# the legacy `run -c gateway.json` path (cmd/gateway/main_legacy.go, tag
 # `legacy`) which mounts NewEngine -> hostProxyMiddleware (the proven HTTP
 # relay of api.hanzo.ai /v1/* straight to cloud-api:8000) + the CORS
 # preflight allowlist. The default (untagged) main.go is the HIP-0110
@@ -29,7 +29,7 @@ all: test
 # `legacy` build — that is what the Dockerfile CMD (`run -c ...`) drives.
 BUILD_TAGS ?= legacy
 
-build: cmd/gateway/schema/schema.json ## Build the gateway binary (KrakenD HTTP edge; BUILD_TAGS=legacy)
+build: cmd/gateway/schema/schema.json ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
 	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${MODULE}/pkg.Version=${VERSION} -X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION} \
 	-X github.com/luraproject/lura/v2/core.GlibcVersion=${GLIBC_VERSION}" \

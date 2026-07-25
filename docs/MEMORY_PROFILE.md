@@ -9,11 +9,11 @@ Procedure for verifying the gateway meets its memory budget:
 
 ## Why these numbers
 
-KrakenD + gin is the heaviest piece in the gateway today. fasthttp-flavored frameworks usually idle around 8-16 MiB; KrakenD with the proxy chain, JWKS cache, plugin registry, and route table sits in the 30-50 MiB range cold. At 10k in-flight TCP conns, expect ~10k goroutines × 8 KiB initial stack + a per-conn read/write buffer pair (~16 KiB), call it ~240 MiB worst case before pooling. Pooling on the fasthttp side brings this down. The 200 MiB target is what's left after sensible buffer reuse — anything above means a leak or unbounded per-conn allocation.
+The legacy engine + gin is the heaviest piece in the gateway today. fasthttp-flavored frameworks usually idle around 8-16 MiB; it with the proxy chain, JWKS cache, plugin registry, and route table sits in the 30-50 MiB range cold. At 10k in-flight TCP conns, expect ~10k goroutines × 8 KiB initial stack + a per-conn read/write buffer pair (~16 KiB), call it ~240 MiB worst case before pooling. Pooling on the fasthttp side brings this down. The 200 MiB target is what's left after sensible buffer reuse — anything above means a leak or unbounded per-conn allocation.
 
 ## Harness
 
-Build the gateway with pprof enabled (pprof is wired in via KrakenD's
+Build the gateway with pprof enabled (pprof is wired in via the legacy engine
 `telemetry/metrics` config but a standalone endpoint is the cleanest
 measurement surface). Add this snippet to `cmd/gateway/main.go` behind
 an env flag if not already there:
@@ -80,8 +80,8 @@ stacks, GC arenas); track both.
 
 ## When to re-measure
 
-- After every dep bump that touches `fasthttp`, `gin`, `KrakenD/lura`,
-  or `krakend-koanf` (the heavy bottom-of-stack libs).
+- After every dep bump that touches `fasthttp`, `gin`, `lura`,
+  or `the koanf parser` (the heavy bottom-of-stack libs).
 - After every change to `auth_middleware.go` that adds new per-request
   allocations (e.g. new claim extraction, new headers minted).
 - After every change to `zap_backend.go` or `base_ha_backend.go`
