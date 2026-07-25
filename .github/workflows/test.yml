@@ -13,13 +13,18 @@ on:
 #     zap-proto/* stays first-party-direct. Any module that falls through to
 #     `direct` is fetched over authenticated git — see the per-job
 #     "Configure private module auth" step (secrets.GH_PAT).
+#   - GOSUMDB is NOT `off`. A global `off` disabled checksum verification for
+#     the whole module graph and, with -mod=mod, let any fetch rewrite go.sum
+#     from whatever the source served. The bypass is scoped via GONOSUMDB to
+#     our own orgs (which include private repos the public sumdb cannot know);
+#     every third-party module is verified against sum.golang.org.
+#   - GOFLAGS drops -mod=mod so the committed go.mod/go.sum are authoritative
+#     and a mismatch fails the build instead of silently rewriting them.
 env:
   GOEXPERIMENT: jsonv2
   GOPRIVATE: github.com/zap-proto/*
-  GONOSUMDB: github.com/zap-proto/*
-  GOSUMDB: off
+  GONOSUMDB: github.com/zap-proto/*,github.com/hanzoai/*,github.com/luxfi/*
   GOPROXY: https://proxy.golang.org,direct
-  GOFLAGS: -mod=mod
 
 jobs:
   go-vet:
