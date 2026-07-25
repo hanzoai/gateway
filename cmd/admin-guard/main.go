@@ -1,7 +1,18 @@
-// admin-guard is the single forward-auth gate that restricts Hanzo's RAW
-// global-admin surfaces (platform.hanzo.ai, studio, commerce-admin, the raw
-// KMS admin UI, the IAM management UI) to GLOBAL ADMINS ONLY — an IAM user
-// whose org (`owner`) is the admin org (IAM `IsGlobalAdmin`: owner == AdminOrg).
+// admin-guard is the single forward-auth gate for Hanzo's admin surfaces. It
+// authorizes on TWO tiers (one predicate each, both in authz.go's authorize):
+//
+//  1. GLOBAL platform-sudo — an IAM user whose org (`owner`) is the reserved
+//     admin org (owner == AdminOrg) — reaches EVERY admin surface: the raw
+//     global/DO-infra consoles (platform.hanzo.ai, studio, commerce-admin, the
+//     raw KMS admin UI, the IAM management UI) AND every tenant surface.
+//  2. TENANT admin — an owner/admin of a brand org (lux, zoo, hanzo, pars, …) —
+//     reaches ONLY that brand's own admin surface (admin.<brand>.<domain>), and
+//     is denied on every other brand's surface and on the global surfaces.
+//
+// The tenant org is derived from the request Host (admin.lux.cloud → lux) — the
+// ingress-set X-Forwarded-Host, never user input — against the canonical
+// HIP-0111 brand registry mirrored in authz.go. A host that is not a recognized
+// tenant surface admits GLOBAL sudo ONLY: fail closed.
 //
 // It is consumed by hanzoai/ingress (Traefik) as a ForwardAuth middleware:
 // the ingress forwards each request's headers to GET /__guard/verify and
@@ -16,12 +27,14 @@
 // surface, console.hanzo.ai.
 //
 // Identity resolution is decomplected into three orthogonal sources, tried in
-// order, all collapsing to one predicate (owner == AdminOrg):
+// order, each producing the SAME principal {owner, isAdmin, orgs} that the ONE
+// authorize() predicate consumes:
 //
 //  1. the guard's own signed session cookie (set after a prior PKCE login) —
-//     the browser fast path, shared across *.hanzo.ai via a parent-domain cookie;
-//  2. a Bearer / Basic JWT validated through iamauth (the API path) — the JWT
-//     already carries `owner`, so no IAM round-trip is needed;
+//     the browser fast path, carrying owner+isAdmin, scoped to the request's
+//     registrable domain;
+//  2. a Bearer / Basic JWT validated through iamauth (the API path) — carries
+//     owner, isAdmin, and the full org-membership set, so no IAM round-trip;
 //  3. an IAM session cookie, resolved by calling IAM get-account server-side
 //     (the path for a browser that has an IAM session but no guard cookie yet).
 //
@@ -71,6 +84,11 @@ type config struct {
 	consoles       map[string]string
 	defaultConsole string
 
+	// iams maps a brand's registrable domain to that brand's IAM login authority,
+	// exactly as consoles does for the console. iamPublic is the fallback for an
+	// unrecognized host.
+	iams map[string]string
+
 	// The guard session (and PKCE state) cookie is scoped to the REGISTRABLE
 	// DOMAIN of each request's host, derived PER REQUEST — a browser can only
 	// set a cookie on its own registrable domain, so a single hardcoded
@@ -88,6 +106,12 @@ type config struct {
 	validator *iamauth.Validator
 }
 
+// guardVersion is the admin-guard's own semantic version — the ONE canonical
+// place it is declared. It is surfaced in the startup log and on the health
+// endpoint so operators can confirm which guard build made an authorization
+// decision. Bump the PATCH on every behavior change (never a lazy major).
+const guardVersion = "v0.1.6"
+
 const (
 	verifyPath   = "/__guard/verify"
 	callbackPath = "/__guard/callback"
@@ -103,6 +127,23 @@ const (
 	defaultConsoleMap = "hanzo.ai=https://console.hanzo.ai," +
 		"zoo.cloud=https://console.zoo.cloud," +
 		"lux.network=https://console.lux.cloud"
+
+	// defaultIAMMap white-labels the LOGIN AUTHORITY by brand, keyed the same way
+	// as defaultConsoleMap. Without it every brand's admin surface bounced an
+	// anonymous browser to hanzo.id, so admin.lux.network and admin.zoo.cloud
+	// rendered "Sign in to Hanzo ID" — Hanzo branding on a Lux/Zoo surface, which
+	// the white-label rule forbids outright. The guard already derives the cookie
+	// domain, the console and the login org from the request Host; the IAM host is
+	// simply the last field that was not. Overridable via GUARD_IAMS.
+	defaultIAMMap = "hanzo.ai=https://hanzo.id," +
+		"lux.network=https://lux.id," +
+		"lux.cloud=https://lux.id," +
+		"zoo.cloud=https://zoo.id," +
+		"zoo.ngo=https://zoo.id," +
+		"zoo.network=https://zoo.id," +
+		"pars.ai=https://pars.id," +
+		"pars.network=https://pars.id," +
+		"bootno.de=https://id.bootno.de"
 )
 
 func main() {
@@ -111,7 +152,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc(healthPath, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "ok")
+		_, _ = io.WriteString(w, "ok "+guardVersion)
 	})
 	mux.HandleFunc(verifyPath, cfg.handleVerify)
 	mux.HandleFunc(callbackPath, cfg.handleCallback)
@@ -122,8 +163,8 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("admin-guard listening on %s (adminOrg=%q consoles=%v defaultConsole=%s iam=%s)",
-		cfg.addr, cfg.adminOrg, cfg.consoles, cfg.defaultConsole, cfg.iamPublic)
+	log.Printf("admin-guard %s listening on %s (adminOrg=%q consoles=%v defaultConsole=%s iam=%s)",
+		guardVersion, cfg.addr, cfg.adminOrg, cfg.consoles, cfg.defaultConsole, cfg.iamPublic)
 	log.Fatal(srv.ListenAndServe())
 }
 
@@ -149,8 +190,9 @@ func loadConfig() *config {
 		clientID:       envOr("IAM_CLIENT_ID", "hanzo-admin-guard"),
 		clientSecret:   clientSecret,
 		adminOrg:       envOr("IAM_ADMIN_ORG", "admin"),
-		consoles:       parseConsoleMap(envOr("GUARD_CONSOLES", defaultConsoleMap)),
+		consoles:       parseBrandMap(envOr("GUARD_CONSOLES", defaultConsoleMap)),
 		defaultConsole: envOr("CONSOLE_URL", "https://console.hanzo.ai"),
+		iams:           parseBrandMap(envOr("GUARD_IAMS", defaultIAMMap)),
 		cookieName:     envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
 		cookieTTL:      envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
 		hmacKey:        hmacKey,
@@ -169,14 +211,15 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	orig := originalURL(r)
 
 	// (1) Guard session cookie — the browser fast path.
-	if owner, ok := c.sessionOwner(r); ok {
-		c.decide(w, r, owner, orig)
+	if p, ok := c.sessionPrincipal(r); ok {
+		c.decide(w, r, p, orig)
 		return
 	}
 
-	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner` directly.
+	// (2) Bearer/Basic JWT — the API path. The JWT carries the full principal
+	// (owner, isAdmin, org-membership set) directly.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		c.decide(w, r, claims.Owner, orig)
+		c.decide(w, r, principalFromClaims(claims), orig)
 		return
 	} else if err != nil && err != iamauth.ErrNoToken {
 		// A token was presented but did not validate. For an API caller, fail
@@ -189,8 +232,8 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// (3) IAM session cookie — resolve via IAM get-account server-side.
-	if owner, ok := c.iamSessionOwner(r); ok {
-		c.decide(w, r, owner, orig)
+	if p, ok := c.iamSessionPrincipal(r); ok {
+		c.decide(w, r, p, orig)
 		return
 	}
 
@@ -203,54 +246,76 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	c.startLogin(w, r, orig)
 }
 
-// decide renders the allow/redirect verdict for a resolved org.
-func (c *config) decide(w http.ResponseWriter, r *http.Request, owner, orig string) {
-	if owner != "" && owner == c.adminOrg {
-		// Global admin — allow. Pass the org downstream for app-side auditing.
-		w.Header().Set("X-Org-Id", owner)
+// decide renders the allow/redirect verdict for a resolved principal against the
+// surface it is trying to reach. The host is the ingress-set request host — the
+// sole, trusted determinant of the tenant org (see authorize).
+func (c *config) decide(w http.ResponseWriter, r *http.Request, p principal, orig string) {
+	host := requestHost(r)
+	if c.authorize(p, host) {
+		// Allowed — global sudo or tenant admin of THIS surface's org. Pass the
+		// resolved home org downstream for app-side auditing + defense in depth:
+		// a global grant carries X-Org-Id==adminOrg, a tenant grant the brand org,
+		// so a downstream global surface can still require X-Org-Id==adminOrg.
+		w.Header().Set("X-Org-Id", p.owner)
 		w.Header().Set("X-Admin-Guard", "allow")
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
-	// Authenticated, but NOT a global admin → THIS brand's client surface
-	// (zoo→zoo console, lux→lux console), never a foreign brand's console.
+	// Authenticated, but NOT authorized for THIS surface → THIS brand's client
+	// surface (zoo→zoo console, lux→lux console), never a foreign brand's console.
 	if isAPIClient(r) {
-		http.Error(w, "global admin required", http.StatusForbidden)
+		http.Error(w, "admin access required", http.StatusForbidden)
 		return
 	}
-	http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
+	http.Redirect(w, r, c.consoleFor(host), http.StatusFound)
 }
 
 // ----------------------------------------------------------------------------
 // Identity source (1): the guard's own signed session cookie
 // ----------------------------------------------------------------------------
 
-// sessionOwner returns the org from a valid, unexpired guard session cookie.
-// Cookie value: base64(owner|expiryUnix) "." base64(HMAC). Tamper-evident and
-// time-bounded; no server-side store needed.
-func (c *config) sessionOwner(r *http.Request) (string, bool) {
+// sessionPrincipal returns the principal from a valid, unexpired guard session
+// cookie. Cookie value: base64(owner|isAdmin|expiryUnix) "." base64(HMAC), where
+// isAdmin is the bit "1"/"0". Tamper-evident (HMAC) and time-bounded; no
+// server-side store. A cookie that is not EXACTLY the three-field canonical form
+// (e.g. a legacy two-field cookie, or a truncated/garbage one) is rejected —
+// fail closed, the holder re-authenticates. The membership set is not carried in
+// the cookie, so the cookie path authorizes a HOME-org admin only.
+func (c *config) sessionPrincipal(r *http.Request) (principal, bool) {
 	ck, err := r.Cookie(c.cookieName)
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
 	payload, ok := c.verifySigned(ck.Value)
 	if !ok {
-		return "", false
+		return principal{}, false
 	}
-	owner, expStr, ok := strings.Cut(payload, "|")
-	if !ok {
-		return "", false
+	parts := strings.Split(payload, "|")
+	if len(parts) != 3 {
+		return principal{}, false
 	}
-	expUnix, err := parseInt(expStr)
+	owner := parts[0]
+	if owner == "" {
+		return principal{}, false
+	}
+	expUnix, err := parseInt(parts[2])
 	if err != nil || time.Now().Unix() > expUnix {
-		return "", false
+		return principal{}, false
 	}
-	return owner, owner != ""
+	return principal{owner: owner, isAdmin: parts[1] == "1"}, true
 }
 
-func (c *config) setSession(w http.ResponseWriter, r *http.Request, owner string) {
+// sessionBit renders the isAdmin flag for the session cookie payload.
+func sessionBit(b bool) string {
+	if b {
+		return "1"
+	}
+	return "0"
+}
+
+func (c *config) setSession(w http.ResponseWriter, r *http.Request, p principal) {
 	exp := time.Now().Add(c.cookieTTL)
-	payload := fmt.Sprintf("%s|%d", owner, exp.Unix())
+	payload := fmt.Sprintf("%s|%s|%d", p.owner, sessionBit(p.isAdmin), exp.Unix())
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
@@ -281,13 +346,14 @@ func (c *config) clearSession(w http.ResponseWriter, r *http.Request) {
 // Identity source (3): IAM session cookie → get-account
 // ----------------------------------------------------------------------------
 
-// iamSessionOwner forwards the inbound cookies to IAM get-account and reads the
-// authenticated user's `owner`. This covers a browser that holds an IAM SSO
-// session but has not yet been issued a guard cookie.
-func (c *config) iamSessionOwner(r *http.Request) (string, bool) {
+// iamSessionPrincipal forwards the inbound cookies to IAM get-account and reads
+// the authenticated user's principal (owner + isAdmin). This covers a browser
+// that holds an IAM SSO session but has not yet been issued a guard cookie. The
+// membership set is not read here, so this path authorizes a HOME-org admin only.
+func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
-		return "", false
+		return principal{}, false
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
@@ -295,51 +361,54 @@ func (c *config) iamSessionOwner(r *http.Request) (string, bool) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", nil)
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
 	req.Header.Set("Cookie", cookie)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", false
+		return principal{}, false
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
-	return ownerFromAccount(body)
+	return principalFromAccount(body)
 }
 
-// ownerFromAccount extracts the user's org from an IAM get-account response.
-// IAM (Casdoor) get-account returns the User object either at the top level or
-// wrapped under `data`; the org slug is the `owner` field. An error/unsigned
-// response has status:"error" and no owner.
-func ownerFromAccount(body []byte) (string, bool) {
+// principalFromAccount extracts the user's principal (org + org-admin bit) from
+// an IAM get-account response. IAM (Casdoor) get-account returns the User object
+// either at the top level or wrapped under `data`; the org slug is `owner` and
+// the org-admin flag is `isAdmin`. An error/unsigned response has status:"error"
+// and no owner → not a principal (fail closed).
+func principalFromAccount(body []byte) (principal, bool) {
 	var top struct {
-		Status string `json:"status"`
-		Owner  string `json:"owner"`
-		Data   struct {
-			Owner string `json:"owner"`
+		Status  string `json:"status"`
+		Owner   string `json:"owner"`
+		IsAdmin bool   `json:"isAdmin"`
+		Data    struct {
+			Owner   string `json:"owner"`
+			IsAdmin bool   `json:"isAdmin"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &top); err != nil {
-		return "", false
+		return principal{}, false
 	}
 	if top.Status == "error" {
-		return "", false
+		return principal{}, false
 	}
 	if top.Owner != "" {
-		return top.Owner, true
+		return principal{owner: top.Owner, isAdmin: top.IsAdmin}, true
 	}
 	if top.Data.Owner != "" {
-		return top.Data.Owner, true
+		return principal{owner: top.Data.Owner, isAdmin: top.Data.IsAdmin}, true
 	}
-	return "", false
+	return principal{}, false
 }
 
 // ----------------------------------------------------------------------------
@@ -369,11 +438,13 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 
 	q := url.Values{}
 	q.Set("client_id", c.clientID)
-	// Pin the reserved admin org so a user who is a member of BOTH a tenant org
-	// and the admin org resolves to their admin-org identity (owner==adminOrg),
-	// which handleCallback requires. Without this, a login defaults to the user's
-	// home org and the guard denies + bounces to the tenant console.
-	q.Set("organization", c.adminOrg)
+	// Pin the login org to the surface being guarded (see loginOrg): a tenant
+	// surface (admin.lux.cloud) authenticates the user into that tenant org (lux)
+	// so a tenant admin can log in; the global/DO-infra surfaces + unknown hosts
+	// pin the reserved admin org, preserving the global-admin login there. This
+	// only steers the login; handleCallback re-runs authorize() before minting a
+	// session, so an unexpected resolved org is denied, never trusted.
+	q.Set("organization", c.loginOrg(requestHost(r)))
 	q.Set("response_type", "code")
 	q.Set("scope", "openid profile email")
 	q.Set("redirect_uri", c.callbackURI(r))
@@ -381,7 +452,7 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 	q.Set("code_challenge", challenge)
 	q.Set("code_challenge_method", "S256")
 
-	authorize := strings.TrimRight(c.iamPublic, "/") + "/v1/iam/oauth/authorize?" + q.Encode()
+	authorize := strings.TrimRight(c.iamFor(requestHost(r)), "/") + "/v1/iam/oauth/authorize?" + q.Encode()
 	http.Redirect(w, r, authorize, http.StatusFound)
 }
 
@@ -413,29 +484,32 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 	// Clear the state cookie (same registrable domain it was set on).
 	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: registrableDomain(requestHost(r)), MaxAge: -1, Secure: true, HttpOnly: true})
 
-	owner, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
+	p, err := c.exchange(r.Context(), code, verifier, c.callbackURI(r))
 	if err != nil {
 		log.Printf("admin-guard: token exchange failed: %v", err)
 		http.Error(w, "login failed", http.StatusBadGateway)
 		return
 	}
 
-	if owner != c.adminOrg {
-		// Authenticated non-admin: do NOT set an admin session; send to THIS
-		// brand's console (zoo→zoo, lux→lux).
+	// Re-run the SAME authorization predicate the forward-auth path uses: only a
+	// principal authorized for THIS surface (global sudo, or a tenant admin of
+	// this host's org) gets a session cookie. An authenticated-but-unauthorized
+	// login (wrong tenant, non-admin member) is bounced to the brand console with
+	// NO session minted — fail closed, no wrongful grant.
+	if !c.authorize(p, requestHost(r)) {
 		http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
 		return
 	}
-	c.setSession(w, r, owner)
+	c.setSession(w, r, p)
 	if returnTo == "" || !strings.HasPrefix(returnTo, "https://") {
 		returnTo = c.consoleFor(requestHost(r))
 	}
 	http.Redirect(w, r, returnTo, http.StatusFound)
 }
 
-// exchange swaps the auth code for tokens and resolves the org from the ID
+// exchange swaps the auth code for tokens and resolves the principal from the ID
 // token (validated via iamauth) or, failing that, the userinfo endpoint.
-func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (string, error) {
+func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (principal, error) {
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("code", code)
@@ -449,72 +523,73 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return "", err
+		return principal{}, err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return principal{}, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
+		return principal{}, fmt.Errorf("token endpoint status %d: %s", resp.StatusCode, truncate(body, 256))
 	}
 	var tok struct {
 		AccessToken string `json:"access_token"`
 		IDToken     string `json:"id_token"`
 	}
 	if err := json.Unmarshal(body, &tok); err != nil {
-		return "", fmt.Errorf("decode token response: %w", err)
+		return principal{}, fmt.Errorf("decode token response: %w", err)
 	}
 
-	// Prefer the ID token's validated `owner` claim.
+	// Prefer the ID token's validated claims (owner, isAdmin, membership set).
 	if tok.IDToken != "" {
 		if claims, verr := c.validator.ValidateRaw(tok.IDToken); verr == nil && claims.Owner != "" {
-			return claims.Owner, nil
+			return principalFromClaims(claims), nil
 		}
 	}
 	if tok.AccessToken != "" {
 		if claims, verr := c.validator.ValidateRaw(tok.AccessToken); verr == nil && claims.Owner != "" {
-			return claims.Owner, nil
+			return principalFromClaims(claims), nil
 		}
 	}
 	// Fallback: call userinfo with the access token.
 	if tok.AccessToken != "" {
-		if owner, ok := c.userinfoOwner(ctx, tok.AccessToken); ok {
-			return owner, nil
+		if p, ok := c.userinfoPrincipal(ctx, tok.AccessToken); ok {
+			return p, nil
 		}
 	}
-	return "", fmt.Errorf("could not resolve owner from token or userinfo")
+	return principal{}, fmt.Errorf("could not resolve owner from token or userinfo")
 }
 
-func (c *config) userinfoOwner(ctx context.Context, accessToken string) (string, bool) {
+func (c *config) userinfoPrincipal(ctx context.Context, accessToken string) (principal, bool) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/oauth/userinfo", nil)
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", false
+		return principal{}, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", false
+		return principal{}, false
 	}
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var ui struct {
-		Owner string `json:"owner"`
+		Owner   string `json:"owner"`
+		IsAdmin bool   `json:"isAdmin"`
 	}
 	if err := json.Unmarshal(body, &ui); err != nil {
-		return "", false
+		return principal{}, false
 	}
-	return ui.Owner, ui.Owner != ""
+	return principal{owner: ui.Owner, isAdmin: ui.IsAdmin}, ui.Owner != ""
 }
 
 func (c *config) handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -586,9 +661,20 @@ func (c *config) consoleFor(host string) string {
 	return c.defaultConsole
 }
 
-// parseConsoleMap parses a "domain=url,domain=url" list into a brand→console
-// map. Malformed pairs are skipped; the result is never nil.
-func parseConsoleMap(s string) map[string]string {
+// iamFor returns the login authority for the brand of host, so a Lux/Zoo/Pars
+// surface authenticates against ITS OWN IAM and never renders Hanzo branding.
+func (c *config) iamFor(host string) string {
+	reg := strings.TrimPrefix(registrableDomain(host), ".")
+	if u, ok := c.iams[reg]; ok && u != "" {
+		return u
+	}
+	return c.iamPublic
+}
+
+// parseBrandMap parses a "domain=url,domain=url" list into a brand→URL map —
+// ONE parser for every brand-keyed table (consoles, iams). Malformed pairs are
+// skipped; the result is never nil.
+func parseBrandMap(s string) map[string]string {
 	m := make(map[string]string)
 	for _, pair := range strings.Split(s, ",") {
 		k, v, ok := strings.Cut(strings.TrimSpace(pair), "=")
