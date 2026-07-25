@@ -2,14 +2,14 @@
 
 // routes.go is the gateway's pure host/path reverse-proxy routing table and
 // CORS preflight — stdlib + gin + yaml, with ZERO dependency on the upstream
-// Lura/KrakenD SDK. It is the default-build routing surface: the HIP-0110
+// Lura SDK. It is the default-build routing surface: the HIP-0110
 // trust-boundary mount (mount.go) loads this table via LoadRoutesFromFile so
 // any path not owned by a co-resident subsystem is proxied to its configured
 // backend, and the standalone binary shares the same table.
 //
-// The legacy Lura/KrakenD gin-engine builder (NewEngine) that also consumed
+// The legacy Lura gin-engine builder (NewEngine) that also consumed
 // this table used to live alongside it in router_engine.go; it now sits behind
-// the `legacy` build tag in krakend_engine.go so the upstream KrakenD graph
+// the `legacy` build tag in legacy_engine.go so the upstream Lura graph
 // stays out of the default build and the shipping image (see that file's
 // header for the full rationale).
 package gateway
@@ -255,7 +255,7 @@ func cloudAPIURL() *url.URL {
 // cloud's mount table, not a second map here.
 var apiCloudHosts = map[string]bool{
 	"api.hanzo.ai": true,
-	// api.cloud.hanzo.ai is the upstream Host the Traefik `console-v1-host` (and
+	// api.cloud.hanzo.ai is the upstream Host the ingress `console-v1-host` (and
 	// `cloud-api-host`) middlewares rewrite console.hanzo.ai/v1/* and
 	// cloud-api.hanzo.ai/v1/* to before this gateway. Without it here those hosts
 	// fell through to the per-service exactRoutes (which carry /v1/billing,
@@ -349,7 +349,7 @@ func hostProxyMiddleware() gin.HandlerFunc {
 // This is the ONE definition of the credentialed-CORS allowlist (DRY). Every
 // site that reflects an Origin with credentials MUST gate on this predicate:
 // the preflight middleware (corsPreflightMiddleware) AND the legacy engine's
-// panic-recovery handler (corsRecoveryHandler in krakend_engine.go). That
+// panic-recovery handler (corsRecoveryHandler in legacy_engine.go). That
 // invariant is what stops a 5xx error path from widening the policy into a
 // wildcard-reflect-with-credentials primitive (Great-Audit F3). The predicate
 // reads the environment once at construction, mirroring the middleware.
@@ -387,7 +387,7 @@ func newCORSOriginAllower() func(origin string) bool {
 //
 // It lives here beside corsPreflightMiddleware — routes.go owns the ONE CORS
 // policy (default build) — and is wired by the legacy engine via
-// gin.CustomRecovery (krakend_engine.go), the same way that engine consumes
+// gin.CustomRecovery (legacy_engine.go), the same way that engine consumes
 // corsPreflightMiddleware / hostProxyMiddleware from this file.
 func corsRecoveryHandler(originAllowed func(string) bool) gin.RecoveryFunc {
 	return func(c *gin.Context, _ any) {

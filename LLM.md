@@ -8,19 +8,19 @@ Go module: github.com/hanzoai/gateway
 
 ## Build & Run
 ```bash
-go build ./...                    # default — KrakenD-free (NOT what ships)
-go build -tags legacy ./...       # legacy  — full Lura/KrakenD engine; SHIPS
+go build ./...                    # default — Lura-free (NOT what ships)
+go build -tags legacy ./...       # legacy  — full Lura engine; SHIPS
 go test ./...                     # unit packages only
 go test -tags legacy ./...        # + the tests/ integration harness
 ```
 
 **The `legacy` build is what ships.** `Makefile` sets `BUILD_TAGS ?= legacy`
 and the `Dockerfile` runs `make build` with no override, so
-`ghcr.io/hanzoai/gateway` is the Lura/KrakenD engine, and `CMD ["run", "-c",
-...]` is the KrakenD cobra subcommand that only exists under that tag. The
+`ghcr.io/hanzoai/gateway` is the Lura engine, and `CMD ["run", "-c",
+...]` is the legacy cobra subcommand that only exists under that tag. The
 default build currently serves only `/healthz` and 404s model calls until the
 HIP-0110 ZAP relay backends are live — see the rationale above `BUILD_TAGS` in
-the Makefile. Upstream KrakenD security patches therefore still matter to
+the Makefile. Upstream Lura security patches therefore still matter to
 production; they are not quarantined away.
 
 Local verification must mirror the Dockerfile (`CGO_ENABLED=0`) and bypass the
@@ -30,27 +30,27 @@ repo-adjacent `~/work/hanzo/go.work`, which does not list this module:
 GOWORK=off CGO_ENABLED=0 go build ./... && GOWORK=off CGO_ENABLED=0 go build -tags legacy ./...
 ```
 
-## Framework Ownership — Lura/KrakenD is `legacy`-gated (#29)
+## Framework Ownership — Lura is `legacy`-gated (#29)
 
 The gateway owns its module path (`github.com/hanzoai/gateway/v2`) and its
-default build is **KrakenD-free**. The upstream Lura/KrakenD framework
+default build is **Lura-free**. The upstream Lura framework
 (`github.com/luraproject/lura/v2` + `github.com/krakend/*`) is quarantined
 behind the `legacy` build tag and never reaches `go build ./...`.
 
 It DOES reach the shipping `ghcr.io/hanzoai/gateway` image, because that image
 is built `-tags legacy` (`BUILD_TAGS ?= legacy`). The quarantine is a
 source-layering boundary, not a production-exposure boundary — do not read it
-as "KrakenD is not in prod". Verify:
+as "the legacy engine is not in prod". Verify:
 
 ```
 go list -deps ./cmd/gateway              | grep -c 'krakend\|lura'   # -> 0
 go list -tags legacy -deps ./cmd/gateway | grep -c 'krakend\|lura'   # -> 105
 ```
 
-| Build | Command | Lura/KrakenD pkgs | Contents | Ships? |
+| Build | Command | Lura pkgs | Contents | Ships? |
 |-------|---------|-------------------|----------|--------|
 | **default** | `go build ./...` | **0** | HIP-0110 ZAP relay + pure reverse-proxy router (`routes.go`, `mount.go`, `build_app.go`, `gate.go`, `auth_middleware.go`) | no — `/healthz` only until Phase C |
-| **legacy** | `go build -tags legacy ./...` | 105 | full Lura/KrakenD gin engine (`krakend_engine.go` + factories) | **yes — this is the image** |
+| **legacy** | `go build -tags legacy ./...` | 105 | full Lura gin engine (`legacy_engine.go` + factories) | **yes — this is the image** |
 
 Ownership boundary:
 
@@ -64,18 +64,18 @@ Ownership boundary:
 `legacy`-gated files (every lura/krakend importer): `backend_factory`,
 `base_ha_backend`, `base_network_backend`, `encoding`, `executor`,
 `handler_factory`, `plugin`, `proxy_factory`, `rebrand`, `sd`, `zap_backend`,
-`zaphttp_listener`, `krakend_engine` (+ their `_test.go`), the `tests/` Lura
+`zaphttp_listener`, `legacy_engine` (+ their `_test.go`), the `tests/` Lura
 integration harness, `cmd/gateway-integration`, and
 `cmd/gateway/{main_legacy,rebrand}.go`. The default routing/auth/mount/ZAP-relay
 surface already imports zero krakend/lura.
 
-**Branding**: user-visible KrakenD strings — HTTP (`X-KRAKEND`→`X-Powered-By`,
+**Branding**: user-visible upstream-brand strings — HTTP (`X-KRAKEND`→`X-Powered-By`,
 backend `User-Agent`→`hanzoai/gateway`) in `rebrand.go`, and the cobra CLI tree
 in `cmd/gateway/rebrand.go` — are scrubbed only in the legacy engine. The
-default build emits no KrakenD strings because it contains no KrakenD.
+default build emits no upstream-brand strings because it contains none of that code.
 
 **Phase-C end state**: when the cloud binary's `gateway.Mount` is the sole edge,
-the entire `legacy` set is deleted and the upstream Lura/KrakenD dependency drops
+the entire `legacy` set is deleted and the upstream Lura dependency drops
 out of `go.mod`. Until then it stays compilable under `-tags legacy` for rollout
 safety. Forwards-only: never add a lura/krakend import to a non-`legacy` file.
 
@@ -110,7 +110,7 @@ Taken:
 
 **Deliberately NOT taken** (re-adding any of these is a regression):
 
-- `krakend-usage` — KrakenD's phone-home telemetry. `startReporter` is a no-op
+- `krakend-usage` — the upstream phone-home telemetry. `startReporter` is a no-op
   here on purpose. `krakend-audit` stays indirect (it exists only to feed it).
 - `krakend-otel` + the jaeger / ocagent / stackdriver OpenCensus exporters —
   all ship telemetry over **gRPC**; Hanzo speaks ZAP/HTTP/WS, never gRPC.
@@ -118,17 +118,48 @@ Taken:
 - Upstream's `cors.NewRunServerWithLogger` wrapper — this fork serves its own
   CORS preflight via `hostProxyMiddleware`; taking it double-sets headers.
 - `router_engine.go`, `krakend.json`, upstream `Makefile`/`README`/`SECURITY.md`
-  branding — superseded by `krakend_engine.go` + `configs/{hanzo,lux}`.
+  branding — superseded by `legacy_engine.go` + `configs/{hanzo,lux}`.
 
-**Load-bearing `krakend` literals — never rebrand these.** Same class of
-constraint as the ingress fork's `paerser` `DefaultRootName = "traefik"`:
+**Load-bearing upstream literals — never rebrand these.** Everything else in
+this repo is de-branded; these four are behaviour, not branding:
 
 | Literal | Where | Why it is pinned |
 |---|---|---|
 | `core.KrakendVersion`, `core.KrakendUserAgent` | `rebrand.go`, Makefile ldflags | exported lura symbols; renaming breaks the build. `rebrand.go` overwrites their *values* with the Hanzo brand — that is the correct seam |
-| `KRAKEND_` env prefix (e.g. `KRAKEND_PORT`) | `config_loader_test.go` | `krakend-koanf` hardcodes the prefix as a const; not configurable |
-| `KRAKEND_ZAP_LISTEN` | `zaphttp_listener.go` | keeps one prefix for the koanf-adjacent env surface |
-| `github.com/krakend/*` extra_config keys | `configs/*/gateway.json` | namespace strings each plugin matches on; renaming silently disables the plugin |
+| `KRAKEND_` env prefix (e.g. `KRAKEND_PORT`) | `config_loader_test.go` | the koanf parser hardcodes the prefix as a const; not configurable |
+| `X-KRAKEND`, `X-Krakend-Completed` | `rebrand.go`, `production_headers_test.go` | compile-time consts in `lura/core`. `rebrand.go` **deletes** them off every response and the tests assert they never leak — the literal exists here in order to be removed |
+| `github.com/devopsfaith/krakend*` extra_config keys | the `aliases` map in `cmd/gateway/main_legacy.go` | these are the canonical namespaces each component registers under; `aliases` maps the friendly name (`auth/validator`) onto them via `config.ExtraConfigAlias`. Rename the canonical side and the component stops finding its config — silently. Note `configs/*/gateway.json` uses only the *friendly* names, so the configs themselves are already brand-free |
+
+Two entries that used to be on this list are gone because they were not
+actually pinned: the auth realm equivalent (`zaphttp_listener.go`'s listener
+env var) is the fork's own knob read by direct `os.Getenv`, not koanf, so it
+is now `GATEWAY_ZAP_LISTEN` in line with `GATEWAY_LISTEN` /
+`GATEWAY_SHUTDOWN_TIMEOUT`; and the negative-assertion brand lists in
+`brand_test.go` / `production_headers_test.go` keep the upstream token on
+purpose — they are the regression guard that fails if the brand ever leaks
+into a `Server` header.
+
+### Module paths — conversion BLOCKED on missing fork repos
+
+The standing rule is that a hanzoai fork declares its OWN module path and is
+required directly, never via `replace`. The ingress fork now satisfies this
+(`github.com/hanzoai/yaegi`, `github.com/hanzoai/grpc-web`). **The gateway
+does not, and cannot yet**: the 33 `github.com/krakend/*` modules in `go.mod`
+resolve to *upstream*, not to hanzoai forks, and the corresponding fork repos
+**do not exist**. Only `hanzoai/krakend-otel` exists — and its `replace` was
+dead (`go mod why` reports the main module does not need it), so it has been
+deleted rather than repointed.
+
+Converting requires, per module, in dependency order: fork the upstream repo
+at the pinned version, rewrite its module path, fix its self-imports *and*
+its cross-references to the other forks, tag a patch bump, then repoint
+`go.mod` here. Until those repos exist the `github.com/krakend/*` import lines
+and the `go.mod`/`go.sum` require lines stay — a partial conversion would not
+build. The full list is the require block at the top of `go.mod`.
+
+`github.com/vulcand/oxy/v2` **was** repointed: it used to `replace` to the
+upstream edge-router fork and now resolves to `github.com/hanzoai/oxy/v2` at
+the identical commit ingress pins.
 
 Module path stays `github.com/hanzoai/gateway/v2` — already v2 from the
 krakend-ce v2 lineage, predating the "stay v1.x" rule. Do not "fix" it; a path
@@ -172,7 +203,7 @@ AI 401, user billing 401).
 
 - Single source of truth: `iamauth.DefaultAudiences` (the known user-facing
   client_ids + `https://api.hanzo.ai`) and `iamauth.AudiencesFromEnv()`. Shared
-  by the gin/KrakenD middleware (`auth_middleware.go`), the relay gate
+  by the gin/Lura middleware (`auth_middleware.go`), the relay gate
   (`gate.go`), the unified-binary mount (`mount.go`), and the ingress
   (`cmd/ingress`). One implementation, four callers.
 - Override entirely with `GATEWAY_ALLOWED_AUDIENCES` (comma-separated). Legacy
@@ -268,7 +299,7 @@ This keeps billing OFF for the 171 AI/validated routes (AI bills per-token
 downstream) and public routes, ON for the metered must-gate surface. Key is the
 verified commerce `org/sub` user identity; per-org billing needs a commerce-side
 balance-model change first. Fail-closed: 402 on zero balance, 503 if commerce
-is unreachable. KrakenD cannot express this in `gateway.json` (no-op encoding
+is unreachable. The config schema cannot express this in `gateway.json` (no-op encoding
 forbids a sequential balance pre-check), so it lives in the Go middleware.
 
 Activation (NOT enabled by default — live is `BILLING_ENABLED=false`):
@@ -295,11 +326,11 @@ and downgrades the running gateway — live is ahead of the manifest).
 **Audience is enforced ONLY at the Go edge, NEVER in `gateway.json`.** The Go
 `NewAuthMiddleware` validates `aud` against an ANY-of allowlist
 (`iamauth.DefaultAudiences`, go-jose v4 `AnyAudience`): a token passes when its
-single `aud=<client_id>` matches ANY entry. The KrakenD `auth/validator`
+single `aud=<client_id>` matches ANY entry. The config-declared `auth/validator`
 (krakend-jose → go-auth0 → go-jose **v3**) validates audience with
 ALL-semantics — the token must carry EVERY configured `aud`. IAM stamps ONE
 `aud` per token, so a multi-entry `"audience"` on any `gateway.json` validator
-block 401s EVERY user JWT. `TestGatewayConfig_NoKrakendAudience` guards this —
+block 401s EVERY user JWT. `TestGatewayConfig_NoJWTAudience` guards this —
 keep `gateway.json` audience-free.
 
 **`X-Project-Id` is stripped at the edge** (`iamauth.StripIdentityHeaders`): it
@@ -316,7 +347,7 @@ a Bearer-only edge validator would break their cookie-auth callers.
 
 ## Upstream Kinds
 
-- **default** — KrakenD HTTP passthrough.
+- **default** — legacy HTTP passthrough.
 - **zap** — binary RPC transport (`github.com/hanzoai/gateway/zap`).
 - **base-network** — shard-aware routing over hanzoai/base network services (ATS, BD, TA, IAM, KMS, AML). `github.com/hanzoai/gateway/base-network`.
 - **base_ha** — leader-pin routing over hanzoai/base-ha clusters (BaseApp CRD). `github.com/hanzoai/gateway/base_ha`. Polls `GET /_ha/leader` on the service DNS every `leader_poll_interval` (default 1s), pins write methods (POST/PUT/PATCH/DELETE or `X-Base-Writer: required`) to the elected writer pod, round-robins reads via the enclosing `host` (K8s ClusterIP). 5s read-your-writes pin per client (X-Forwarded-For + X-Org-Id) after a write. One-retry cap on writer 5xx/connect-refused (no retry storm on OOM). Stale-cache fail-secure: lease-expired + poll-stale → 503 instead of targeting a dead pod.
@@ -466,7 +497,7 @@ never ran (it `needs: go-vet`, which died at module fetch):
   os.Getenv — a separate mechanism from koanf config-file key overrides.
 
 Integration divergences (tracked, not fixed here): 12 of 59 lura fixtures in
-`tests/` exercise upstream KrakenD behaviour this edge fork diverges from and are
+`tests/` exercise upstream behaviour this edge fork diverges from and are
 `-skip`'d in CI — `cors_1..5` (fork ships its own CORS preflight, not
 `security/cors`), `backend_404`, `cel-1`, `cel-2`, `lua_2`, `router_redirect`,
 `integration_jsonschema`, `negotitate_plain`. 47 integration cases + every unit

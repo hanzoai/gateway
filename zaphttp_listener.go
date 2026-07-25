@@ -11,7 +11,7 @@
 //
 // Knobs (env):
 //
-//	KRAKEND_ZAP_LISTEN — bind addr for the ZAP-HTTP listener.
+//	GATEWAY_ZAP_LISTEN — bind addr for the ZAP-HTTP listener.
 //	                     Default ":9999". Set to "off" or "" to disable.
 //
 // Wire-up: see DefaultRunServerFactory.NewRunServer in executor.go,
@@ -35,7 +35,7 @@ import (
 const (
 	// envZapHTTPListen is the env var that sets the ZAP-HTTP bind address.
 	// Empty string or "off" disables the listener entirely.
-	envZapHTTPListen = "KRAKEND_ZAP_LISTEN"
+	envZapHTTPListen = "GATEWAY_ZAP_LISTEN"
 
 	// defaultZapHTTPAddr is the bind address used when the env var is unset.
 	defaultZapHTTPAddr = ":9999"
@@ -62,7 +62,7 @@ func startZapHTTPListenerOnce(logger logging.Logger, handler http.Handler) {
 	defaultZapHTTPState.once.Do(func() {
 		addr := zapHTTPListenAddr()
 		if addr == "" {
-			logger.Info("[SERVICE: ZAP-HTTP] Listener disabled (KRAKEND_ZAP_LISTEN=off)")
+			logger.Info("[SERVICE: ZAP-HTTP] Listener disabled (GATEWAY_ZAP_LISTEN=off)")
 			return
 		}
 		// Wrap the handler so every ZAP-HTTP request logs a single
@@ -76,7 +76,7 @@ func startZapHTTPListenerOnce(logger logging.Logger, handler http.Handler) {
 			logger.Info("[ZAP-WIRE]", r.Method, r.URL.Path, rec.status)
 		})
 		// zap-proto/http v0.1.0+ serves a fasthttp.RequestHandler; adapt the
-		// net/http logging wrapper (KrakenD is net/http) to it.
+		// net/http logging wrapper (Lura is net/http) to it.
 		srv := &zaphttp.Server{Addr: addr, Handler: fasthttpadaptor.NewFastHTTPHandler(wrapped)}
 		defaultZapHTTPState.server.Store(srv)
 		go func() {

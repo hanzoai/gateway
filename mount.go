@@ -8,7 +8,7 @@
 // X-User-IsAdmin / X-Phone-Number set documented in HIP-0026.
 //
 // In split-deploy mode (legacy ghcr.io/hanzoai/gateway image) the
-// gateway runs as its own KrakenD process — the standalone cmd/gateway
+// gateway runs as its own legacy-engine process — the standalone cmd/gateway
 // binary keeps that path. The Mount path below is the SAME logic,
 // reused inside the cloud binary so we do not maintain two trust
 // boundaries.
