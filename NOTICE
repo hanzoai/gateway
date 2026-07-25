@@ -2,7 +2,8 @@ Hanzo Gateway
 Copyright (c) 2026 Hanzo AI, Inc.
 
 Forked from https://github.com/krakendio/krakend-ce (Lura framework
-github.com/luraproject/lura/v2 at v2.12.1).
+github.com/luraproject/lura/v2 at v2.14.1); service-assembly sources
+synced to upstream krakend-ce v2.13.8.
 
 This product includes software from KrakenD Community Edition
 (https://github.com/krakendio/krakend-ce), licensed under Apache-2.0:
