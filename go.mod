@@ -537,7 +537,7 @@ replace github.com/lyft/protoc-gen-validate v0.0.13 => github.com/envoyproxy/pro
 
 // Mirror hanzoai/cloud's canonical replace set (required to build the unified
 // binary's cloud/ai deps consistently — go-openai fork carries Delta.ReasoningContent,
-// the go-sqlite3 phantom-version redirect, and Traefik/KrakenD fork pins).
+// the go-sqlite3 phantom-version redirect, and the edge-router fork pins).
 replace github.com/apache/thrift => github.com/apache/thrift v0.16.0
 
 replace github.com/uber/jaeger-client-go => github.com/uber/jaeger-client-go v2.28.0+incompatible
@@ -546,8 +546,9 @@ replace github.com/abbot/go-http-auth => github.com/containous/go-http-auth v0.4
 
 replace github.com/mailgun/minheap => github.com/containous/minheap v0.0.0-20190809180810-6e71eb837595
 
-replace github.com/vulcand/oxy/v2 => github.com/traefik/oxy/v2 v2.0.0-20260126093803-fb11d60e0fdf
+// Same commit hanzoai/ingress pins; sourced from the hanzoai fork rather than
+// the upstream one so the dependency is on a path we control.
+replace github.com/vulcand/oxy/v2 => github.com/hanzoai/oxy/v2 v2.0.0-20260126093803-fb11d60e0fdf
 
 replace github.com/mattn/go-sqlite3 v2.0.3+incompatible => github.com/mattn/go-sqlite3 v1.14.47
 
-replace github.com/krakend/krakend-otel => github.com/hanzoai/krakend-otel v0.13.1
