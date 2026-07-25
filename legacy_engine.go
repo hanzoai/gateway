@@ -3,20 +3,20 @@
 //go:build legacy
 // +build legacy
 
-// krakend_engine.go is the LEGACY Lura/KrakenD gin-engine builder for the
+// legacy_engine.go is the LEGACY Lura gin-engine builder for the
 // standalone gateway process (cmd/gateway/main_legacy.go). It is the only part
 // of the gateway that consumes the upstream `github.com/luraproject/lura` +
-// `github.com/krakend/*` modules; every other file in package gateway — the
+// the upstream framework modules; every other file in package gateway — the
 // HIP-0110 ZAP relay (build_app.go / gate.go), the trust-boundary mount
 // (mount.go), and the pure reverse-proxy routing table (routes.go) — is
-// KrakenD-free.
+// Lura-free.
 //
 // Gating this file (and its siblings: executor.go, backend_factory.go,
 // proxy_factory.go, handler_factory.go, encoding.go, plugin.go, sd.go,
 // zap_backend.go, zaphttp_listener.go, base_ha_backend.go,
 // base_network_backend.go, rebrand.go) behind the `legacy` build tag keeps the
-// upstream KrakenD graph OUT of the default `go build ./...` and out of the
-// shipping `ghcr.io/hanzoai/gateway` image. The KrakenD path stays compilable
+// upstream Lura graph OUT of the default `go build ./...` and out of the
+// shipping `ghcr.io/hanzoai/gateway` image. The legacy path stays compilable
 // with `-tags legacy` for the HIP-0110 Phase-A→C rollout safety window; when
 // the cloud binary's gateway.Mount registration is the sole edge (Phase C),
 // this whole legacy set is deleted.
