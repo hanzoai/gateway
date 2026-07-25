@@ -57,6 +57,4 @@ func TokenExtractorFromCfg(cfg router.Config) (TokenExtractor, error) {
 	default:
 		return nil, ErrNotFound
 	}
-
-	return nil, ErrNotFound
 }
