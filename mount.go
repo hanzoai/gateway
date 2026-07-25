@@ -110,15 +110,16 @@ func zipFromGin(h gin.HandlerFunc) zip.Handler {
 		engine := gin.New()
 		engine.Use(h)
 		engine.NoRoute(func(c *gin.Context) {
-			// Copy the gin-mutated headers back onto the downstream
-			// request, then delegate to next. The gin handler may have
-			// minted X-Org-Id / X-User-Id / etc.
-			for k, vs := range c.Request.Header {
-				for _, v := range vs {
-					c.Writer.Header()[k] = append(c.Writer.Header()[k], v)
-				}
-				_ = vs
-			}
+			// Delegate straight to next: c.Request already carries the
+			// headers the gin handler minted (X-Org-Id / X-User-Id / …),
+			// because the middleware mutates c.Request.Header in place.
+			//
+			// Do NOT copy request headers onto c.Writer.Header(). That
+			// writes them to the RESPONSE, reflecting Authorization,
+			// Cookie and the minted identity set straight back to the
+			// caller — a credential leak to anything that observes or
+			// caches response headers. It also never served the stated
+			// purpose, since the downstream reads c.Request.
 			next.ServeHTTP(c.Writer, c.Request)
 		})
 		return engine
