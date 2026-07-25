@@ -1,6 +1,6 @@
 // Package iamauth is the single source of truth for Hanzo IAM JWT
 // validation at the edge. It is deliberately dependency-light — only
-// go-jose + net/http — so both the heavyweight gin/KrakenD gateway
+// go-jose + net/http — so both the heavyweight gin/Lura gateway
 // middleware (package gateway) and the lightweight host-routing ingress
 // (cmd/ingress) validate tokens through exactly one implementation.
 //
@@ -172,7 +172,7 @@ type Config struct {
 // DefaultAudiences is the baked allowlist of acceptable JWT audiences: the
 // known Hanzo IAM client_ids (each app's `aud` is its client_id) plus the
 // gateway origin. It is the single source of truth shared by the ingress and
-// the gin/KrakenD middleware. Forwards-only: append new client_ids, never
+// the gin/Lura middleware. Forwards-only: append new client_ids, never
 // remove. Override entirely with GATEWAY_ALLOWED_AUDIENCES (comma-separated).
 var DefaultAudiences = []string{
 	"hanzo-app",

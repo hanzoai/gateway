@@ -51,7 +51,7 @@ var brandDomains = []struct{ brand, domain string }{
 
 // NeutralServerBrand is the Server value when a request Host matches no brand
 // (internal k8s probes, direct-IP hits). Brand-neutral and honest about the role
-// without ever naming the framework (fasthttp / fiber / zip / KrakenD).
+// without ever naming the framework (fasthttp / fiber / zip / the legacy engine).
 const NeutralServerBrand = "gateway"
 
 // hstsPolicy is the Strict-Transport-Security value: two years, subdomains

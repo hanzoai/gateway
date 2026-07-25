@@ -6,7 +6,7 @@ package gateway
 // auth/validator surface: the /v1/commerce funding surface is never
 // balance-gated, billing refuses to run half-configured, forged X-Project-Id
 // never reaches a backend, and audience is enforced at the Go edge (ANY-of
-// allowlist) — NOT in the KrakenD auth/validator, whose go-jose v3 backend
+// allowlist) — NOT in the config-declared auth/validator, whose go-jose v3 backend
 // uses ALL-semantics and would 401 every single-aud user JWT.
 
 import (
@@ -152,8 +152,8 @@ func TestValidAuth_StripsForgedXProjectId(t *testing.T) {
 
 // TestJWTAuth_AudienceAllowlist_AnySemantics proves the edge accepts a token
 // whose single aud is ANY listed value and rejects one outside the list. This
-// is exactly why audience is enforced here and not in the KrakenD
-// auth/validator: krakend-jose (go-jose v3) requires the token to contain ALL
+// is exactly why audience is enforced here and not in the config-declared
+// auth/validator: the JOSE validator module (go-jose v3) requires the token to contain ALL
 // configured audiences, so a multi-entry list there would reject every
 // single-aud IAM user token.
 func TestJWTAuth_AudienceAllowlist_AnySemantics(t *testing.T) {
@@ -188,18 +188,18 @@ func TestJWTAuth_AudienceAllowlist_AnySemantics(t *testing.T) {
 	}
 }
 
-// TestGatewayConfig_NoKrakendAudience is the availability guard for the
-// audience landmine. krakend-jose validates audience with ALL-semantics — a
+// TestGatewayConfig_NoJWTAudience is the availability guard for the
+// audience landmine. the JOSE validator module validates audience with ALL-semantics — a
 // token must carry EVERY configured aud. IAM stamps a single aud=<client_id>
-// per token, so any "audience" on a KrakenD auth/validator block would 401
+// per token, so any "audience" on a config-declared auth/validator block would 401
 // every user JWT. Audience belongs at the Go edge (ANY-of allowlist). Keep the
-// KrakenD config audience-free.
-func TestGatewayConfig_NoKrakendAudience(t *testing.T) {
+// gateway config audience-free.
+func TestGatewayConfig_NoJWTAudience(t *testing.T) {
 	data, err := os.ReadFile("configs/hanzo/gateway.json")
 	if err != nil {
 		t.Skipf("gateway.json not readable from package dir: %v", err)
 	}
 	if bytes.Contains(data, []byte(`"audience"`)) {
-		t.Fatal(`configs/hanzo/gateway.json contains an "audience" field; krakend-jose ALL-semantics would 401 every single-aud user JWT. Enforce audience at the Go edge instead.`)
+		t.Fatal(`configs/hanzo/gateway.json contains an "audience" field; the JOSE validator module ALL-semantics would 401 every single-aud user JWT. Enforce audience at the Go edge instead.`)
 	}
 }
