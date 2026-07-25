@@ -33,11 +33,10 @@ BUILD_TAGS ?= legacy
 # binary stamps at link time. Folding the engine in (internal/lura) moved these
 # off the upstream module path; an -X against a symbol that does not exist is
 # silently ignored by the linker, so a stale path here would ship an "undefined"
-# version in the User-Agent and X-Api-Version with no build error. The dropped
-# `${MODULE}/pkg.Version` -X was already such a no-op: no `pkg` package exists.
+# version in the User-Agent and X-Api-Version with no build error.
 CORE := ${MODULE}/v2/internal/lura/core
 
-build: cmd/gateway/schema/schema.json ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
+build: ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
 	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
 	-X ${CORE}.GlibcVersion=${GLIBC_VERSION}" \
@@ -52,9 +51,23 @@ build-ingress: ## Build the ingress binary
 test: build ## Build and run tests
 	go test -v ./tests
 
-cmd/gateway/schema/schema.json:
+# cmd/gateway/schema/schema.json is COMMITTED, not fetched.
+#
+# It used to be gitignored and pulled at build time from a namespace we do not
+# control (raw.githubusercontent.com/krakend/krakend-schema, with a plain-HTTPS
+# fallback to a vendor site) with no checksum of any kind, then //go:embed-ed
+# into the shipping binary. That is the same supply-chain exposure as an
+# unpinned module import, minus go.sum: whatever that host served became the
+# schema `gateway check` validates every production config against, so a
+# poisoned schema could wave through an insecure config.
+#
+# The artifact is ours anyway — the rebranding pass below rewrote every URL and
+# brand string in it — so it is now a reviewable, version-controlled file. Run
+# `make schema` deliberately to refresh it from upstream and review the diff.
+.PHONY: schema
+schema: ## Refresh the embedded config schema from upstream (review the diff!)
 	@echo "Fetching v${SCHEMA_VERSION} schema"
-	@wget -qO $@.orig https://raw.githubusercontent.com/krakend/krakend-schema/refs/heads/main/v${SCHEMA_VERSION}/krakend.json || wget -qO $@.orig https://krakend.io/schema/krakend.json
+	@wget -qO cmd/gateway/schema/schema.json.orig https://raw.githubusercontent.com/krakend/krakend-schema/refs/heads/main/v${SCHEMA_VERSION}/krakend.json
 	@echo "Rebranding embedded schema descriptions and URLs"
 	@sed \
 		-e 's|https://www.krakend.io|https://gateway.hanzo.ai|g' \
@@ -66,8 +79,9 @@ cmd/gateway/schema/schema.json:
 		-e 's|Krakend|Gateway|g' \
 		-e 's|KRAKEND|GATEWAY|g' \
 		-e 's|krakend|gateway|g' \
-		$@.orig > $@
-	@rm -f $@.orig
+		cmd/gateway/schema/schema.json.orig > cmd/gateway/schema/schema.json
+	@rm -f cmd/gateway/schema/schema.json.orig
+	@echo "Review: git diff cmd/gateway/schema/schema.json"
 
 REGISTRY := ghcr.io/hanzoai/gateway
 
@@ -150,4 +164,3 @@ clean: ## Clean build artifacts
 	rm -rf builder/skel/*
 	rm -f ${BIN_NAME}
 	rm -rf vendor/
-	rm -f cmd/gateway/schema/schema.json
