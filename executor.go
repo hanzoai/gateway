@@ -27,9 +27,9 @@ import (
 	opencensus "github.com/krakend/krakend-opencensus/v2"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/datadog"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/influxdb"
-	// jaeger, ocagent, and stackdriver exporters dropped — and krakend-otel
+	// jaeger, ocagent, and stackdriver exporters dropped — and the OTLP exporter module
 	// (OTLP) removed entirely — because each ships telemetry over gRPC
-	// (ocagent/stackdriver dial an OpenCensus/gRPC agent; krakend-otel's OTLP
+	// (ocagent/stackdriver dial an OpenCensus/gRPC agent; the OTLP exporter module's OTLP
 	// collector exporter is gRPC-only), and Hanzo services speak ZAP/HTTP/WS,
 	// never gRPC. Legacy-build telemetry rides opencensus (prometheus/datadog/
 	// influx/xray/zipkin) + ZAP for inter-service.

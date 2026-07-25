@@ -145,7 +145,7 @@ func TestZapHTTPListener_ServesSameHandler(t *testing.T) {
 	}
 }
 
-// TestZapHTTPListener_DisabledByEnv verifies that KRAKEND_ZAP_LISTEN=off
+// TestZapHTTPListener_DisabledByEnv verifies that GATEWAY_ZAP_LISTEN=off
 // is a hard kill switch — no listener is bound, no port is consumed.
 func TestZapHTTPListener_DisabledByEnv(t *testing.T) {
 	resetZapHTTPListenerForTest()
@@ -155,6 +155,6 @@ func TestZapHTTPListener_DisabledByEnv(t *testing.T) {
 	startZapHTTPListenerOnce(logging.NoOp, http.NotFoundHandler())
 
 	if defaultZapHTTPState.server.Load() != nil {
-		t.Fatal("server should not have been created when KRAKEND_ZAP_LISTEN=off")
+		t.Fatal("server should not have been created when GATEWAY_ZAP_LISTEN=off")
 	}
 }

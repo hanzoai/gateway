@@ -563,6 +563,7 @@ See also:
 
 Apache-2.0 -- see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-The service-assembly layer is derived from [KrakenD Community Edition](https://github.com/krakendio/krakend-ce)
-and built on the [Lura](https://github.com/luraproject/lura) framework, both
-Apache-2.0. Upstream attributions are preserved in [NOTICE](NOTICE).
+The service-assembly layer is derived from upstream Apache-2.0 projects and
+built on the [Lura](https://github.com/luraproject/lura) framework. The full
+upstream attributions -- which are the authoritative ones -- are preserved
+verbatim in [NOTICE](NOTICE).

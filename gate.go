@@ -9,7 +9,7 @@
 //
 // One auth implementation: the gate reuses package iamauth (the same
 // JWKS cache + JWT validation + token extraction shared with cmd/ingress
-// and the gin/KrakenD middleware) and gateway's own permission bit-field
+// and the gin/Lura middleware) and gateway's own permission bit-field
 // math (computePermissionsBitField / permissionBits). No second copy.
 //
 // Billing is NOT enforced here. The gateway is authn + identity injection

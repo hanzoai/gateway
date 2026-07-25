@@ -53,7 +53,7 @@ func newRequestExecutorFactory(ctx context.Context, logger logging.Logger) func(
 		return opencensus.HTTPRequestExecutorFromConfig(clientFactory, cfg)
 	}
 	// WithContext propagates the application context into client plugins so
-	// they observe cancellation and can drain on shutdown (upstream krakend-ce
+	// they observe cancellation and can drain on shutdown (upstream upstream
 	// 16a23d2 "Application context is not propagated to client plugins").
 	return httprequestexecutor.HTTPRequestExecutorWithContext(ctx, logger, requestExecutorFactory)
 }
