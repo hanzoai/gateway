@@ -108,7 +108,7 @@ func TestBrandCookieDomainAndConsole(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
 			r.Header.Set("X-Forwarded-Host", b.host)
 			r.Header.Set("Accept", "text/html")
-			r.AddCookie(cfg.guardCookie("acme")) // authed, non-admin
+			r.AddCookie(cfg.guardCookie("acme", false)) // authed, non-admin
 			w := httptest.NewRecorder()
 			cfg.handleVerify(w, r)
 
@@ -124,12 +124,54 @@ func TestBrandCookieDomainAndConsole(t *testing.T) {
 			r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
 			r.Header.Set("X-Forwarded-Host", b.host)
 			r.Header.Set("Accept", "text/html")
-			r.AddCookie(cfg.guardCookie("admin")) // global admin
+			r.AddCookie(cfg.guardCookie("admin", true)) // global admin
 			w := httptest.NewRecorder()
 			cfg.handleVerify(w, r)
 			if w.Code != http.StatusNoContent {
 				t.Fatalf("admin on %s: status=%d want 204 (global admin allowed on every brand)", b.host, w.Code)
 			}
 		})
+	}
+}
+
+// A brand's admin surface must send an anonymous browser to ITS OWN IAM. When
+// the login authority was pinned to hanzo.id, admin.lux.network and
+// admin.zoo.cloud rendered "Sign in to Hanzo ID" — Hanzo branding on a Lux/Zoo
+// surface, which the white-label rule forbids outright.
+func TestIAMForIsWhiteLabelledByHost(t *testing.T) {
+	c := &config{
+		iams:      parseBrandMap(defaultIAMMap),
+		iamPublic: "https://hanzo.id",
+	}
+	for host, want := range map[string]string{
+		"admin.hanzo.ai":     "https://hanzo.id",
+		"admin.lux.network":  "https://lux.id",
+		"admin.lux.cloud":    "https://lux.id",
+		"admin.zoo.cloud":    "https://zoo.id",
+		"admin.zoo.ngo":      "https://zoo.id",
+		"admin.pars.network": "https://pars.id",
+		"admin.bootno.de":    "https://id.bootno.de",
+		// An unrecognized host falls back, never to a foreign brand's IAM.
+		"admin.example.test": "https://hanzo.id",
+	} {
+		if got := c.iamFor(host); got != want {
+			t.Errorf("iamFor(%q)=%q want %q", host, got, want)
+		}
+	}
+}
+
+// No brand may resolve to another brand's login authority.
+func TestIAMForNeverCrossesBrands(t *testing.T) {
+	c := &config{iams: parseBrandMap(defaultIAMMap), iamPublic: "https://hanzo.id"}
+	for _, tc := range []struct{ host, forbidden string }{
+		{"admin.lux.network", "hanzo.id"},
+		{"admin.lux.cloud", "hanzo.id"},
+		{"admin.zoo.cloud", "hanzo.id"},
+		{"admin.zoo.network", "hanzo.id"},
+		{"admin.pars.network", "hanzo.id"},
+	} {
+		if got := c.iamFor(tc.host); strings.Contains(got, tc.forbidden) {
+			t.Errorf("iamFor(%q)=%q must not use %q", tc.host, got, tc.forbidden)
+		}
 	}
 }
