@@ -33,5 +33,10 @@ func (c *Context) increase() {
 }
 
 func (c *Context) error(e string) {
-	c.state.RaiseError(e)
+	// RaiseError is printf-style. `e` is a runtime string — it carries Lua
+	// script and host error text — so passing it as the FORMAT lets any '%' in
+	// a message be read as a verb, mangling the error and emitting
+	// %!v(MISSING) noise from attacker-influenceable input. Pass it as an
+	// argument instead. (go vet: non-constant format string.)
+	c.state.RaiseError("%s", e)
 }
