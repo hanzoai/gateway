@@ -8,9 +8,26 @@ Go module: github.com/hanzoai/gateway
 
 ## Build & Run
 ```bash
-go build ./...                    # default — KrakenD-free, ships the image
-go build -tags legacy ./...       # legacy  — full Lura/KrakenD engine
-go test ./...
+go build ./...                    # default — KrakenD-free (NOT what ships)
+go build -tags legacy ./...       # legacy  — full Lura/KrakenD engine; SHIPS
+go test ./...                     # unit packages only
+go test -tags legacy ./...        # + the tests/ integration harness
+```
+
+**The `legacy` build is what ships.** `Makefile` sets `BUILD_TAGS ?= legacy`
+and the `Dockerfile` runs `make build` with no override, so
+`ghcr.io/hanzoai/gateway` is the Lura/KrakenD engine, and `CMD ["run", "-c",
+...]` is the KrakenD cobra subcommand that only exists under that tag. The
+default build currently serves only `/healthz` and 404s model calls until the
+HIP-0110 ZAP relay backends are live — see the rationale above `BUILD_TAGS` in
+the Makefile. Upstream KrakenD security patches therefore still matter to
+production; they are not quarantined away.
+
+Local verification must mirror the Dockerfile (`CGO_ENABLED=0`) and bypass the
+repo-adjacent `~/work/hanzo/go.work`, which does not list this module:
+
+```bash
+GOWORK=off CGO_ENABLED=0 go build ./... && GOWORK=off CGO_ENABLED=0 go build -tags legacy ./...
 ```
 
 ## Framework Ownership — Lura/KrakenD is `legacy`-gated (#29)
@@ -18,18 +35,22 @@ go test ./...
 The gateway owns its module path (`github.com/hanzoai/gateway/v2`) and its
 default build is **KrakenD-free**. The upstream Lura/KrakenD framework
 (`github.com/luraproject/lura/v2` + `github.com/krakend/*`) is quarantined
-behind the `legacy` build tag and never reaches `go build ./...` or the shipping
-`ghcr.io/hanzoai/gateway` image. Verify:
+behind the `legacy` build tag and never reaches `go build ./...`.
+
+It DOES reach the shipping `ghcr.io/hanzoai/gateway` image, because that image
+is built `-tags legacy` (`BUILD_TAGS ?= legacy`). The quarantine is a
+source-layering boundary, not a production-exposure boundary — do not read it
+as "KrakenD is not in prod". Verify:
 
 ```
 go list -deps ./cmd/gateway              | grep -c 'krakend\|lura'   # -> 0
 go list -tags legacy -deps ./cmd/gateway | grep -c 'krakend\|lura'   # -> 105
 ```
 
-| Build | Command | Lura/KrakenD pkgs | What ships |
-|-------|---------|-------------------|------------|
-| **default** | `go build ./...` | **0** | HIP-0110 ZAP relay + pure reverse-proxy router (`routes.go`, `mount.go`, `build_app.go`, `gate.go`, `auth_middleware.go`) |
-| **legacy** | `go build -tags legacy ./...` | 105 | full Lura/KrakenD gin engine (`krakend_engine.go` + factories) |
+| Build | Command | Lura/KrakenD pkgs | Contents | Ships? |
+|-------|---------|-------------------|----------|--------|
+| **default** | `go build ./...` | **0** | HIP-0110 ZAP relay + pure reverse-proxy router (`routes.go`, `mount.go`, `build_app.go`, `gate.go`, `auth_middleware.go`) | no — `/healthz` only until Phase C |
+| **legacy** | `go build -tags legacy ./...` | 105 | full Lura/KrakenD gin engine (`krakend_engine.go` + factories) | **yes — this is the image** |
 
 Ownership boundary:
 
@@ -57,6 +78,61 @@ default build emits no KrakenD strings because it contains no KrakenD.
 the entire `legacy` set is deleted and the upstream Lura/KrakenD dependency drops
 out of `go.mod`. Until then it stays compilable under `-tags legacy` for rollout
 safety. Forwards-only: never add a lura/krakend import to a non-`legacy` file.
+
+## Upstream sync — krakend-ce v2.12.x → v2.13.8 (2026-07-25)
+
+This fork has **no shared git history** with `krakend/krakend-ce` (it began as a
+squashed import), so there is no merge-base and `git merge` is not available.
+Syncing is a deliberate content-level port: diff our copies of the seven derived
+service-assembly files against an upstream tag, take the delta, keep ours.
+
+Base identified by content-diffing every upstream tag: our derived sources
+matched **v2.12.x** (137 residual lines = our own deltas). Now at **v2.13.8**.
+
+krakend-ce is a thin assembly repo — the v2.12.1→v2.13.8 source delta is only
+`backend_factory.go` (17 lines), `executor.go` (3), `Makefile`, and
+`tests/`. The substance of an upgrade is the **dependency graph**.
+
+Taken:
+
+| Change | Why |
+|---|---|
+| `krakend-xml` v2.2.0 → **v2.2.2** | **security** — exponential-cost XML rendering (algorithmic-complexity DoS); drops `clbanning/mxj` |
+| `go-jose/v3` v3.0.4 → **v3.0.5** (transitive) | **security** — JOSE lib under `krakend-jose` |
+| `krakend-jose` v2.10.0 → **v2.12.3** | JWT validation path |
+| `lura` v2.12.1 → **v2.14.1** | core framework; **real tag**, not upstream's `v2.14.2-0.2026…` pseudo-version |
+| `backend_factory.go` ctx propagation | **bug** — app context never reached client plugins, so they missed cancellation/shutdown (upstream `16a23d2`) |
+| `krakend-circuitbreaker` v2 → **v3** | import path change; pulls `sony/gobreaker/v2` |
+| `krakend-pubsub` v2.2.0 → **v2.3.1** + drop `pubsub.OpenCensusViews` | **forced**: `gocloud.dev` v0.45.0 removed that symbol, breaking pubsub v2.2.0 |
+| `tests/integration.go` → `santhosh-tekuri/jsonschema/v6` | drops unmaintained `xeipuuv/gojsonschema` |
+| `expected.Body != ""` → `!= nil` | **bug** — `Body` is `interface{}`, so a nil body compared true against `""` and wrongly asserted. Fixture `integration_no_body.json` added as the guard |
+| botdetector, cel, cobra, cors, flexibleconfig, httpsecure, jsonschema, lua, martian, metrics, opencensus, ratelimit, go-auth0 | routine patch/minor bumps |
+
+**Deliberately NOT taken** (re-adding any of these is a regression):
+
+- `krakend-usage` — KrakenD's phone-home telemetry. `startReporter` is a no-op
+  here on purpose. `krakend-audit` stays indirect (it exists only to feed it).
+- `krakend-otel` + the jaeger / ocagent / stackdriver OpenCensus exporters —
+  all ship telemetry over **gRPC**; Hanzo speaks ZAP/HTTP/WS, never gRPC.
+- `go-contrib/uuid` — only used by the usage reporter.
+- Upstream's `cors.NewRunServerWithLogger` wrapper — this fork serves its own
+  CORS preflight via `hostProxyMiddleware`; taking it double-sets headers.
+- `router_engine.go`, `krakend.json`, upstream `Makefile`/`README`/`SECURITY.md`
+  branding — superseded by `krakend_engine.go` + `configs/{hanzo,lux}`.
+
+**Load-bearing `krakend` literals — never rebrand these.** Same class of
+constraint as the ingress fork's `paerser` `DefaultRootName = "traefik"`:
+
+| Literal | Where | Why it is pinned |
+|---|---|---|
+| `core.KrakendVersion`, `core.KrakendUserAgent` | `rebrand.go`, Makefile ldflags | exported lura symbols; renaming breaks the build. `rebrand.go` overwrites their *values* with the Hanzo brand — that is the correct seam |
+| `KRAKEND_` env prefix (e.g. `KRAKEND_PORT`) | `config_loader_test.go` | `krakend-koanf` hardcodes the prefix as a const; not configurable |
+| `KRAKEND_ZAP_LISTEN` | `zaphttp_listener.go` | keeps one prefix for the koanf-adjacent env surface |
+| `github.com/krakend/*` extra_config keys | `configs/*/gateway.json` | namespace strings each plugin matches on; renaming silently disables the plugin |
+
+Module path stays `github.com/hanzoai/gateway/v2` — already v2 from the
+krakend-ce v2 lineage, predating the "stay v1.x" rule. Do not "fix" it; a path
+change would break every consumer for zero gain.
 
 ## Structure
 ```
@@ -389,10 +465,35 @@ never ran (it `needs: go-vet`, which died at module fetch):
   (`GATEWAY_LISTEN`, `GATEWAY_SHUTDOWN_TIMEOUT`) use GATEWAY_ via direct
   os.Getenv — a separate mechanism from koanf config-file key overrides.
 
-Integration divergences (tracked, not fixed here): 12 of 58 lura fixtures in
+Integration divergences (tracked, not fixed here): 12 of 59 lura fixtures in
 `tests/` exercise upstream KrakenD behaviour this edge fork diverges from and are
 `-skip`'d in CI — `cors_1..5` (fork ships its own CORS preflight, not
 `security/cors`), `backend_404`, `cel-1`, `cel-2`, `lua_2`, `router_redirect`,
-`integration_jsonschema`, `negotitate_plain`. 46 integration cases + every unit
-package still gate CI. Re-enable per fixture as the edge binary grows the
+`integration_jsonschema`, `negotitate_plain`. 47 integration cases + every unit
+package gate CI. Re-enable per fixture as the edge binary grows the
 matching component.
+
+**The harness needs `-tags legacy` (fixed 2026-07-25).** Every file in `tests/`
+is `//go:build legacy`, so the previous untagged `go test ./...` resolved
+`./tests` to zero Go files and ran **no** integration fixture at all — the
+`-skip` list was inert and the "46 cases gate CI" claim above was false for as
+long as it stood. `test.yml` now runs two steps: unit packages
+(`go list -tags legacy ./... | grep -v '/tests$'`) and the harness
+(`./tests -args -gateway_startup_wait=30s`). They are separate because
+`go test ./... -args` forwards the flag to every package's test binary and the
+unit packages abort with `flag provided but not defined`.
+
+`-gateway_startup_wait` matters: the harness `exec`s the ~190MB edge binary and
+waits a **fixed** 1500ms before probing `:8080`. On a cold or loaded host that
+is not enough and every fixture fails with `connection refused` — a startup
+race, not a behavioural regression. Diagnose with
+`go test -tags legacy ./tests -args -gateway_startup_wait=15s` before believing
+a mass failure. The harness runs whatever binary is at `../gateway`, so
+**rebuild it first** or you are testing a stale artifact:
+
+```bash
+VERSION=$(sed -n 's/^VERSION := *//p' Makefile)
+CGO_ENABLED=0 go build -tags legacy \
+  -ldflags="-X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION}" \
+  -o gateway ./cmd/gateway
+```
