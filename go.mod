@@ -9,37 +9,36 @@ require (
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/krakend/bloomfilter/v2 v2.1.0
 	github.com/krakend/krakend-amqp/v2 v2.3.0
-	github.com/krakend/krakend-botdetector/v2 v2.3.0
-	github.com/krakend/krakend-cel/v2 v2.4.0
-	github.com/krakend/krakend-circuitbreaker/v2 v2.1.0
-	github.com/krakend/krakend-cobra/v2 v2.7.0
-	github.com/krakend/krakend-cors/v2 v2.2.0
-	github.com/krakend/krakend-flexibleconfig/v2 v2.3.0
+	github.com/krakend/krakend-botdetector/v2 v2.3.1
+	github.com/krakend/krakend-cel/v2 v2.4.1
+	github.com/krakend/krakend-circuitbreaker/v3 v3.0.0
+	github.com/krakend/krakend-cobra/v2 v2.8.2
+	github.com/krakend/krakend-cors/v2 v2.2.1
+	github.com/krakend/krakend-flexibleconfig/v2 v2.3.1
 	github.com/krakend/krakend-gelf/v2 v2.1.0
 	github.com/krakend/krakend-gologging/v2 v2.1.1
 	github.com/krakend/krakend-httpcache/v2 v2.2.0
-	github.com/krakend/krakend-httpsecure/v2 v2.2.0
+	github.com/krakend/krakend-httpsecure/v2 v2.2.1
 	github.com/krakend/krakend-influx/v2 v2.2.0
-	github.com/krakend/krakend-jose/v2 v2.10.0
-	github.com/krakend/krakend-jsonschema/v2 v2.1.0
+	github.com/krakend/krakend-jose/v2 v2.12.3
+	github.com/krakend/krakend-jsonschema/v2 v2.2.1
 	github.com/krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b
 	github.com/krakend/krakend-lambda/v2 v2.1.0
 	github.com/krakend/krakend-logstash/v2 v2.1.0
-	github.com/krakend/krakend-lua/v2 v2.9.0
-	github.com/krakend/krakend-martian/v2 v2.2.0
-	github.com/krakend/krakend-metrics/v2 v2.1.0
+	github.com/krakend/krakend-lua/v2 v2.9.1
+	github.com/krakend/krakend-martian/v2 v2.3.0
+	github.com/krakend/krakend-metrics/v2 v2.2.0
 	github.com/krakend/krakend-oauth2-clientcredentials/v2 v2.2.0
-	github.com/krakend/krakend-opencensus/v2 v2.2.0
-	github.com/krakend/krakend-pubsub/v2 v2.2.0
-	github.com/krakend/krakend-ratelimit/v3 v3.3.0
+	github.com/krakend/krakend-opencensus/v2 v2.2.1
+	github.com/krakend/krakend-pubsub/v2 v2.3.1
+	github.com/krakend/krakend-ratelimit/v3 v3.3.1
 	github.com/krakend/krakend-rss/v2 v2.1.1
-	github.com/krakend/krakend-xml/v2 v2.2.0
-	github.com/luraproject/lura/v2 v2.12.1
+	github.com/krakend/krakend-xml/v2 v2.2.2
+	github.com/luraproject/lura/v2 v2.14.1
 	github.com/luxfi/log v1.5.0
 	github.com/luxfi/zap v1.2.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/xeipuuv/gojsonschema v1.2.1-0.20200424115421-065759f9c3d7
 	github.com/zap-proto/http v0.2.0
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -242,6 +241,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
+	github.com/sony/gobreaker/v2 v2.4.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/viper v1.20.1 // indirect
@@ -274,6 +274,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -324,7 +325,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.12.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus v1.7.1 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/messaging/azservicebus v1.10.0 // indirect
 	github.com/Azure/go-amqp v1.5.1 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.0 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
@@ -362,9 +363,7 @@ require (
 	github.com/bytedance/sonic v1.15.2 // indirect
 	github.com/bytedance/sonic/loader v0.5.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
-	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
-	github.com/clbanning/mxj v1.8.4 // indirect
 	github.com/cloudwego/base64x v0.1.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
@@ -376,7 +375,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gin-contrib/sse v1.1.1 // indirect
-	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.5 // indirect
 	github.com/go-kit/log v0.2.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
@@ -395,7 +394,7 @@ require (
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/google/wire v0.6.0 // indirect
+	github.com/google/wire v0.7.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.14 // indirect
 	github.com/googleapis/gax-go/v2 v2.21.0 // indirect
 	github.com/grandcat/zeroconf v1.0.0 // indirect
@@ -405,13 +404,13 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8 // indirect
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
 	github.com/hashicorp/go-sockaddr v1.0.7 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
-	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
-	github.com/hashicorp/vault/api v1.14.0 // indirect
+	github.com/hashicorp/hcl v1.0.1-vault-7 // indirect
+	github.com/hashicorp/vault/api v1.22.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -435,9 +434,9 @@ require (
 	github.com/kpacha/opencensus-influxdb v0.0.0-20180520162117-1b490a38de4c // indirect
 	github.com/krakend/binder v0.0.0-20250826131726-e91a8a754ef8 // indirect
 	github.com/krakend/flatmap v1.2.0 // indirect
-	github.com/krakend/go-auth0/v2 v2.0.3 // indirect
+	github.com/krakend/go-auth0/v2 v2.0.4 // indirect
 	github.com/krakend/httpcache v1.1.1 // indirect
-	github.com/krakend/krakend-audit v0.5.0 // indirect
+	github.com/krakend/krakend-audit v0.9.3 // indirect
 	github.com/krakend/lru v0.0.0-20250121172718-0e3a6eab620d // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
@@ -455,7 +454,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/nats-io/nats-server/v2 v2.10.27 // indirect
 	github.com/nats-io/nats.go v1.50.0 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
@@ -477,9 +475,8 @@ require (
 	github.com/rs/cors v1.11.1 // indirect
 	github.com/rs/cors/wrapper/gin v0.0.0-20240830163046-1084d89a1692 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/shopspring/decimal v1.4.0 // indirect
-	github.com/sony/gobreaker v1.0.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
@@ -496,8 +493,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.70.0
 	github.com/valyala/fastrand v1.1.0 // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	github.com/zap-proto/zip v1.8.3
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
@@ -510,11 +505,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	gocloud.dev v0.39.0 // indirect
-	gocloud.dev/pubsub/kafkapubsub v0.37.0 // indirect
-	gocloud.dev/pubsub/natspubsub v0.37.0 // indirect
-	gocloud.dev/pubsub/rabbitpubsub v0.37.0 // indirect
-	gocloud.dev/secrets/hashivault v0.39.0 // indirect
+	gocloud.dev v0.45.0 // indirect
+	gocloud.dev/pubsub/kafkapubsub v0.45.0 // indirect
+	gocloud.dev/pubsub/natspubsub v0.45.0 // indirect
+	gocloud.dev/pubsub/rabbitpubsub v0.45.0 // indirect
+	gocloud.dev/secrets/hashivault v0.45.0 // indirect
 	golang.org/x/arch v0.25.0 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260529124908-c761662dc8c9 // indirect

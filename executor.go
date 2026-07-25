@@ -36,7 +36,6 @@ import (
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/prometheus"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/xray"
 	_ "github.com/krakend/krakend-opencensus/v2/exporter/zipkin"
-	pubsub "github.com/krakend/krakend-pubsub/v2"
 	"github.com/luraproject/lura/v2/async"
 	"github.com/luraproject/lura/v2/config"
 	"github.com/luraproject/lura/v2/core"
@@ -407,7 +406,7 @@ func (m *MetricsAndTraces) Register(ctx context.Context, cfg config.ServiceConfi
 		l.Debug("[SERVICE: InfluxDB] Service correctly registered")
 	}
 
-	if err := opencensus.Register(ctx, cfg, append(opencensus.DefaultViews, pubsub.OpenCensusViews...)...); err != nil {
+	if err := opencensus.Register(ctx, cfg, opencensus.DefaultViews...); err != nil {
 		if err != opencensus.ErrNoConfig {
 			l.Warning("[SERVICE: OpenCensus]", err.Error())
 		}
