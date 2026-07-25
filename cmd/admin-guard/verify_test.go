@@ -31,7 +31,7 @@ import (
 func testConfig() *config {
 	return &config{
 		adminOrg:       "admin",
-		consoles:       parseConsoleMap(defaultConsoleMap),
+		consoles:       parseBrandMap(defaultConsoleMap),
 		defaultConsole: "https://console.hanzo.ai",
 		iamPublic:      "https://hanzo.id",
 		clientID:       "hanzo-admin-guard",
@@ -42,18 +42,21 @@ func testConfig() *config {
 	}
 }
 
-// guardCookie returns a valid, unexpired guard session cookie for owner.
-func (c *config) guardCookie(owner string) *http.Cookie {
-	payload := fmt.Sprintf("%s|%d", owner, time.Now().Add(time.Hour).Unix())
+// guardCookie returns a valid, unexpired guard session cookie for a principal
+// (owner + org-admin bit), in the canonical owner|isAdmin|exp form.
+func (c *config) guardCookie(owner string, isAdmin bool) *http.Cookie {
+	payload := fmt.Sprintf("%s|%s|%d", owner, sessionBit(isAdmin), time.Now().Add(time.Hour).Unix())
 	return &http.Cookie{Name: c.cookieName, Value: c.sign(payload)}
 }
 
-// TestVerifyContentNegotiation is the admin-guard forward-auth contract: one
-// predicate (owner == AdminOrg), three verdicts, content-negotiated for API vs
-// browser callers. Global admin → 204; authenticated non-admin → 403 for API,
+// TestVerifyContentNegotiation is the admin-guard forward-auth contract on a
+// GLOBAL surface (platform.hanzo.ai — not a tenant admin.<brand> host, so only
+// platform-sudo passes): three verdicts, content-negotiated for API vs browser
+// callers. Global admin → 204; authenticated non-admin → 403 for API,
 // 302→console for a browser; no identity → 401 for API, 302→IAM-login for a
 // browser. A non-admin is NEVER allowed through, and an API caller is never
-// bounced through an interactive redirect.
+// bounced through an interactive redirect. (Tenant-scoped allow/deny is covered
+// in tenant_test.go.)
 func TestVerifyContentNegotiation(t *testing.T) {
 	cfg := testConfig()
 
@@ -68,31 +71,31 @@ func TestVerifyContentNegotiation(t *testing.T) {
 	}{
 		{
 			name:       "admin cookie → 204 allow",
-			cookie:     cfg.guardCookie("admin"),
+			cookie:     cfg.guardCookie("admin", true),
 			accept:     "text/html",
 			wantStatus: http.StatusNoContent,
 		},
 		{
 			name:         "non-admin cookie + browser → 302 console",
-			cookie:       cfg.guardCookie("acme"),
+			cookie:       cfg.guardCookie("acme", false),
 			accept:       "text/html",
 			wantStatus:   http.StatusFound,
 			wantLocation: "https://console.hanzo.ai",
 		},
 		{
 			name:       "non-admin cookie + API (json) → 403",
-			cookie:     cfg.guardCookie("acme"),
+			cookie:     cfg.guardCookie("acme", false),
 			accept:     "application/json",
 			wantStatus: http.StatusForbidden,
-			wantBody:   "global admin required",
+			wantBody:   "admin access required",
 		},
 		{
 			name:       "non-admin cookie + Bearer → 403 (API even with html accept)",
-			cookie:     cfg.guardCookie("acme"),
+			cookie:     cfg.guardCookie("acme", false),
 			accept:     "text/html",
 			bearer:     "some-token",
 			wantStatus: http.StatusForbidden,
-			wantBody:   "global admin required",
+			wantBody:   "admin access required",
 		},
 		{
 			name:       "anonymous + API (json) → 401",
@@ -155,7 +158,7 @@ func TestVerifyContentNegotiation(t *testing.T) {
 // identity (→ 401 for an API caller), never allowed through.
 func TestVerifyRejectsTamperedCookie(t *testing.T) {
 	cfg := testConfig()
-	good := cfg.guardCookie("admin")
+	good := cfg.guardCookie("admin", true)
 	tampered := &http.Cookie{Name: cfg.cookieName, Value: good.Value + "x"}
 
 	r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
@@ -173,7 +176,7 @@ func TestVerifyRejectsTamperedCookie(t *testing.T) {
 // cookie is rejected — time-bounded sessions, no replay past expiry.
 func TestVerifyRejectsExpiredCookie(t *testing.T) {
 	cfg := testConfig()
-	expired := &http.Cookie{Name: cfg.cookieName, Value: cfg.sign(fmt.Sprintf("admin|%d", time.Now().Add(-time.Hour).Unix()))}
+	expired := &http.Cookie{Name: cfg.cookieName, Value: cfg.sign(fmt.Sprintf("admin|1|%d", time.Now().Add(-time.Hour).Unix()))}
 
 	r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
 	r.Header.Set("Accept", "application/json")
