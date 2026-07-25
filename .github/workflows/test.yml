@@ -101,7 +101,7 @@ jobs:
             -o gateway ./cmd/gateway
 
       # Unit packages + the lura integration harness in one pass. The -skip
-      # set excludes upstream KrakenD fixtures for behaviours this edge fork
+      # set excludes upstream fixtures for behaviours this edge fork
       # deliberately diverges from — its own CORS preflight (not security/cors),
       # its own backend-error surface, plus a few CEL/Lua/redirect/negotiate
       # cases — tracked in LLM.md as separate work. 46 of 58 integration cases

@@ -51,7 +51,7 @@ Edition and Lura:
     trust.go).
   - Default build is a KrakenD-free in-process ZAP relay (HIP-0110); the
     upstream Lura/KrakenD gin engine is quarantined behind the `legacy`
-    build tag (krakend_engine.go and its sibling legacy-gated files) and is
+    build tag (legacy_engine.go and its sibling legacy-gated files) and is
     excluded from the shipped image.
   - Default-build telemetry runs over OTLP-over-ZAP and the in-process mount
     under hanzoai/cloud (zap_backend.go, zap_listener.go, zaphttp_listener.go,

@@ -20,7 +20,7 @@ import (
 // app 5xxs.
 //
 // gin.CustomRecovery(corsRecoveryHandler(newCORSOriginAllower())) is the exact
-// wiring the legacy engine installs in NewEngine (krakend_engine.go), so this
+// wiring the legacy engine installs in NewEngine (legacy_engine.go), so this
 // exercises the real handler.
 func TestCORSRecoveryHandler_F3(t *testing.T) {
 	gin.SetMode(gin.TestMode)

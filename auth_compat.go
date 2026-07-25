@@ -7,7 +7,7 @@ import (
 	"github.com/hanzoai/gateway/v2/iamauth"
 )
 
-// These shims keep the gin/KrakenD auth middleware (and its security tests)
+// These shims keep the gin/Lura auth middleware (and its security tests)
 // on the single edge-auth implementation in package iamauth. The middleware
 // keeps its commerce-coupled glue (billing, permission bit-fields, role
 // minting); everything below is delegated so there is exactly one copy of

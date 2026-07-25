@@ -21,13 +21,13 @@
 //
 // Two builds exist, and the one that SHIPS is `legacy`:
 //
-//	go build ./...               // default: no Lura/KrakenD; ZAP relay edge
-//	go build -tags legacy ./...  // legacy: full Lura/KrakenD gin engine
+//	go build ./...               // default: no Lura; ZAP relay edge
+//	go build -tags legacy ./...  // legacy: full Lura gin engine
 //
 // Makefile sets BUILD_TAGS ?= legacy and the Dockerfile runs `make build`,
 // so ghcr.io/hanzoai/gateway is the legacy engine. The default build serves
 // only /healthz until the HIP-0110 ZAP relay backends are live; see the
 // rationale comment above BUILD_TAGS in the Makefile.
 //
-// Forwards-only: never add a lura/krakend import to a non-`legacy` file.
+// Forwards-only: never add a lura import to a non-`legacy` file.
 package gateway
