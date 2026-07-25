@@ -20,20 +20,28 @@ WORKDIR /app
 ARG GO_EXPERIMENT=jsonv2
 ENV GOEXPERIMENT=${GO_EXPERIMENT}
 
-# hanzoai/* and luxfi/* are PUBLIC and resolve via the IMMUTABLE public proxy +
-# sumdb — go.sum pins those canonical hashes, so a force-re-pointed tag can never
-# break the build. Routing them DIRECT (the old GOPRIVATE approach) re-fetches a
-# re-tagged tree (e.g. luxfi/zap@v0.8.8) whose hash differs from go.sum's proxy
-# hash → "checksum mismatch / SECURITY ERROR". This matches the drop-GOPRIVATE
-# fix already shipped in hanzoai/cloud + iam + luxfi/kms. Only zap-proto/* stays
-# first-party-direct (kept in GOPRIVATE) — authenticated git via gh_token. GOPROXY
-# still routes nested-path monorepo tags through the proxy. The committed go.sum
-# is the single source of truth.
+# hanzoai/* and luxfi/* resolve via the IMMUTABLE public proxy — go.sum pins
+# those canonical hashes, so a force-re-pointed tag can never break the build.
+# Routing them DIRECT (the old GOPRIVATE approach) re-fetches a re-tagged tree
+# (e.g. luxfi/zap@v0.8.8) whose hash differs from go.sum's proxy hash →
+# "checksum mismatch / SECURITY ERROR". This matches the drop-GOPRIVATE fix
+# already shipped in hanzoai/cloud + iam + luxfi/kms. Only zap-proto/* stays
+# first-party-direct (kept in GOPRIVATE) — authenticated git via gh_token.
+#
+# GOSUMDB is NO LONGER `off`. A global `off` disabled checksum-database
+# verification for the ENTIRE 1500-module graph, which fails OPEN: paired with
+# GOFLAGS=-mod=mod it let any fetch rewrite go.sum from whatever the source
+# served. The bypass is now scoped with GONOSUMDB to exactly the namespaces that
+# genuinely cannot be in the public sumdb — our own first-party orgs, several of
+# whose repos are private — while every third-party module is verified against
+# sum.golang.org again.
+#
+# GOFLAGS no longer carries -mod=mod either: the default (-mod=readonly) makes
+# the committed go.mod/go.sum authoritative and fails the build rather than
+# silently rewriting them.
 ENV GOPRIVATE=github.com/zap-proto/* \
-    GONOSUMDB=github.com/zap-proto/* \
-    GOSUMDB=off \
-    GOPROXY=https://proxy.golang.org,direct \
-    GOFLAGS=-mod=mod
+    GONOSUMDB=github.com/zap-proto/*,github.com/hanzoai/*,github.com/luxfi/* \
+    GOPROXY=https://proxy.golang.org,direct
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
