@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/luraproject/lura/v2/core"
+	"github.com/hanzoai/gateway/v2/internal/lura/core"
 )
 
 // TestProductionHeadersMiddleware is the deployed (legacy gin) edge contract:

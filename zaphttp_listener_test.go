@@ -15,7 +15,7 @@ import (
 	"github.com/valyala/fasthttp"
 	zaphttp "github.com/zap-proto/http"
 
-	"github.com/luraproject/lura/v2/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 )
 
 // freePort grabs an ephemeral port and returns it as a ":NNNN" string.
