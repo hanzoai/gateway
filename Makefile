@@ -38,7 +38,7 @@ CORE := ${MODULE}/v2/internal/lura/core
 
 build: ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
-	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
+	@go build -mod=readonly -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
 	-X ${CORE}.GlibcVersion=${GLIBC_VERSION}" \
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
