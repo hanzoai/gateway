@@ -2,24 +2,28 @@ package main
 
 import "testing"
 
-func TestOwnerFromAccount(t *testing.T) {
+func TestPrincipalFromAccount(t *testing.T) {
 	cases := []struct {
-		name      string
-		body      string
-		wantOwner string
-		wantOK    bool
+		name        string
+		body        string
+		wantOwner   string
+		wantIsAdmin bool
+		wantOK      bool
 	}{
-		{"top-level owner", `{"owner":"admin","name":"z"}`, "admin", true},
-		{"wrapped in data", `{"status":"ok","data":{"owner":"hanzo","name":"dave"}}`, "hanzo", true},
-		{"error response", `{"status":"error","msg":"Please login first"}`, "", false},
-		{"missing owner", `{"status":"ok","data":{"name":"x"}}`, "", false},
-		{"garbage", `not json`, "", false},
+		{"top-level owner", `{"owner":"admin","name":"z"}`, "admin", false, true},
+		{"top-level owner + isAdmin", `{"owner":"lux","name":"z","isAdmin":true}`, "lux", true, true},
+		{"wrapped in data", `{"status":"ok","data":{"owner":"hanzo","name":"dave"}}`, "hanzo", false, true},
+		{"wrapped in data + isAdmin", `{"status":"ok","data":{"owner":"lux","name":"z","isAdmin":true}}`, "lux", true, true},
+		{"error response", `{"status":"error","msg":"Please login first"}`, "", false, false},
+		{"missing owner", `{"status":"ok","data":{"name":"x"}}`, "", false, false},
+		{"garbage", `not json`, "", false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			owner, ok := ownerFromAccount([]byte(tc.body))
-			if owner != tc.wantOwner || ok != tc.wantOK {
-				t.Fatalf("ownerFromAccount(%s) = (%q,%v), want (%q,%v)", tc.body, owner, ok, tc.wantOwner, tc.wantOK)
+			p, ok := principalFromAccount([]byte(tc.body))
+			if p.owner != tc.wantOwner || p.isAdmin != tc.wantIsAdmin || ok != tc.wantOK {
+				t.Fatalf("principalFromAccount(%s) = (owner=%q,isAdmin=%v,ok=%v), want (owner=%q,isAdmin=%v,ok=%v)",
+					tc.body, p.owner, p.isAdmin, ok, tc.wantOwner, tc.wantIsAdmin, tc.wantOK)
 			}
 		})
 	}
@@ -44,7 +48,7 @@ func TestSignVerifyRoundTrip(t *testing.T) {
 func TestSessionOwnerExpiry(t *testing.T) {
 	c := &config{hmacKey: []byte("0123456789abcdef"), cookieName: "g"}
 	// Forge an expired payload directly and confirm it is rejected by the
-	// expiry check inside sessionOwner's parsing logic.
+	// expiry check inside sessionPrincipal's parsing logic.
 	expired := c.sign("admin|1")
 	payload, ok := c.verifySigned(expired)
 	if !ok {
