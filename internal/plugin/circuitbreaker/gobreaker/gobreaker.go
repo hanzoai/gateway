@@ -1,0 +1,126 @@
+/*
+Package gobreaker provides a circuit breaker adapter using the sony/gobreaker lib.
+
+Sample backend extra config
+
+	...
+	"extra_config": {
+		...
+		"github.com/devopsfaith/krakend-circuitbreaker/gobreaker": {
+			"interval":        60,
+			"timeout":         10,
+			"max_errors":       5,
+			"log_status_change": true,
+		},
+		...
+	},
+	...
+
+The gobreaker package provides an efficient circuit breaker implementation. See https://github.com/sony/gobreaker
+and https://martinfowler.com/bliki/CircuitBreaker.html for more details.
+*/
+package gobreaker
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/sony/gobreaker/v2"
+)
+
+// Namespace is the key to use to store and access the custom config data
+const Namespace = "github.com/devopsfaith/krakend-circuitbreaker/gobreaker"
+
+// Config is the custom config struct containing the params for the sony/gobreaker package
+type Config struct {
+	Name            string
+	Interval        int
+	Timeout         int
+	MaxErrors       int
+	LogStatusChange bool
+}
+
+// ZeroCfg is the zero value for the Config struct
+var ZeroCfg = Config{}
+
+// ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
+// gobreaker adapter and returns a ZeroCfg if something goes wrong.
+func ConfigGetter(e config.ExtraConfig) interface{} {
+	v, ok := e[Namespace]
+	if !ok {
+		return ZeroCfg
+	}
+	tmp, ok := v.(map[string]interface{})
+	if !ok {
+		return ZeroCfg
+	}
+	cfg := Config{}
+	if v, ok := tmp["name"]; ok {
+		if name, ok := v.(string); ok {
+			cfg.Name = name
+		}
+	}
+	if v, ok := tmp["interval"]; ok {
+		switch i := v.(type) {
+		case int:
+			cfg.Interval = i
+		case float64:
+			cfg.Interval = int(i)
+		}
+	}
+	if v, ok := tmp["timeout"]; ok {
+		switch i := v.(type) {
+		case int:
+			cfg.Timeout = i
+		case float64:
+			cfg.Timeout = int(i)
+		}
+	}
+	if v, ok := tmp["max_errors"]; ok {
+		switch i := v.(type) {
+		case int:
+			cfg.MaxErrors = i
+		case float64:
+			cfg.MaxErrors = int(i)
+		}
+	}
+	value, ok := tmp["log_status_change"].(bool)
+	cfg.LogStatusChange = ok && value
+
+	return cfg
+}
+
+type CircuitBreaker struct {
+	cb *gobreaker.CircuitBreaker[interface{}]
+}
+
+func (c *CircuitBreaker) Execute(req func() (interface{}, error)) (interface{}, error) {
+	return c.cb.Execute(req)
+}
+
+// NewCircuitBreaker builds a gobreaker circuit breaker with the injected config
+func NewCircuitBreaker(cfg Config, logger logging.Logger) CircuitBreaker {
+	settings := gobreaker.Settings{
+		Name:     cfg.Name,
+		Interval: time.Duration(cfg.Interval) * time.Second,
+		Timeout:  time.Duration(cfg.Timeout) * time.Second,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return counts.ConsecutiveFailures > uint32(cfg.MaxErrors)
+		},
+		IsExcluded: func(err error) bool {
+			return errors.Is(err, context.Canceled)
+		},
+	}
+
+	if cfg.LogStatusChange {
+		settings.OnStateChange = func(name string, from gobreaker.State, to gobreaker.State) {
+			logger.Warning(fmt.Sprintf("[CB] Circuit breaker named '%s' went from '%s' to '%s'", name, from.String(), to.String()))
+		}
+	}
+
+	return CircuitBreaker{cb: gobreaker.NewCircuitBreaker[interface{}](settings)}
+}

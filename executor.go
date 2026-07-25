@@ -13,38 +13,38 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 
-	krakendbf "github.com/krakend/bloomfilter/v2/krakend"
-	asyncamqp "github.com/krakend/krakend-amqp/v2/async"
-	cel "github.com/krakend/krakend-cel/v2"
-	cmd "github.com/krakend/krakend-cobra/v2"
-	_ "github.com/krakend/krakend-cors/v2/gin" // keep dep, CORS handled by hostProxyMiddleware
-	gelf "github.com/krakend/krakend-gelf/v2"
-	gologging "github.com/krakend/krakend-gologging/v2"
-	influxdb "github.com/krakend/krakend-influx/v2"
-	jose "github.com/krakend/krakend-jose/v2"
-	logstash "github.com/krakend/krakend-logstash/v2"
-	metrics "github.com/krakend/krakend-metrics/v2/gin"
-	opencensus "github.com/krakend/krakend-opencensus/v2"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/datadog"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/influxdb"
+	bloomfilterreg "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/register"
+	asyncamqp "github.com/hanzoai/gateway/v2/internal/plugin/amqp/async"
+	cel "github.com/hanzoai/gateway/v2/internal/plugin/cel"
+	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/cors/gin" // keep dep, CORS handled by hostProxyMiddleware
+	gelf "github.com/hanzoai/gateway/v2/internal/plugin/gelf"
+	gologging "github.com/hanzoai/gateway/v2/internal/plugin/gologging"
+	influxdb "github.com/hanzoai/gateway/v2/internal/plugin/influx"
+	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
+	logstash "github.com/hanzoai/gateway/v2/internal/plugin/logstash"
+	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
+	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/datadog"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/influxdb"
 	// jaeger, ocagent, and stackdriver exporters dropped — and the OTLP exporter module
 	// (OTLP) removed entirely — because each ships telemetry over gRPC
 	// (ocagent/stackdriver dial an OpenCensus/gRPC agent; the OTLP exporter module's OTLP
 	// collector exporter is gRPC-only), and Hanzo services speak ZAP/HTTP/WS,
 	// never gRPC. Legacy-build telemetry rides opencensus (prometheus/datadog/
 	// influx/xray/zipkin) + ZAP for inter-service.
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/prometheus"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/xray"
-	_ "github.com/krakend/krakend-opencensus/v2/exporter/zipkin"
-	"github.com/luraproject/lura/v2/async"
-	"github.com/luraproject/lura/v2/config"
-	"github.com/luraproject/lura/v2/core"
-	"github.com/luraproject/lura/v2/logging"
-	"github.com/luraproject/lura/v2/proxy"
-	router "github.com/luraproject/lura/v2/router/gin"
-	"github.com/luraproject/lura/v2/sd/dnssrv"
-	serverhttp "github.com/luraproject/lura/v2/transport/http/server"
-	server "github.com/luraproject/lura/v2/transport/http/server/plugin"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/prometheus"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/xray"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/zipkin"
+	"github.com/hanzoai/gateway/v2/internal/lura/async"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/core"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	"github.com/hanzoai/gateway/v2/internal/lura/sd/dnssrv"
+	serverhttp "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
+	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
 )
 
 // NewExecutor returns an executor for the cmd package. The executor initalizes the entire gateway by
@@ -192,7 +192,7 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 			logger,
 			e.SubscriberFactoriesRegister.Register(ctx, cfg, logger),
 		)
-		if err != nil && err != krakendbf.ErrNoConfig {
+		if err != nil && err != bloomfilterreg.ErrNoConfig {
 			logger.Warning("[SERVICE: Bloomfilter]", err.Error())
 		}
 
@@ -374,7 +374,7 @@ type BloomFilterJWT struct{}
 // NewTokenRejecter registers the bloomfilter component and links it to a token rejecter. Then it returns a chained
 // rejecter factory with the created token rejecter and other based on the CEL component.
 func (BloomFilterJWT) NewTokenRejecter(ctx context.Context, cfg config.ServiceConfig, l logging.Logger, reg func(n string, p int)) (jose.ChainedRejecterFactory, error) {
-	rejecter, err := krakendbf.Register(ctx, "krakend-bf", cfg, l, reg)
+	rejecter, err := bloomfilterreg.Register(ctx, "krakend-bf", cfg, l, reg)
 
 	return jose.ChainedRejecterFactory([]jose.RejecterFactory{
 		jose.RejecterFactoryFunc(func(_ logging.Logger, _ *config.EndpointConfig) jose.Rejecter {

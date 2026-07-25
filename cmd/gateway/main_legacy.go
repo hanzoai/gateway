@@ -21,10 +21,10 @@ import (
 	"syscall"
 
 	gateway "github.com/hanzoai/gateway/v2"
-	cmd "github.com/krakend/krakend-cobra/v2"
-	flexibleconfig "github.com/krakend/krakend-flexibleconfig/v2"
-	koanf "github.com/krakend/krakend-koanf"
-	"github.com/luraproject/lura/v2/config"
+	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
+	flexibleconfig "github.com/hanzoai/gateway/v2/internal/plugin/flexibleconfig"
+	koanf "github.com/hanzoai/gateway/v2/internal/plugin/koanf"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
 )
 
 const (

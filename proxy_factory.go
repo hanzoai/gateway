@@ -6,14 +6,14 @@ package gateway
 import (
 	"fmt"
 
-	cel "github.com/krakend/krakend-cel/v2"
-	jsonschema "github.com/krakend/krakend-jsonschema/v2"
-	lua "github.com/krakend/krakend-lua/v2/proxy"
-	metrics "github.com/krakend/krakend-metrics/v2/gin"
-	opencensus "github.com/krakend/krakend-opencensus/v2"
-	"github.com/luraproject/lura/v2/config"
-	"github.com/luraproject/lura/v2/logging"
-	"github.com/luraproject/lura/v2/proxy"
+	cel "github.com/hanzoai/gateway/v2/internal/plugin/cel"
+	jsonschema "github.com/hanzoai/gateway/v2/internal/plugin/jsonschema"
+	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua/proxy"
+	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
+	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 )
 
 func internalNewProxyFactory(logger logging.Logger, backendFactory proxy.BackendFactory,

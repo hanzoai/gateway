@@ -21,8 +21,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/luraproject/lura/v2/core"
-	"github.com/luraproject/lura/v2/transport/http/server"
+	"github.com/hanzoai/gateway/v2/internal/lura/core"
+	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
 )
 
 // BrandName is the canonical rebrand string emitted on responses and outbound

@@ -16,9 +16,9 @@ import (
 
 	"github.com/luxfi/zap"
 
-	"github.com/luraproject/lura/v2/config"
-	"github.com/luraproject/lura/v2/logging"
-	"github.com/luraproject/lura/v2/proxy"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 )
 
 const (

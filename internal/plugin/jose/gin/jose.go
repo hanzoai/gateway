@@ -1,0 +1,276 @@
+package gin
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"net/textproto"
+	"regexp"
+	"strings"
+
+	"github.com/gin-gonic/gin"
+	"github.com/go-jose/go-jose/v3/jwt"
+	auth0 "github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
+	krakendjose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	ginlura "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+)
+
+func HandlerFactory(hf ginlura.HandlerFactory, logger logging.Logger, rejecterF krakendjose.RejecterFactory) ginlura.HandlerFactory {
+	return TokenSignatureValidator(TokenSigner(hf, logger), logger, rejecterF)
+}
+
+func TokenSigner(hf ginlura.HandlerFactory, logger logging.Logger) ginlura.HandlerFactory {
+	return func(cfg *config.EndpointConfig, prxy proxy.Proxy) gin.HandlerFunc {
+		logPrefix := "[ENDPOINT: " + cfg.Endpoint + "][JWTSigner]"
+		signerCfg, signer, err := krakendjose.NewSigner(cfg, nil)
+		if err == krakendjose.ErrNoSignerCfg {
+			logger.Debug(logPrefix, "Signer disabled")
+			return hf(cfg, prxy)
+		}
+		if err != nil {
+			logger.Error(logPrefix, "Unable to create the signer:", err.Error())
+			return erroredHandler
+		}
+
+		logger.Debug(logPrefix, "Signer enabled")
+
+		return func(c *gin.Context) {
+			proxyReq := ginlura.NewRequest(cfg.HeadersToPass)(c, cfg.QueryString)
+			ctx, cancel := context.WithTimeout(c, cfg.Timeout)
+			defer cancel()
+
+			response, err := prxy(ctx, proxyReq)
+			if err != nil {
+				logger.Error(logPrefix, "Proxy response:", err.Error())
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+
+			if response == nil {
+				logger.Error(logPrefix, "Empty proxy response")
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+
+			if err := krakendjose.SignFields(signerCfg.KeysToSign, signer, response); err != nil {
+				logger.Error(logPrefix, "Signing fields:", err.Error())
+				c.AbortWithStatus(http.StatusBadRequest)
+				return
+			}
+
+			for k, v := range response.Metadata.Headers {
+				c.Header(k, v[0])
+			}
+			c.JSON(response.Metadata.StatusCode, response.Data)
+		}
+	}
+}
+
+func TokenSignatureValidator(hf ginlura.HandlerFactory, logger logging.Logger, rejecterF krakendjose.RejecterFactory) ginlura.HandlerFactory {
+	return func(cfg *config.EndpointConfig, prxy proxy.Proxy) gin.HandlerFunc {
+		logPrefix := "[ENDPOINT: " + cfg.Endpoint + "][JWTValidator]"
+		if rejecterF == nil {
+			rejecterF = new(krakendjose.NopRejecterFactory)
+		}
+		rejecter := rejecterF.New(logger, cfg)
+
+		handler := hf(cfg, prxy)
+		scfg, err := krakendjose.GetSignatureConfig(cfg)
+		if err == krakendjose.ErrNoValidatorCfg {
+			logger.Info(logPrefix, "Validator disabled for this endpoint")
+			return handler
+		}
+		if err != nil {
+			logger.Warning(logPrefix, "Unable to parse the configuration:", err.Error())
+			return erroredHandler
+		}
+
+		validator, err := krakendjose.NewValidator(scfg, FromCookie, FromHeader)
+		if err != nil {
+			logger.Fatal(logPrefix, "Unable to create the validator:", err.Error())
+			return erroredHandler
+		}
+
+		var aclCheck func(string, map[string]interface{}, []string) bool
+
+		if scfg.RolesKeyIsNested && strings.Contains(scfg.RolesKey, ".") && scfg.RolesKey[:4] != "http" {
+			logger.Debug(logPrefix, fmt.Sprintf("Roles will be matched against the nested key: '%s'", scfg.RolesKey))
+			aclCheck = krakendjose.CanAccessNested
+		} else {
+			logger.Debug(logPrefix, fmt.Sprintf("Roles will be matched against the key: '%s'", scfg.RolesKey))
+			aclCheck = krakendjose.CanAccess
+		}
+
+		var scopesMatcher func(string, map[string]interface{}, []string) bool
+
+		if len(scfg.Scopes) > 0 && scfg.ScopesKey != "" {
+			if scfg.ScopesMatcher == "all" {
+				logger.Debug(logPrefix, fmt.Sprintf("Constraint added: tokens must contain a claim '%s' with all these scopes: %v", scfg.ScopesKey, scfg.Scopes))
+				scopesMatcher = krakendjose.ScopesAllMatcher
+			} else {
+				logger.Debug(logPrefix, fmt.Sprintf("Constraint added: tokens must contain a claim '%s' with any of these scopes: %v", scfg.ScopesKey, scfg.Scopes))
+				scopesMatcher = krakendjose.ScopesAnyMatcher
+			}
+		} else {
+			logger.Debug(logPrefix, "No scope validation required")
+			scopesMatcher = krakendjose.ScopesDefaultMatcher
+		}
+
+		if scfg.OperationDebug {
+			logger.Debug(logPrefix, "Validator enabled for this endpoint. Operation debug is enabled")
+		} else {
+			logger.Debug(logPrefix, "Validator enabled for this endpoint")
+		}
+
+		paramExtractor := extractRequiredJWTClaims(cfg)
+
+		return func(c *gin.Context) {
+			token, err := validator.ValidateRequest(c.Request)
+			if err != nil {
+				if scfg.OperationDebug {
+					logger.Error(logPrefix, "Unable to validate the token:", err.Error())
+				}
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			claims := map[string]interface{}{}
+			err = validator.Claims(c.Request, token, &claims)
+			if err != nil {
+				if scfg.OperationDebug {
+					logger.Error(logPrefix, "Token sent by client is invalid:", err.Error())
+				}
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			if rejecter.Reject(claims) {
+				if scfg.OperationDebug {
+					logger.Error(logPrefix, "Token sent by client rejected")
+				}
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+
+			if !aclCheck(scfg.RolesKey, claims, scfg.Roles) {
+				if scfg.OperationDebug {
+					logger.Error(logPrefix, "Token sent by client does not have sufficient roles")
+				}
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+
+			if !scopesMatcher(scfg.ScopesKey, claims, scfg.Scopes) {
+				if scfg.OperationDebug {
+					logger.Error(logPrefix, "Token sent by client does not have the required scopes")
+				}
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+
+			propagateHeaders(cfg, scfg.PropagateClaimsToHeader, scfg.PropagateClaimsPreserveArray, claims, c, logger)
+
+			paramExtractor(c, claims)
+
+			handler(c)
+		}
+	}
+}
+
+func erroredHandler(c *gin.Context) {
+	c.AbortWithStatus(http.StatusUnauthorized)
+}
+
+func propagateHeaders(
+	cfg *config.EndpointConfig,
+	propagationCfg [][]string,
+	propagationPreserveArrays bool,
+	claims map[string]interface{},
+	c *gin.Context,
+	logger logging.Logger,
+) {
+	logPrefix := "[ENDPOINT: " + cfg.Endpoint + "][PropagateHeaders]"
+	if len(propagationCfg) > 0 {
+		if !propagationPreserveArrays {
+			headersToPropagate, err := krakendjose.CalculateHeadersToPropagate(propagationCfg, claims)
+			if err != nil {
+				logger.Warning(logPrefix, err.Error())
+			}
+			for k, v := range headersToPropagate {
+				// Set header value - replaces existing one
+				c.Request.Header.Set(k, v)
+			}
+			return
+		}
+
+		headersToPropagate, err := krakendjose.CalculateArrayHeadersToPropagate(propagationCfg, claims)
+		if err != nil {
+			logger.Warning(logPrefix, err.Error())
+		}
+		for k, v := range headersToPropagate {
+			c.Request.Header[textproto.CanonicalMIMEHeaderKey(k)] = v
+		}
+	}
+}
+
+var jwtParamsPattern = regexp.MustCompile(`{{\.JWT\.([^}]*)}}`)
+
+func extractRequiredJWTClaims(cfg *config.EndpointConfig) func(*gin.Context, map[string]interface{}) {
+	var required []string
+
+	for _, backend := range cfg.Backend {
+		for _, match := range jwtParamsPattern.FindAllStringSubmatch(backend.URLPattern, -1) {
+			if len(match) < 2 {
+				continue
+			}
+			required = append(required, match[1])
+		}
+	}
+	if len(required) == 0 {
+		return func(_ *gin.Context, _ map[string]interface{}) {}
+	}
+
+	return func(c *gin.Context, claims map[string]interface{}) {
+		cl := krakendjose.Claims(claims)
+		for _, param := range required {
+			// TODO: check for nested claims
+			v, ok := cl.Get(param)
+			if !ok {
+				continue
+			}
+			c.Params = append(c.Params, gin.Param{Key: "JWT." + param, Value: v})
+		}
+	}
+}
+
+func FromCookie(key string) func(r *http.Request) (*jwt.JSONWebToken, error) {
+	if key == "" {
+		key = "access_token"
+	}
+	return func(r *http.Request) (*jwt.JSONWebToken, error) {
+		cookie, err := r.Cookie(key)
+		if err != nil {
+			return nil, auth0.ErrTokenNotFound
+		}
+		return jwt.ParseSigned(cookie.Value)
+	}
+}
+
+func FromHeader(header string) func(r *http.Request) (*jwt.JSONWebToken, error) {
+	if header == "" {
+		header = "Authorization"
+	}
+	return func(r *http.Request) (*jwt.JSONWebToken, error) {
+		raw := r.Header.Get(header)
+		if len(raw) > 7 && strings.EqualFold(raw[0:7], "BEARER ") {
+			raw = raw[7:]
+		}
+		if raw == "" {
+			return nil, auth0.ErrTokenNotFound
+		}
+		return jwt.ParseSigned(raw)
+	}
+}

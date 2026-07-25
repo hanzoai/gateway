@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	koanf "github.com/krakend/krakend-koanf"
+	koanf "github.com/hanzoai/gateway/v2/internal/plugin/koanf"
 )
 
 // loadConfigPath is shared test setup — writes the given JSON body to a
