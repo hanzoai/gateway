@@ -106,8 +106,28 @@ jobs:
       # its own backend-error surface, plus a few CEL/Lua/redirect/negotiate
       # cases — tracked in LLM.md as separate work. 46 of 58 integration cases
       # plus every unit package gate CI.
-      - name: Run tests
+      # `-tags legacy` is REQUIRED for the integration harness to run at all:
+      # tests/{integration,integration_test,integration_example_test}.go are all
+      # `//go:build legacy`, so an untagged `go test ./...` resolves ./tests to
+      # zero files and silently skips every fixture. Without the tag this step
+      # exercised only the unit packages while the -skip list above implied the
+      # 46 integration cases were gating — they were not. The tag also builds
+      # the legacy engine that actually ships (Makefile BUILD_TAGS ?= legacy).
+      #
+      # -gateway_startup_wait raises the harness's default 1500ms fixed sleep:
+      # the edge binary is ~190MB and a loaded runner can exceed 1.5s before it
+      # binds :8080, which surfaces as "connection refused" on every fixture.
+      - name: Run unit tests
         run: |
-          go test -count=1 -timeout=5m \
+          go test -count=1 -timeout=10m -tags legacy \
+            $(go list -tags legacy ./... | grep -v '/tests$')
+
+      # Separate step because the harness needs -args, and `go test ./... -args`
+      # forwards the flag to EVERY package's test binary — the unit packages do
+      # not define -gateway_startup_wait and abort with "flag provided but not
+      # defined".
+      - name: Run integration harness
+        run: |
+          go test -count=1 -timeout=10m -tags legacy \
             -skip 'ExampleNewIntegration|TestNewIntegration/(cors_1|cors_2|cors_3|cors_4|cors_5|cel-1|cel-2|lua_2|router_redirect|backend_404|integration_jsonschema|negotitate_plain)' \
-            ./...
+            ./tests -args -gateway_startup_wait=30s
