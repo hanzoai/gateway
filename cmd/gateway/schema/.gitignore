@@ -1,2 +1,9 @@
+# schema.json is COMMITTED (see the `schema` target in the Makefile): it is
+# //go:embed'ed into the binary and is what `gateway check` validates every
+# production config against, so it must be a reviewable, version-controlled
+# artifact rather than an unpinned build-time download.
+# Everything else here stays ignored — notably schema.json.orig, the raw
+# upstream download that `make schema` rebrands and then deletes.
 *.json
 !empty.json
+!schema.json
