@@ -65,7 +65,7 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^VERSION := *//p' Makefile)
           go build -tags legacy \
-            -ldflags="-X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION}" \
+            -ldflags="-X github.com/hanzoai/gateway/v2/internal/lura/core.KrakendVersion=${VERSION}" \
             -o gateway ./cmd/gateway
 
       - name: Validate hanzo config
@@ -97,7 +97,7 @@ jobs:
         run: |
           VERSION=$(sed -n 's/^VERSION := *//p' Makefile)
           go build -tags legacy \
-            -ldflags="-X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION}" \
+            -ldflags="-X github.com/hanzoai/gateway/v2/internal/lura/core.KrakendVersion=${VERSION}" \
             -o gateway ./cmd/gateway
 
       # Unit packages + the lura integration harness in one pass. The -skip

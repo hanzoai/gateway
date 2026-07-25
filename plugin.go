@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	cmd "github.com/krakend/krakend-cobra/v2"
-	"github.com/luraproject/lura/v2/logging"
-	proxy "github.com/luraproject/lura/v2/proxy/plugin"
-	client "github.com/luraproject/lura/v2/transport/http/client/plugin"
-	server "github.com/luraproject/lura/v2/transport/http/server/plugin"
+	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	proxy "github.com/hanzoai/gateway/v2/internal/lura/proxy/plugin"
+	client "github.com/hanzoai/gateway/v2/internal/lura/transport/http/client/plugin"
+	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
 	"github.com/spf13/cobra"
 )
 
