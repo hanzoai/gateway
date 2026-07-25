@@ -29,10 +29,18 @@ all: test
 # `legacy` build — that is what the Dockerfile CMD (`run -c ...`) drives.
 BUILD_TAGS ?= legacy
 
+# CORE is the vendored engine's core package — the home of the version vars the
+# binary stamps at link time. Folding the engine in (internal/lura) moved these
+# off the upstream module path; an -X against a symbol that does not exist is
+# silently ignored by the linker, so a stale path here would ship an "undefined"
+# version in the User-Agent and X-Api-Version with no build error. The dropped
+# `${MODULE}/pkg.Version` -X was already such a no-op: no `pkg` package exists.
+CORE := ${MODULE}/v2/internal/lura/core
+
 build: cmd/gateway/schema/schema.json ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
-	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${MODULE}/pkg.Version=${VERSION} -X github.com/luraproject/lura/v2/core.KrakendVersion=${VERSION} \
-	-X github.com/luraproject/lura/v2/core.GlibcVersion=${GLIBC_VERSION}" \
+	@go build -mod=mod -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
+	-X ${CORE}.GlibcVersion=${GLIBC_VERSION}" \
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
 

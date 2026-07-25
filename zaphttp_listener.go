@@ -29,7 +29,7 @@ import (
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	zaphttp "github.com/zap-proto/http"
 
-	"github.com/luraproject/lura/v2/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 )
 
 const (
