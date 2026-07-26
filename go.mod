@@ -8,6 +8,7 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/go-jose/go-jose/v4 v4.1.4
+	github.com/hanzoai/log v0.1.0
 	github.com/luxfi/log v1.5.0
 	github.com/luxfi/zap v1.2.6
 	github.com/prometheus/client_golang v1.23.2
@@ -422,7 +423,6 @@ require (
 	github.com/nats-io/nats.go v1.50.0 // indirect
 	github.com/nats-io/nkeys v0.4.15 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/openzipkin/zipkin-go v0.4.3
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
@@ -493,7 +493,6 @@ require (
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/DataDog/dd-trace-go.v1 v1.62.0 // indirect
-	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
