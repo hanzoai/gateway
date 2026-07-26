@@ -110,7 +110,7 @@ type config struct {
 // place it is declared. It is surfaced in the startup log and on the health
 // endpoint so operators can confirm which guard build made an authorization
 // decision. Bump the PATCH on every behavior change (never a lazy major).
-const guardVersion = "v0.1.6"
+const guardVersion = "v0.1.7"
 
 const (
 	verifyPath   = "/__guard/verify"
@@ -163,8 +163,11 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	log.Printf("admin-guard %s listening on %s (adminOrg=%q consoles=%v defaultConsole=%s iam=%s)",
-		guardVersion, cfg.addr, cfg.adminOrg, cfg.consoles, cfg.defaultConsole, cfg.iamPublic)
+	// Log the per-brand IAM MAP, not just the fallback: printing only iamPublic
+	// makes a correctly white-labelled guard look like it still sends every brand
+	// to hanzo.id, which reads as the exact bug this map fixes.
+	log.Printf("admin-guard %s listening on %s (adminOrg=%q consoles=%v defaultConsole=%s iams=%v iamFallback=%s)",
+		guardVersion, cfg.addr, cfg.adminOrg, cfg.consoles, cfg.defaultConsole, cfg.iams, cfg.iamPublic)
 	log.Fatal(srv.ListenAndServe())
 }
 
