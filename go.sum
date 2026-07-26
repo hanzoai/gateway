@@ -855,6 +855,8 @@ github.com/hanzoai/iam v1.31.28 h1:bEKm4x7Ghy0LQD+GeMjeMhzBwIYjJV+6UlGwCkHCi4U=
 github.com/hanzoai/iam v1.31.28/go.mod h1:7kl/z2j0QQ+DFmQsq8S//ypDLkyl6VDsY4owK3fKbJU=
 github.com/hanzoai/kv-go/v9 v9.18.0 h1:vO2SD8dV0+H9WWCVKV9KHaWZq4yeMsZruohrsZN9448=
 github.com/hanzoai/kv-go/v9 v9.18.0/go.mod h1:S+Li20E6Bskpw6r+c8WWhfi4hCr8SVV32qPXO0wdl+E=
+github.com/hanzoai/log v0.1.0 h1:xUJyibpbaUL1hvr/oR7am2uxlVjecT7MGEm6IAbToBA=
+github.com/hanzoai/log v0.1.0/go.mod h1:fF/SPVzsIcX436nITnZpKoMNQhe+3jek2rQI2juhuCk=
 github.com/hanzoai/money v0.2.1 h1:w2Fi2aP9bBYY+Zk1jyYfCOT3QhaswGzXQUmoZIjwIHM=
 github.com/hanzoai/money v0.2.1/go.mod h1:A8BJJ7CFalMMv+gyJm0gUMGfxg3zpygXgfb2WeRzStY=
 github.com/hanzoai/orm v0.6.1 h1:PELYVy+kTVuA7hqn1y3IQqR1Q5cTk008Wh4CLn9Isok=
@@ -2151,8 +2153,6 @@ google.golang.org/protobuf v1.36.11/go.mod h1:HTf+CrKn2C3g5S8VImy6tdcUvCska2kB7j
 gopkg.in/DataDog/dd-trace-go.v1 v1.22.0/go.mod h1:DVp8HmDh8PuTu2Z0fVVlBsyWaC++fzwVCaGWylTe3tg=
 gopkg.in/DataDog/dd-trace-go.v1 v1.62.0 h1:jeZxE4ZlfAc+R0zO5TEmJBwOLet3NThsOfYJeSQg1x0=
 gopkg.in/DataDog/dd-trace-go.v1 v1.62.0/go.mod h1:YTvYkk3PTsfw0OWrRFxV/IQ5Gy4nZ5TRvxTAP3JcIzs=
-gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0 h1:Xg23ydYYJLmb9AK3XdcEpplHZd1MpN3X2ZeeMoBClmY=
-gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0/go.mod h1:CeDeqW4tj9FrgZXF/dQCWZrBdcZWWBenhJtxLH4On2g=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

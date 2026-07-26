@@ -69,7 +69,7 @@ func TestAuthMiddlewarePublicPaths(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{"/healthz", "/.well-known/"},
 		PublicHosts: []string{"hanzo.id"},
@@ -121,7 +121,7 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{},
@@ -181,7 +181,7 @@ func TestAuthMiddlewareAPIKeyPassthrough(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{},
@@ -214,7 +214,7 @@ func TestAuthMiddlewareWidgetKeyPassthrough(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{},
@@ -318,7 +318,7 @@ func TestHeaderInjectionPublicHost(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{"hanzo.id"},
@@ -369,7 +369,7 @@ func TestHeaderInjectionPublicPath(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{"/healthz"},
 		PublicHosts: []string{},
@@ -409,7 +409,7 @@ func TestHeaderInjectionNoToken(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{},
@@ -450,7 +450,7 @@ func TestHeaderInjectionAPIKey(t *testing.T) {
 
 	cfg := AuthConfig{
 		Enabled:     true,
-		JWKSURL:     "https://hanzo.id/.well-known/jwks",
+		JWKSURL:     "https://hanzo.id/v1/iam/.well-known/jwks",
 		Issuer:      "https://hanzo.id",
 		PublicPaths: []string{},
 		PublicHosts: []string{},

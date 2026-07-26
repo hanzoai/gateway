@@ -232,7 +232,7 @@ func appendUnique(list []string, v string) []string {
 // same defaults, so the gateway and ingress agree on the IAM authority.
 func ConfigFromEnv() Config {
 	return Config{
-		JWKSURL:   envOr("AUTH_JWKS_URL", "https://hanzo.id/.well-known/jwks"),
+		JWKSURL:   envOr("AUTH_JWKS_URL", "https://hanzo.id/v1/iam/.well-known/jwks"),
 		Issuer:    envOr("AUTH_ISSUER", "https://hanzo.id"),
 		Audiences: AudiencesFromEnv(),
 		JWKSTTL:   15 * time.Minute,

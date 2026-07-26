@@ -25,7 +25,7 @@ type AuthConfig struct {
 	// all auth checks (useful for integration tests and development).
 	Enabled bool
 
-	// JWKS URL to fetch signing keys (default: https://hanzo.id/.well-known/jwks)
+	// JWKS URL to fetch signing keys (default: https://hanzo.id/v1/iam/.well-known/jwks)
 	JWKSURL string
 
 	// Expected JWT issuer (default: https://hanzo.id)
@@ -356,7 +356,7 @@ func DefaultAuthConfig() AuthConfig {
 
 	jwksURL := os.Getenv("AUTH_JWKS_URL")
 	if jwksURL == "" {
-		jwksURL = "https://hanzo.id/.well-known/jwks"
+		jwksURL = "https://hanzo.id/v1/iam/.well-known/jwks"
 	}
 
 	issuer := os.Getenv("AUTH_ISSUER")
