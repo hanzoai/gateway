@@ -21,10 +21,10 @@ import (
 	"syscall"
 
 	gateway "github.com/hanzoai/gateway/v2"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
 	flexibleconfig "github.com/hanzoai/gateway/v2/internal/plugin/flexibleconfig"
 	koanf "github.com/hanzoai/gateway/v2/internal/plugin/koanf"
-	"github.com/hanzoai/gateway/v2/internal/lura/config"
 )
 
 const (
@@ -130,9 +130,12 @@ var aliases = map[string]string{
 	"github.com/devopsfaith/krakend/transport/http/client/graphql": "backend/graphql",
 	"github.com/devopsfaith/krakend/http":                          "backend/http",
 
-	"github_com/devopsfaith/krakend-gelf":       "telemetry/gelf",
+	// telemetry/gelf and telemetry/logstash are deliberately absent: logging
+	// goes through hanzoai/log (internal/hanzolog) and neither the Graylog
+	// sink nor the logstash text pattern is built in any more. This table is
+	// the list of extra_config namespaces the gateway actually honours, so a
+	// key it cannot serve does not belong in it.
 	"github_com/devopsfaith/krakend-gologging":  "telemetry/logging",
-	"github_com/devopsfaith/krakend-logstash":   "telemetry/logstash",
 	"github_com/devopsfaith/krakend-metrics":    "telemetry/metrics",
 	"github_com/letgoapp/krakend-influx":        "telemetry/influx",
 	"github_com/devopsfaith/krakend-opencensus": "telemetry/opencensus",

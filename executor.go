@@ -5,6 +5,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,11 +19,8 @@ import (
 	cel "github.com/hanzoai/gateway/v2/internal/plugin/cel"
 	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
 	_ "github.com/hanzoai/gateway/v2/internal/plugin/cors/gin" // keep dep, CORS handled by hostProxyMiddleware
-	gelf "github.com/hanzoai/gateway/v2/internal/plugin/gelf"
-	gologging "github.com/hanzoai/gateway/v2/internal/plugin/gologging"
 	influxdb "github.com/hanzoai/gateway/v2/internal/plugin/influx"
 	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
-	logstash "github.com/hanzoai/gateway/v2/internal/plugin/logstash"
 	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
 	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
 	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/datadog"
@@ -33,9 +31,7 @@ import (
 	// collector exporter is gRPC-only), and Hanzo services speak ZAP/HTTP/WS,
 	// never gRPC. Legacy-build telemetry rides opencensus (prometheus/datadog/
 	// influx/xray/zipkin) + ZAP for inter-service.
-	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/prometheus"
-	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/xray"
-	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/zipkin"
+	"github.com/hanzoai/gateway/v2/internal/hanzolog"
 	"github.com/hanzoai/gateway/v2/internal/lura/async"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/core"
@@ -45,6 +41,9 @@ import (
 	"github.com/hanzoai/gateway/v2/internal/lura/sd/dnssrv"
 	serverhttp "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
 	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/prometheus"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/xray"
+	_ "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/exporter/zipkin"
 )
 
 // NewExecutor returns an executor for the cmd package. The executor initalizes the entire gateway by
@@ -107,7 +106,7 @@ type HandlerFactory interface {
 
 // LoggerFactory returns a Gateway Logger factory, ready to be passed to the Gateway RouterFactory
 type LoggerFactory interface {
-	NewLogger(config.ServiceConfig) (logging.Logger, io.Writer, error)
+	NewLogger(config.ServiceConfig) (logging.Logger, error)
 }
 
 // RunServer defines the interface of a function used by the Gateway router to start the service
@@ -159,8 +158,8 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 	return func(cfg config.ServiceConfig) {
 		cfg.Normalize()
 
-		logger, gelfWriter, gelfErr := e.LoggerFactory.NewLogger(cfg)
-		if gelfErr != nil {
+		logger, err := e.LoggerFactory.NewLogger(cfg)
+		if err != nil {
 			return
 		}
 
@@ -218,7 +217,11 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		routerFactory := router.NewFactory(router.Config{
 			Engine: e.EngineFactory.NewEngine(cfg, router.EngineOptions{
 				Logger: logger,
-				Writer: gelfWriter,
+				// Writer is gin's access-log sink. Left nil so gin falls back
+				// to its default (stdout) — the same place the service logger
+				// writes, and exactly what happened before when no remote log
+				// sink was configured (which was always).
+				Writer: nil,
 				Health: (<-chan string)(agentPing),
 			}),
 			ProxyFactory:   pf,
@@ -322,50 +325,28 @@ func (*DefaultRunServerFactory) NewRunServer(l logging.Logger, next router.RunSe
 // LoggerBuilder is the default BuilderFactory implementation.
 type LoggerBuilder struct{}
 
-// NewLogger sets up the logging components as defined at the configuration.
-func (LoggerBuilder) NewLogger(cfg config.ServiceConfig) (logging.Logger, io.Writer, error) {
-	var writers []io.Writer
-	gelfWriter, gelfErr := gelf.NewWriter(cfg.ExtraConfig)
-	if gelfErr == nil {
-		writers = append(writers, gelfWriterWrapper{gelfWriter})
-		gologging.SetFormatterSelector(func(w io.Writer) string {
-			switch w.(type) {
-			case gelfWriterWrapper:
-				return "%{message}"
-			default:
-				return gologging.DefaultPattern
-			}
-		})
-	} else {
-		gelfWriter = nil
+// NewLogger sets up the service logger from the configuration.
+//
+// One backend: hanzoai/log, via internal/hanzolog. When the config carries no
+// usable telemetry/logging block we fall back to the engine's own basic logger
+// at DEBUG on stdout, which is what the previous chain did.
+func (LoggerBuilder) NewLogger(cfg config.ServiceConfig) (logging.Logger, error) {
+	logger, err := hanzolog.NewLogger(cfg.ExtraConfig)
+	if err == nil {
+		logger.Debug("[SERVICE: telemetry/logging] structured logging started")
+		return logger, nil
 	}
 
-	logger, gologgingErr := logstash.NewLogger(cfg.ExtraConfig)
-
-	if gologgingErr != nil {
-		logger, gologgingErr = gologging.NewLogger(cfg.ExtraConfig, writers...)
-
-		if gologgingErr != nil {
-			var err error
-			logger, err = logging.NewLogger("DEBUG", os.Stdout, "GATEWAY")
-			if err != nil {
-				return logger, gelfWriter, err
-			}
-			if gologgingErr != gologging.ErrWrongConfig {
-				logger.Error("[SERVICE: Logging] Unable to create the logger:", gologgingErr.Error())
-			}
-		}
+	fallback, ferr := logging.NewLogger("DEBUG", os.Stdout, "GATEWAY")
+	if ferr != nil {
+		return fallback, ferr
 	}
-
-	if gelfErr != nil && gelfErr != gelf.ErrWrongConfig {
-		logger.Error("[SERVICE: Logging][GELF] Unable to create the writer:", gelfErr.Error())
+	// A malformed block is a configuration error worth surfacing; an absent
+	// one is not.
+	if !errors.Is(err, hanzolog.ErrWrongConfig) {
+		fallback.Error("[SERVICE: telemetry/logging] Unable to create the logger:", err.Error())
 	}
-
-	if gologgingErr == nil {
-		logger.Debug("[SERVICE: telemetry/logging] Improved logging started.")
-	}
-
-	return logger, gelfWriter, nil
+	return fallback, nil
 }
 
 // BloomFilterJWT is the default TokenRejecterFactory implementation.
@@ -425,7 +406,3 @@ func (m *MetricsAndTraces) Close() {
 
 // startReporter is a no-op in the Hanzo fork — no telemetry is sent to upstream.
 func startReporter(_ context.Context, _ logging.Logger, _ config.ServiceConfig) {}
-
-type gelfWriterWrapper struct {
-	io.Writer
-}

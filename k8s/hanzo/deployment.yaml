@@ -31,7 +31,7 @@ spec:
               value: "8080"
             # -- Unified Auth Middleware --
             - name: AUTH_JWKS_URL
-              value: "https://hanzo.id/.well-known/jwks"
+              value: "https://hanzo.id/v1/iam/.well-known/jwks"
             - name: AUTH_ISSUER
               value: "https://hanzo.id"
             - name: AUTH_PUBLIC_PATHS

@@ -140,7 +140,7 @@ func authConfigFromEnv(deps cloud.Deps) AuthConfig {
 	}
 	cfg := AuthConfig{
 		Enabled:        getenv("AUTH_ENABLED", "true") == "true",
-		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/.well-known/jwks"),
+		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/v1/iam/.well-known/jwks"),
 		Issuer:         getenv("JWT_ISSUER", "https://hanzo.id"),
 		Audiences:      audiences,
 		BillingURL:     getenv("AUTH_BILLING_URL", "http://commerce.hanzo.svc.cluster.local:8001"),
