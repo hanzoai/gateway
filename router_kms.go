@@ -34,19 +34,32 @@ func (noopKMSResolver) FetchRoutes(string) ([]byte, error) {
 	return nil, fmt.Errorf("kms: no resolver configured (set GATEWAY_KMS_ENDPOINT + IAM_CLIENT_ID/SECRET, or inject via SetKMSResolver)")
 }
 
-// httpKMSResolver speaks the Hanzo KMS HTTP contract documented in
-// hanzoai/base/plugins/platform/kms.go: authenticate via Universal-Auth
-// (POST /api/v1/auth/universal-auth/login with IAM_CLIENT_ID + IAM_CLIENT_SECRET),
-// then GET /api/v3/secrets/raw/<path> and read .secret.secretValue.
+// httpKMSResolver speaks the luxfi/kms HTTP contract:
+//
+//	POST /v1/kms/auth/login                              {clientId, clientSecret}
+//	                                                     -> {accessToken}
+//	GET  /v1/kms/orgs/{org}/secrets/{path}/{name}?env=   -> {"secret":{"value"}}
+//
+// It used to call Infisical's shape — POST /api/v1/auth/universal-auth/login,
+// then GET /api/v3/secrets/raw/<path> reading .secret.secretValue. kms.hanzo.ai
+// served that when it ran Casibase; the Go service that replaced it never has.
+// The break stayed invisible because the Go binary answered every unmatched path
+// with its embedded console SPA — 200, text/html — so a wrong URL looked like a
+// decode failure rather than a missing route. luxfi/kms 1.12.8 removed that
+// catch-all, and those paths now return an honest JSON 404.
 //
 // Env contract:
-//   - GATEWAY_KMS_ENDPOINT      (e.g. https://kms.hanzo.ai)
+//   - GATEWAY_KMS_ENDPOINT      (e.g. https://api.hanzo.ai — paths are /v1/kms/*)
 //   - GATEWAY_KMS_CLIENT_ID     (falls back to IAM_CLIENT_ID)
 //   - GATEWAY_KMS_CLIENT_SECRET (falls back to IAM_CLIENT_SECRET)
+//   - GATEWAY_KMS_ORG           (default "hanzo")
+//   - GATEWAY_KMS_ENV           (default "default")
 type httpKMSResolver struct {
 	endpoint     string
 	clientID     string
 	clientSecret string
+	org          string
+	env          string
 	client       *http.Client
 }
 
@@ -66,10 +79,20 @@ func newHTTPKMSResolverFromEnv() (KMSResolver, bool) {
 	if clientID == "" || clientSecret == "" {
 		return nil, false
 	}
+	org := os.Getenv("GATEWAY_KMS_ORG")
+	if org == "" {
+		org = "hanzo"
+	}
+	env := os.Getenv("GATEWAY_KMS_ENV")
+	if env == "" {
+		env = "default"
+	}
 	return &httpKMSResolver{
 		endpoint:     strings.TrimRight(endpoint, "/"),
 		clientID:     clientID,
 		clientSecret: clientSecret,
+		org:          org,
+		env:          env,
 		client:       &http.Client{Timeout: 10 * time.Second},
 	}, true
 }
@@ -78,11 +101,25 @@ func (r *httpKMSResolver) FetchRoutes(path string) ([]byte, error) {
 	if path == "" {
 		return nil, fmt.Errorf("kms: empty path")
 	}
+	// The server splits {rest...} at its LAST slash into (path, name), so a bare
+	// name has nothing to split and would come back 400. That is a caller
+	// mistake, not a server condition — check it before spending a round trip
+	// on auth.
+	if !strings.Contains(path, "/") {
+		return nil, fmt.Errorf("kms: path %q needs a path and a name (e.g. %q)", path, "gateway/"+path)
+	}
 	token, err := r.authenticate()
 	if err != nil {
 		return nil, fmt.Errorf("kms: auth: %w", err)
 	}
-	endpoint := fmt.Sprintf("%s/api/v3/secrets/raw/%s", r.endpoint, url.PathEscape(path))
+	// Escape each segment independently — url.PathEscape on the joined string
+	// would encode the separators away and the server would see one long name.
+	segs := strings.Split(path, "/")
+	for i, s := range segs {
+		segs[i] = url.PathEscape(s)
+	}
+	endpoint := fmt.Sprintf("%s/v1/kms/orgs/%s/secrets/%s?env=%s",
+		r.endpoint, url.PathEscape(r.org), strings.Join(segs, "/"), url.QueryEscape(r.env))
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("kms: build request: %w", err)
@@ -99,16 +136,16 @@ func (r *httpKMSResolver) FetchRoutes(path string) ([]byte, error) {
 	}
 	var result struct {
 		Secret struct {
-			SecretValue string `json:"secretValue"`
+			Value string `json:"value"`
 		} `json:"secret"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 		return nil, fmt.Errorf("kms: decode response: %w", err)
 	}
-	if result.Secret.SecretValue == "" {
+	if result.Secret.Value == "" {
 		return nil, fmt.Errorf("kms: empty secret value for path %s", path)
 	}
-	return []byte(result.Secret.SecretValue), nil
+	return []byte(result.Secret.Value), nil
 }
 
 func (r *httpKMSResolver) authenticate() (string, error) {
@@ -117,7 +154,7 @@ func (r *httpKMSResolver) authenticate() (string, error) {
 		"clientSecret": r.clientSecret,
 	})
 	req, err := http.NewRequest(http.MethodPost,
-		r.endpoint+"/api/v1/auth/universal-auth/login", bytes.NewReader(payload))
+		r.endpoint+"/v1/kms/auth/login", bytes.NewReader(payload))
 	if err != nil {
 		return "", err
 	}

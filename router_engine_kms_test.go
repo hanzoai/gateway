@@ -190,24 +190,40 @@ func TestNewHTTPKMSResolverFromEnv_NoEndpoint_Disabled(t *testing.T) {
 }
 
 // TestHTTPKMSResolver_FetchRoutes_RoundTrip exercises the auth + fetch flow
-// against a stub HTTP server that mimics the contract documented in
-// hanzoai/base/plugins/platform/kms.go.
+// against a stub that speaks the luxfi/kms contract. The stub registers ONLY
+// the canonical paths, so a regression back to the Infisical shape
+// (/api/v1/auth/universal-auth/login, /api/v3/secrets/raw/...) fails here
+// rather than in production — which is where it hid last time, behind an
+// embedded SPA that answered every unmatched path with 200 text/html.
 func TestHTTPKMSResolver_FetchRoutes_RoundTrip(t *testing.T) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/auth/universal-auth/login", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Fatalf("login: want POST, got %s", r.Method)
+	mux.HandleFunc("POST /v1/kms/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		var body struct{ ClientId, ClientSecret string }
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		if body.ClientId != "id" || body.ClientSecret != "secret" {
+			t.Fatalf("login credentials not forwarded: %+v", body)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]string{"accessToken": "test-token"})
 	})
-	mux.HandleFunc("/api/v3/secrets/raw/", func(w http.ResponseWriter, r *http.Request) {
+	// {rest...} is split at its LAST slash into (path, name): "gateway/routes"
+	// must arrive as path "gateway", name "routes".
+	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 			t.Fatalf("missing/wrong bearer: %q", got)
 		}
+		if got := r.PathValue("org"); got != "hanzo" {
+			t.Fatalf("org = %q, want the hanzo default", got)
+		}
+		if got := r.PathValue("rest"); got != "gateway/routes" {
+			t.Fatalf("rest = %q, want %q (path separators must survive escaping)", got, "gateway/routes")
+		}
+		if got := r.URL.Query().Get("env"); got != "default" {
+			t.Fatalf("env = %q, want the default", got)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"secret": map[string]string{"secretValue": sampleRoutesYAML},
+			"secret": map[string]string{"value": sampleRoutesYAML},
 		})
 	})
 	srv := httptest.NewServer(mux)
@@ -229,6 +245,27 @@ func TestHTTPKMSResolver_FetchRoutes_RoundTrip(t *testing.T) {
 	}
 	if !strings.Contains(string(data), "example.com") {
 		t.Fatalf("unexpected payload: %s", data)
+	}
+}
+
+// A bare name has no path segment, and the server would answer 400. Catch it
+// in the client with a message that says what to write instead.
+func TestHTTPKMSResolver_RejectsPathWithoutName(t *testing.T) {
+	withEnv(t, map[string]string{
+		"GATEWAY_KMS_ENDPOINT":      "https://api.hanzo.ai",
+		"GATEWAY_KMS_CLIENT_ID":     "id",
+		"GATEWAY_KMS_CLIENT_SECRET": "secret",
+	})
+	r, ok := newHTTPKMSResolverFromEnv()
+	if !ok {
+		t.Fatalf("expected resolver enabled")
+	}
+	_, err := r.FetchRoutes("routes")
+	if err == nil {
+		t.Fatal("want an error for a path with no name segment")
+	}
+	if !strings.Contains(err.Error(), "path and a name") {
+		t.Fatalf("error should say what is missing, got: %v", err)
 	}
 }
 
