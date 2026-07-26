@@ -28,7 +28,7 @@ spec:
             # gateway so both trust one IAM. The in-code defaults already
             # match these; set explicitly for operator clarity.
             - name: AUTH_JWKS_URL
-              value: "https://hanzo.id/.well-known/jwks"
+              value: "https://hanzo.id/v1/iam/.well-known/jwks"
             - name: AUTH_ISSUER
               value: "https://hanzo.id"
             - name: AUTH_AUDIENCE

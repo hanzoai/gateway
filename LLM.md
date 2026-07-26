@@ -275,7 +275,7 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
   `/v1/licensing/{path}`, `/v1/product/{path}`, `/v1/provisioning/{path}`,
   `/v1/ml/*`, `/v1/train/*`, `/v1/get-global-providers`, `/v1/add-provider`,
   `/v1/update-provider`. Each carries the canonical `auth/validator` block
-  (RS256, `https://hanzo.id/.well-known/jwks`, `propagate_claims`
+  (RS256, `https://hanzo.id/v1/iam/.well-known/jwks`, `propagate_claims`
   sub→X-User-Id / owner→X-Org-Id / roles→X-Roles) and `input_headers` = the VH
   set. Result: **401 at the edge without a valid JWT**. Audience is NOT checked
   here — krakend-jose ALL-semantics would 401 every single-aud user token; it is

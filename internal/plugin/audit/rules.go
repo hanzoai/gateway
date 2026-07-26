@@ -1,25 +1,23 @@
 package audit
 
 import (
-	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
-	cb "github.com/hanzoai/gateway/v2/internal/plugin/circuitbreaker/gobreaker"
-	cors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
-	gelf "github.com/hanzoai/gateway/v2/internal/plugin/gelf"
-	gologging "github.com/hanzoai/gateway/v2/internal/plugin/gologging"
-	httpcache "github.com/hanzoai/gateway/v2/internal/plugin/httpcache"
-	httpsecure "github.com/hanzoai/gateway/v2/internal/plugin/httpsecure"
-	influx "github.com/hanzoai/gateway/v2/internal/plugin/influx"
-	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
-	logstash "github.com/hanzoai/gateway/v2/internal/plugin/logstash"
-	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics"
-	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
-	ratelimitProxy "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/proxy"
-	ratelimit "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/router"
+	"github.com/hanzoai/gateway/v2/internal/hanzolog"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy/plugin"
 	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
 	client "github.com/hanzoai/gateway/v2/internal/lura/transport/http/client/plugin"
 	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
+	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
+	cb "github.com/hanzoai/gateway/v2/internal/plugin/circuitbreaker/gobreaker"
+	cors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
+	httpcache "github.com/hanzoai/gateway/v2/internal/plugin/httpcache"
+	httpsecure "github.com/hanzoai/gateway/v2/internal/plugin/httpsecure"
+	influx "github.com/hanzoai/gateway/v2/internal/plugin/influx"
+	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
+	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics"
+	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
+	ratelimitProxy "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/proxy"
+	ratelimit "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/router"
 )
 
 func hasBit(x, y int) bool {
@@ -372,11 +370,14 @@ func hasDeprecatedTLSPrivPubKey(s *Service) bool {
 	return hasBit(s.Details[0], ServiceTLSPrivPubKey)
 }
 
+// hasNoLogging reports a service with no WORKING logging configured.
+//
+// It used to accept any of three namespaces. Only telemetry/logging is wired
+// now — logging goes through hanzoai/log — so a config carrying just the old
+// gelf or logstash block genuinely has no logging and is correctly flagged.
 func hasNoLogging(s *Service) bool {
-	_, ok1 := s.Components[gologging.Namespace]
-	_, ok2 := s.Components[gelf.Namespace]
-	_, ok3 := s.Components[logstash.Namespace]
-	return !ok1 && !ok2 && !ok3
+	_, ok := s.Components[hanzolog.Namespace]
+	return !ok
 }
 
 func hasRestfulDisabled(s *Service) bool {

@@ -6,24 +6,22 @@ import (
 	"encoding/gob"
 	"io"
 
-	bf "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/register"
-	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
-	gelf "github.com/hanzoai/gateway/v2/internal/plugin/gelf"
-	gologging "github.com/hanzoai/gateway/v2/internal/plugin/gologging"
-	httpcache "github.com/hanzoai/gateway/v2/internal/plugin/httpcache"
-	httpsecure "github.com/hanzoai/gateway/v2/internal/plugin/httpsecure"
-	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
-	logstash "github.com/hanzoai/gateway/v2/internal/plugin/logstash"
-	luaproxy "github.com/hanzoai/gateway/v2/internal/plugin/lua/proxy"
-	luarouter "github.com/hanzoai/gateway/v2/internal/plugin/lua/router"
-	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
-	ratelimitProxy "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/proxy"
-	ratelimit "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/router"
+	"github.com/hanzoai/gateway/v2/internal/hanzolog"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy/plugin"
 	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
 	client "github.com/hanzoai/gateway/v2/internal/lura/transport/http/client/plugin"
 	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
+	bf "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/register"
+	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
+	httpcache "github.com/hanzoai/gateway/v2/internal/plugin/httpcache"
+	httpsecure "github.com/hanzoai/gateway/v2/internal/plugin/httpsecure"
+	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
+	luaproxy "github.com/hanzoai/gateway/v2/internal/plugin/lua/proxy"
+	luarouter "github.com/hanzoai/gateway/v2/internal/plugin/lua/router"
+	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
+	ratelimitProxy "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/proxy"
+	ratelimit "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/router"
 )
 
 // Marshal returns the encoded and compressed representation of the Service
@@ -58,26 +56,31 @@ func Unmarshal(b []byte, s *Service) error {
 }
 
 var componentAlias = map[string]string{
-	server.Namespace:                   "a",
-	client.Namespace:                   "b",
-	plugin.Namespace:                   "c",
-	proxy.Namespace:                    "d",
-	router.Namespace:                   "e",
-	bf.Namespace:                       "f",
-	botdetector.Namespace:              "g",
-	opencensus.Namespace:               "h",
-	ratelimit.Namespace:                "i",
-	ratelimitProxy.Namespace:           "j",
-	"telemetry/newrelic":               "k",
-	"telemetry/ganalytics":             "l",
-	"telemetry/instana":                "m",
-	jose.ValidatorNamespace:            "n",
-	jose.SignerNamespace:               "o",
-	"auth/api-keys":                    "p",
-	httpsecure.Namespace:               "q",
-	gologging.Namespace:                "r",
-	gelf.Namespace:                     "s",
-	logstash.Namespace:                 "t",
+	server.Namespace:         "a",
+	client.Namespace:         "b",
+	plugin.Namespace:         "c",
+	proxy.Namespace:          "d",
+	router.Namespace:         "e",
+	bf.Namespace:             "f",
+	botdetector.Namespace:    "g",
+	opencensus.Namespace:     "h",
+	ratelimit.Namespace:      "i",
+	ratelimitProxy.Namespace: "j",
+	"telemetry/newrelic":     "k",
+	"telemetry/ganalytics":   "l",
+	"telemetry/instana":      "m",
+	jose.ValidatorNamespace:  "n",
+	jose.SignerNamespace:     "o",
+	"auth/api-keys":          "p",
+	httpsecure.Namespace:     "q",
+	hanzolog.Namespace:       "r",
+	// The gelf and logstash sinks are no longer built into the gateway
+	// (logging goes through hanzoai/log), but their namespaces stay in this
+	// table as literals: it is the audit encoding's stable alphabet, and
+	// dropping two entries would renumber nothing but WOULD stop the linter
+	// recognising these keys in a config that still carries them.
+	"github_com/devopsfaith/krakend-gelf":     "s",
+	"github_com/devopsfaith/krakend-logstash": "t",
 	"backend/grpc":                     "u",
 	"auth/basic":                       "v",
 	"server/virtualhost":               "w",
