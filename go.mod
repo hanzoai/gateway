@@ -2,7 +2,7 @@ module github.com/hanzoai/gateway/v2
 
 go 1.26.4
 
-require github.com/hanzoai/cloud v1.801.218-0.20260726235232-2dcbbd389f9f
+require github.com/hanzoai/cloud v1.801.218
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
