@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	gojose "github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
@@ -57,26 +58,83 @@ type Claims struct {
 	Permissions       json.RawMessage `json:"permissions"`
 }
 
-// EffectiveOrg resolves the org a request acts in — the value the edge mints into
-// X-Org-Id — given the org the client REQUESTED (X-Act-As-Org, empty when none).
-// It is the ONE org-switch predicate: the requested org is honored iff the subject
-// is a member of it (the HOME org `owner` is always an implicit member); anything
-// else falls back to the home org. So a caller can only ever act in — and spend
-// from — an org IAM granted, and can never switch beyond its membership set. The
-// bool reports whether an explicit, non-home request was HONORED (false when it
-// was absent, was already home, or was refused for non-membership).
-func (c *Claims) EffectiveOrg(requested string) (string, bool) {
-	home := strings.TrimSpace(c.Owner)
-	requested = strings.TrimSpace(requested)
-	if requested == "" || strings.EqualFold(requested, home) {
+// EffectiveOrg resolves the org a request ACTS IN — the value the edge mints into
+// X-Org-Id — from the org the client SELECTED (the inbound X-Org-Id, "" when none).
+// It is the ONE org-switch predicate at the edge, and it has TWO branches:
+//
+//   - MASQUERADE (a human platform operator): the selection is honored with no
+//     membership test. That is what platform sudo means — see Masquerade.
+//   - EVERYONE ELSE: the selection is honored iff the token's SIGNED `orgs`
+//     membership set contains it. The home org is always an implicit member.
+//
+// A selection outside the set is DISCARDED, not refused: the request continues in
+// the home org, byte-for-byte indistinguishable from "no selection". So a stale
+// switcher choice left in a browser after a membership is revoked reads the
+// caller's OWN data and bills the caller's OWN ledger — never the requested org's,
+// and never a 403 the UI has no way to explain.
+//
+// The comparison is VERBATIM — no trim, no case fold — mirroring cloud's isMember
+// (hanzoai/cloud auth_identity.go). "acme" and "ACME" are DISTINCT orgs in IAM, so
+// a fold would let a member of one select the other; a trim would collapse "acme "
+// onto "acme". Both sides of the trust boundary must answer identically, or the
+// edge and the in-binary path disagree about which ledger pays.
+//
+// The bool reports whether an explicit, non-home selection was HONORED (false when
+// it was absent, was already home, or was discarded for non-membership).
+func (c *Claims) EffectiveOrg(selected string) (string, bool) {
+	home := c.Owner
+	if selected == "" || selected == home || OrgHasUnsafeRune(selected) {
 		return home, false
 	}
+	if c.Masquerade() {
+		return selected, true // platform sudo: any org, no membership test
+	}
 	for _, m := range c.Orgs {
-		if org := strings.TrimSpace(m.Org); strings.EqualFold(org, requested) {
-			return org, true // the CANONICAL membership slug, never the client's casing
+		if m.Org == selected {
+			return selected, true
 		}
 	}
-	return home, false // requested outside the membership set → fail closed to home
+	return home, false // outside the membership set → fail closed to home
+}
+
+// LedgerOrg resolves the org that PAYS for a request — the org whose balance the
+// edge gate checks — from the same client selection EffectiveOrg reads. It is
+// deliberately a SECOND function with TWO explicit branches, not a clever reuse of
+// the first, because acting and paying are different questions:
+//
+//   - MASQUERADE: the HOME org pays. An operator inspecting a customer's org must
+//     never spend the customer's money, so the ledger stays on the admin org while
+//     EffectiveOrg (the data scope) moves to the customer.
+//   - EVERYONE ELSE: the org they act in pays. That IS the product — a person
+//     belongs to several orgs, picks one, and that org is the payer of record.
+//
+// It takes the raw selection, exactly like EffectiveOrg, so the two can never be
+// mis-threaded by a caller passing one's output into the other.
+// Mirrors cloud's principal.BillingOrg.
+func (c *Claims) LedgerOrg(selected string) string {
+	if c.Masquerade() {
+		return c.Owner
+	}
+	org, _ := c.EffectiveOrg(selected)
+	return org
+}
+
+// OrgHasUnsafeRune reports whether s carries any whitespace, control, or
+// zero-width/format rune — the class that defeats the injectivity of the org→org
+// map. Transport OWS-trimming (and any TrimSpace downstream) silently drops such
+// runes at the edges, so two DISTINCT IAM org names ("acme" vs "acme ", or an
+// NBSP/ZWSP variant) would collapse onto ONE org. A selection bearing one is
+// REFUSED (fail secure) rather than folded. Case and visible punctuation are
+// deliberately NOT unsafe — they survive transport, so they stay distinct.
+// Mirrors cloud's OrgHasUnsafeRune so both sides of the boundary refuse the
+// same set.
+func OrgHasUnsafeRune(s string) bool {
+	for _, r := range s {
+		if unicode.IsSpace(r) || unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			return true
+		}
+	}
+	return false
 }
 
 // AdminOrg is the reserved org slug Hanzo IAM seeds PLATFORM (sudo) admins into.
@@ -101,6 +159,55 @@ func (c *Claims) PlatformSudo() bool {
 		return false
 	}
 	return strings.EqualFold(strings.TrimSpace(c.Owner), AdminOrg)
+}
+
+// machineType is IAM's `type` for a client_credentials identity (IAM stamps
+// Type:"application" on a machine token). It is the discriminator that keeps a
+// machine from ever inheriting platform sudo's cross-org reach.
+const machineType = "application"
+
+// kmsMachineAud is the audience suffix a per-org PaaS-KMS sync identity carries:
+// "<owner>-platform-kms". It is bound to the token's OWN owner claim, so matching
+// it certifies "the KMS machine for its own org" and widens nothing.
+const kmsMachineAud = "-platform-kms"
+
+// Machine reports whether these claims belong to a MACHINE (client_credentials)
+// identity rather than a person. The primary signal is IAM's `type` claim; the
+// owner-bound KMS audience is UNIONed on as a defensive fallback for a token
+// minted before that claim existed. Fail-closed toward "human": an unknown/empty
+// type is NOT a machine, so a real operator carrying no `type` is never locked out.
+// Mirrors cloud's isMachinePrincipal.
+func (c *Claims) Machine() bool {
+	if c == nil {
+		return false
+	}
+	if c.Type == machineType {
+		return true
+	}
+	if c.Owner == "" {
+		return false
+	}
+	mach := c.Owner + kmsMachineAud
+	for _, a := range c.Audience {
+		if a == mach {
+			return true
+		}
+	}
+	return false
+}
+
+// Masquerade reports whether these claims may act in an org OUTSIDE the signed
+// membership set — the platform operator's cross-org view. It is PlatformSudo
+// narrowed to a HUMAN, and it is the predicate BOTH org questions branch on
+// (EffectiveOrg: which org the request acts in; LedgerOrg: which org pays).
+//
+// The human narrowing is load-bearing, not decoration: without it ANY admin-org
+// client_credentials app — the KMS sync identity, say — could name a victim org in
+// X-Org-Id and the edge would mint it, handing every gateway-fronted backend
+// (which trusts the minted header by design) a cross-tenant read. Mirrors cloud's
+// SuperAdmin arm (owner == adminOrg && !isMachinePrincipal).
+func (c *Claims) Masquerade() bool {
+	return c.PlatformSudo() && !c.Machine()
 }
 
 // UserID resolves the canonical user identifier: sub, then
@@ -567,7 +674,7 @@ var MintedIdentityHeaders = []string{
 // (Traefik, exact-name only) strip the FULL identity set with no wildcard gap.
 var StripIdentityHeaderNames = []string{
 	"X-User-Id",
-	"X-Org-Id",
+	OrgHeader,
 	"X-User-Owner",
 	"X-Roles",
 	"X-User-Permissions",
@@ -597,11 +704,33 @@ var StripIdentityHeaderNames = []string{
 // generates from StripIdentityHeaderNames is already complete + exact.
 var StripIdentityHeaderPrefixes = []string{"X-IAM-", "X-HANZO-"}
 
+// OrgHeader is the ONE org header, and it plays two roles across the trust
+// boundary — inbound it is the client's SELECTION (which org the switcher picked),
+// outbound it is the edge's minted AUTHORITY (which org the request acts in).
+// StripIdentityHeaders performs the conversion between the two in one act: it
+// returns the selection and deletes the header, so what a client sent survives
+// only as an INTENT, and only EffectiveOrg can turn an intent back into authority.
+//
+// There is no second org header. An earlier design routed the intent through a
+// separate X-Act-As-Org while cloud read the selection from X-Org-Id; no client
+// ever sent it, so the edge's membership gate ran on "" for every request and
+// always resolved home — a correct gate wired to nothing. One name, one meaning.
+const OrgHeader = "X-Org-Id"
+
 // StripIdentityHeaders removes every client-supplied identity header (exact neutral
-// names) plus, defensively, any stray vendor-prefixed header. The edge is the sole
-// authority for identity; this MUST run before any bypass path so a forged value
-// can never survive.
-func StripIdentityHeaders(r *http.Request) {
+// names) plus, defensively, any stray vendor-prefixed header, and RETURNS the org
+// the client selected (the inbound OrgHeader). The edge is the sole authority for
+// identity; this MUST run before any bypass path so a forged value can never
+// survive.
+//
+// The capture and the strip are ONE operation on purpose. The selection has to be
+// read BEFORE the header is deleted, and a separate "read it first" function would
+// be an ordering trap that fails silently — the switch would just stop working. By
+// threading the selection through the return value the ordering is impossible to
+// get wrong, and a caller that ignores it (the unauthenticated paths) simply keeps
+// today's behavior: nothing minted, nothing trusted.
+func StripIdentityHeaders(r *http.Request) string {
+	selected := r.Header.Get(OrgHeader)
 	for _, h := range StripIdentityHeaderNames {
 		r.Header.Del(h)
 	}
@@ -614,27 +743,21 @@ func StripIdentityHeaders(r *http.Request) {
 			}
 		}
 	}
+	return selected
 }
-
-// ActAsOrgHeader is the request header a client sets to act in a specific org it
-// is a member of (an org-switch). The edge validates it against the token's
-// membership set (Claims.EffectiveOrg), mints X-Org-Id from the result, and drops
-// it — so it is a request INTENT, never a trusted identity header, and can only
-// ever select an org IAM already granted. Absent ⟹ the home org.
-const ActAsOrgHeader = "X-Act-As-Org"
 
 // InjectIdentity sets the core identity headers from validated claims. This
 // is the minimal edge identity (id, org, email, isAdmin) — roles and the
 // permission bit-field stay in the commerce-coupled gateway middleware.
-// Call StripIdentityHeaders first.
-func InjectIdentity(r *http.Request, c *Claims) {
+// Call StripIdentityHeaders first and pass its return value as selected.
+func InjectIdentity(r *http.Request, c *Claims, selected string) {
 	r.Header.Set("X-User-Id", c.UserID())
-	// X-Org-Id = the EFFECTIVE org: the org the client asked to act in
-	// (X-Act-As-Org) when it is in the membership set, else the home org. The
-	// intent header is consumed here so it never reaches a backend.
-	effective, _ := c.EffectiveOrg(r.Header.Get(ActAsOrgHeader))
-	r.Header.Del(ActAsOrgHeader)
-	r.Header.Set("X-Org-Id", effective)
+	// X-Org-Id = the EFFECTIVE org: the org the client SELECTED when the signed
+	// membership set admits it (or the operator may masquerade), else the home org.
+	// The client's copy was already deleted by StripIdentityHeaders, so the value
+	// re-minted here is authority, never passthrough.
+	effective, _ := c.EffectiveOrg(selected)
+	r.Header.Set(OrgHeader, effective)
 	// X-User-Owner = the immutable HOME org (JWT owner), distinct from X-Org-Id (the
 	// EFFECTIVE org). Platform-sudo + billing key on the home org; stripped on
 	// ingress so it is never forgeable.

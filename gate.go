@@ -70,6 +70,13 @@ func newGate(cfg AuthConfig) forward.Gate {
 		// may re-assert them. This is the relay's counterpart to the gin
 		// middleware's StripIdentityHeaders — a forged identity can never
 		// survive on the no-token, API-key, public, or invalid-token paths.
+		//
+		// TenantID IS X-Org-Id (forward.Forward), so the value being cleared is
+		// the org the client SELECTED. Keep it as an INTENT — it is re-asserted
+		// below only through EffectiveOrg, which admits it only if the validated
+		// token's signed membership set does. Exactly the capture the gin
+		// middleware's StripIdentityHeaders performs on the HTTP wire.
+		selectedOrg := f.TenantID
 		f.TenantID = ""
 		f.UserID = ""
 		f.IsAdmin = false
@@ -110,7 +117,13 @@ func newGate(cfg AuthConfig) forward.Gate {
 
 		// Inject the validated identity onto the envelope in place. These
 		// are the only fields the gate mutates; it never touches f.Body.
-		f.TenantID = claims.Owner
+		//
+		// TenantID is the EFFECTIVE org — the client's selection when the token's
+		// membership set admits it, else the home org. The relay does NOT bill (see
+		// RegisterRelay: cloud bills the bridged request), so there is no ledger
+		// question to answer here; cloud re-validates the same Bearer and applies
+		// its own payer policy to the org this puts on the wire.
+		f.TenantID, _ = claims.EffectiveOrg(selectedOrg)
 		f.UserID = claims.UserID()
 		f.IsAdmin = claims.IsAdmin
 

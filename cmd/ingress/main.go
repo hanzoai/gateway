@@ -148,7 +148,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// identity from the claims. The credential header is removed before
 	// proxying so the IAM token never reaches the backend.
 	if authRequired {
-		iamauth.StripIdentityHeaders(req)
+		selectedOrg := iamauth.StripIdentityHeaders(req)
 		claims, err := r.validator.Validate(req)
 		if err != nil {
 			// Prompt Basic so the `go` module client attaches its
@@ -159,7 +159,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte(`{"error":"unauthorized","message":"valid Hanzo IAM token required"}`))
 			return
 		}
-		iamauth.InjectIdentity(req, claims)
+		iamauth.InjectIdentity(req, claims, selectedOrg)
 		req.Header.Del("Authorization")
 		req.Header.Del("X-Authorization")
 	}
