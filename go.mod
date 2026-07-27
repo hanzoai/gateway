@@ -15,7 +15,7 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/zap-proto/http v0.2.0
+	github.com/zap-proto/http v0.2.2
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -126,7 +126,6 @@ require (
 	github.com/hanzoai/ai v1.831.6 // indirect
 	github.com/hanzoai/builder v0.3.13 // indirect
 	github.com/hanzoai/csqlite v0.1.0 // indirect
-	github.com/hanzoai/dashscope-go-sdk v0.0.2 // indirect
 	github.com/hanzoai/dashscopego v0.6.0 // indirect
 	github.com/hanzoai/dbx v1.17.2 // indirect
 	github.com/hanzoai/decimal v0.1.1 // indirect
@@ -138,7 +137,7 @@ require (
 	github.com/hanzoai/ha v0.1.1 // indirect
 	github.com/hanzoai/iam v1.33.8 // indirect
 	github.com/hanzoai/money v0.2.1 // indirect
-	github.com/hanzoai/orm v0.6.14 // indirect
+	github.com/hanzoai/orm v0.6.15 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
 	github.com/hanzoai/s3-go v1.0.0 // indirect
 	github.com/hanzoai/search-go v0.36.0 // indirect
@@ -237,7 +236,6 @@ require (
 	github.com/volcengine/volc-sdk-golang v1.0.241 // indirect
 	github.com/volcengine/volcengine-go-sdk v1.0.141 // indirect
 	github.com/wangbin/jiebago v0.3.2 // indirect
-	github.com/workweixin/weworkapi_golang v0.0.0-20200831071321-c1fdfd3d6e7d // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
@@ -459,7 +457,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.8.3
+	github.com/zap-proto/zip v1.9.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
