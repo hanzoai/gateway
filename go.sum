@@ -829,6 +829,8 @@ github.com/hanzoai/account v0.2.0 h1:WxIut3YMz8JNdHerlRIqP1a+k3P79BIKM1mjfRFDG0Y
 github.com/hanzoai/account v0.2.0/go.mod h1:8OzIGRphAhlabOI74O4GoL3RM0y8mbUV0pQUKgXLjkw=
 github.com/hanzoai/ai v1.831.5-0.20260726065328-5420f6ba9987 h1:XP016M5/7SoeOvSWq0JFUJ3ZnV127vp0B8DiMFJRZko=
 github.com/hanzoai/ai v1.831.5-0.20260726065328-5420f6ba9987/go.mod h1:Q3WkxfW6rUwvfXLb8qBBcerJQ60g6nTvRac+XwVqW1s=
+github.com/hanzoai/ai v1.831.6 h1:tPdmTyfHy5EGECrziv+lrOGpEzRK13rLCmZRjXzyB2M=
+github.com/hanzoai/ai v1.831.6/go.mod h1:6nqnTEZnsJPTg65pAF7aMGi4YOyH1nY7CiXFf2yGCAQ=
 github.com/hanzoai/builder v0.3.13 h1:tAOJ+0Q0xrrovk7lkvaZxuKZ4lqENIB6tE0Rr9+6Bo8=
 github.com/hanzoai/builder v0.3.13/go.mod h1:TWZaiP0Y9tCMwtLH2EvQqBAeT1f3aJI5Y0XPM8S0wcE=
 github.com/hanzoai/cloud v1.801.218-0.20260726235232-2dcbbd389f9f h1:VroT2xnaOo5RT9Qhk6t23U+h2UaygtfFZJwuhzrBlaA=

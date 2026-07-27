@@ -123,7 +123,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hanzo-ds/native v0.72.0 // indirect
 	github.com/hanzoai/account v0.2.0 // indirect
-	github.com/hanzoai/ai v1.831.5-0.20260726065328-5420f6ba9987 // indirect
+	github.com/hanzoai/ai v1.831.6 // indirect
 	github.com/hanzoai/builder v0.3.13 // indirect
 	github.com/hanzoai/csqlite v0.1.0 // indirect
 	github.com/hanzoai/dashscope-go-sdk v0.0.2 // indirect
@@ -237,6 +237,7 @@ require (
 	github.com/volcengine/volc-sdk-golang v1.0.241 // indirect
 	github.com/volcengine/volcengine-go-sdk v1.0.141 // indirect
 	github.com/wangbin/jiebago v0.3.2 // indirect
+	github.com/workweixin/weworkapi_golang v0.0.0-20200831071321-c1fdfd3d6e7d // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
