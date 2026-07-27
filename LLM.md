@@ -261,20 +261,22 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 `configs/hanzo/gateway.json` endpoints fall in three auth classes:
 
 - **PUBLIC** (13): health/discovery/catalog (`/`, `/health`, `/v1/*/health`,
-  `/v1/get-providers`, `/v1/get-provider`, `/v1/pricing-policy`, `/v1/models`,
-  `/v1/analytics/heartbeat`, `/v1/pubsub/healthz`, `/bot/health`). No
-  `auth/validator`. `/v1/get-providers` / `/v1/get-provider` self-protect at the
-  backend (session auth); `/v1/get-global-providers` does NOT and is must-gate.
+  `GET /v1/ai/providers`, `GET /v1/ai/providers/{owner}/{name}`,
+  `/v1/pricing-policy`, `/v1/models`, `/v1/analytics/heartbeat`,
+  `/v1/pubsub/healthz`, `/bot/health`). No `auth/validator`. The two provider
+  reads self-protect at the backend (session auth); `GET
+  /v1/ai/providers/global` does NOT and is must-gate.
 - **AI / API-KEY** (8): `/v1/chat`, `/v1/chat/completions`, `/v1/completions`,
   `/v1/messages`, `/ai/{path}`, `/v1/ai/{path}`. NO IAM-JWT validator — these
   use opaque API keys (hk-/sk-) and are billed per-token by cloud. Adding
   an `auth/validator` here would 401 every API-key call.
-- **MUST-GATE** (25, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}`,
-  `/v1/commerce/{path}`, `/v1/tasks/{path}`, `/v1/insights/{path}`,
-  `/v1/o11y/{path}`, `/v1/mpc/{path}`, `/v1/evals/{path}`,
-  `/v1/licensing/{path}`, `/v1/product/{path}`, `/v1/provisioning/{path}`,
-  `/v1/ml/*`, `/v1/train/*`, `/v1/get-global-providers`, `/v1/add-provider`,
-  `/v1/update-provider`. Each carries the canonical `auth/validator` block
+- **MUST-GATE** (29, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}` (both
+  GET/POST/PATCH/DELETE), `/v1/commerce/{path}`, `/v1/tasks/{path}`,
+  `/v1/insights/{path}`, `/v1/o11y/{path}`, `/v1/mpc/{path}`,
+  `/v1/evals/{path}`, `/v1/licensing/{path}`, `/v1/product/{path}`,
+  `/v1/provisioning/{path}`, `/v1/ml/*`, `/v1/train/*`,
+  `GET /v1/ai/providers/global`, `POST /v1/ai/providers`,
+  `PATCH /v1/ai/providers/{owner}/{name}`. Each carries the canonical `auth/validator` block
   (RS256, `https://hanzo.id/v1/iam/.well-known/jwks`, `propagate_claims`
   sub→X-User-Id / owner→X-Org-Id / roles→X-Roles) and `input_headers` = the VH
   set. Result: **401 at the edge without a valid JWT**. Audience is NOT checked
@@ -311,10 +313,14 @@ Activation (NOT enabled by default — live is `BILLING_ENABLED=false`):
    (`AUTH_BILLING_URL` / `COMMERCE_SERVICE_TOKEN`); no `BILLING_URL`/
    `BILLING_TOKEN` drift.
 2. Set `BILLING_ENABLED=true` and
-   `BILLING_PATHS=/v1/cloud/,/cloud/,/v1/tasks/,/v1/insights/,/v1/o11y/,/v1/mpc/,/v1/evals/,/v1/licensing/,/v1/product/,/v1/provisioning/,/v1/add-provider,/v1/update-provider`
+   `BILLING_PATHS=/v1/cloud/,/cloud/,/v1/tasks/,/v1/insights/,/v1/o11y/,/v1/mpc/,/v1/evals/,/v1/licensing/,/v1/product/,/v1/provisioning/,/v1/ai/providers`
    (`/v1/commerce` is hard-excluded in code — `billingPathMatch`, segment
    boundary — so it is NEVER balance-gated regardless of `BILLING_PATHS`; a 402
    on the funding surface would lock users out of adding funds).
+   `billingPathMatch` keys on PATH ONLY, so `/v1/ai/providers` meters the
+   ungated GET reads too — the provider mutations are now distinguished by
+   METHOD (POST/PATCH), which the prefix list cannot express. Drop the entry if
+   read-metering is unacceptable.
 3. Confirm commerce balance granularity before enabling.
 
 Deploy = update ConfigMap `gateway-config` from this file + `rollout restart
@@ -338,12 +344,14 @@ is forgeable and minted from no claim, so it can never reach a backend
 (cross-project IDOR). Mint it here from a validated claim if/when IAM carries
 one — same pattern as `X-Org-Id`.
 
-**`/v1/get-global-providers` is must-gate.** It dumps the admin provider
+**`GET /v1/ai/providers/global` is must-gate.** It dumps the admin provider
 inventory (names, base URLs, masked secrets) and the backend does NOT
 self-protect it, so it carries the canonical `auth/validator` block. Its read
-siblings `/v1/get-providers` / `/v1/get-provider` self-protect at the backend
-("Please sign in first") via session auth and are intentionally left ungated —
-a Bearer-only edge validator would break their cookie-auth callers.
+siblings `GET /v1/ai/providers` / `GET /v1/ai/providers/{owner}/{name}`
+self-protect at the backend ("Please sign in first") via session auth and are
+intentionally left ungated — a Bearer-only edge validator would break their
+cookie-auth callers. `/v1/ai/providers/global` is 4 segments and the member
+route is 5, so the ungated param route can never shadow it.
 
 ## Upstream Kinds
 
