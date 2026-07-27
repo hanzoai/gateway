@@ -54,7 +54,7 @@ func (s *server) authenticate(r *http.Request) (identity, bool) {
 		}
 		return identity{}, false // a valid non-admin token is a definitive deny
 	}
-	// (2) cloud session cookie → /v1/auth/account.
+	// (2) cloud session cookie → /v1/ai/account.
 	return s.sessionIdentity(r)
 }
 
@@ -70,7 +70,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.cfg.cloudURL+"/v1/auth/account", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.cfg.cloudURL+"/v1/ai/account", nil)
 	if err != nil {
 		return identity{}, false
 	}
