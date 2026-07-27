@@ -138,7 +138,7 @@ require (
 	github.com/hanzoai/ha v0.1.1 // indirect
 	github.com/hanzoai/iam v1.33.8 // indirect
 	github.com/hanzoai/money v0.2.1 // indirect
-	github.com/hanzoai/orm v0.6.8 // indirect
+	github.com/hanzoai/orm v0.6.10 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
 	github.com/hanzoai/s3-go v1.0.0 // indirect
 	github.com/hanzoai/search-go v0.36.0 // indirect
