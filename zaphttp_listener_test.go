@@ -112,7 +112,7 @@ func TestZapHTTPListener_ServesSameHandler(t *testing.T) {
 	// fasthttp.Response from a fasthttp.Request, framed over ZAP-HTTP. This
 	// is the on-the-wire equivalent of the plain-HTTP request the handler
 	// would otherwise receive.
-	tr := zaphttp.NewTransport(addr)
+	tr := zaphttp.Dial("tcp", addr)
 	defer tr.CloseIdleConnections()
 
 	req := fasthttp.AcquireRequest()
