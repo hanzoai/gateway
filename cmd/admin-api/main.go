@@ -16,7 +16,7 @@
 //
 // Identity is resolved exactly like the rest of the platform: a Bearer/Basic
 // JWT validated through iamauth, or the first-party session cookie minted by
-// cloud (forwarded to /v1/get-account). Either way the predicate is the
+// cloud (forwarded to /v1/auth/account). Either way the predicate is the
 // same single fact — owner == AdminOrg — the same one admin-guard enforces at
 // the edge.
 package main
@@ -48,7 +48,7 @@ type config struct {
 	iamInternal string
 	iamClientID string
 	iamSecret   string
-	cloudURL    string // cloud: session check (/v1/get-account)
+	cloudURL    string // cloud: session check (/v1/auth/account)
 	commerceURL string
 	commerceTok string
 	platformURL string
