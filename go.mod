@@ -15,7 +15,7 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/zap-proto/http v0.2.2
+	github.com/zap-proto/http v0.3.0
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -137,7 +137,7 @@ require (
 	github.com/hanzoai/ha v0.1.1 // indirect
 	github.com/hanzoai/iam v1.33.8 // indirect
 	github.com/hanzoai/money v0.2.1 // indirect
-	github.com/hanzoai/orm v0.6.15 // indirect
+	github.com/hanzoai/orm v0.6.16 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
 	github.com/hanzoai/s3-go v1.0.0 // indirect
 	github.com/hanzoai/search-go v0.36.0 // indirect
@@ -457,7 +457,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.9.0
+	github.com/zap-proto/zip v1.10.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
