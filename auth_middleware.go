@@ -591,7 +591,14 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		//   • Ingest class (class 1) mints NOTHING, so this guarantees no client
 		//     identity ever reaches cloud, which resolves the org solely from the DSN.
 		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
-		stripIdentityHeaders(c.Request)
+		//
+		// The strip RETURNS the org the client selected (the inbound X-Org-Id) as it
+		// deletes it — the one identity value that survives, and only as an INTENT.
+		// It is used solely below, after JWT validation, where EffectiveOrg checks it
+		// against the token's signed membership set before any of it is re-minted. On
+		// every class that mints nothing (ingest, public host, public path, tokenless,
+		// API key) it is simply discarded, so those paths are untouched.
+		selectedOrg := stripIdentityHeaders(c.Request)
 
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
@@ -668,15 +675,21 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			return
 		}
 
-		// orgID = the EFFECTIVE org: the org the client asked to act in
-		// (X-Act-As-Org) when it is in the token's membership set, else the home
-		// org (claims.Owner). No header ⟹ home, so a non-switching request is
-		// unchanged; the switch is honored only within the IAM-granted set, so a
-		// member acts in — and the balance gate below charges — a team org it
-		// belongs to, never one beyond its membership. The intent header is consumed
-		// so it never reaches a backend.
-		orgID, _ := claims.EffectiveOrg(c.Request.Header.Get(iamauth.ActAsOrgHeader))
-		c.Request.Header.Del(iamauth.ActAsOrgHeader)
+		// The two orgs a request has. They are the SAME value for everyone except a
+		// masquerading operator, and identical to claims.Owner whenever no selection
+		// was sent — so a non-switching request is byte-for-byte what it was before
+		// the switcher existed.
+		//
+		//   orgID    — the org the request ACTS IN (minted into X-Org-Id below): the
+		//              client's selection when the token's signed `orgs` set admits
+		//              it, else the home org. Honored only within the IAM-granted
+		//              set, so a member acts in a team org it belongs to and never
+		//              one beyond its membership.
+		//   ledgerOrg — the org that PAYS (the balance gate below). Same as orgID,
+		//              except an operator viewing a customer's org spends the ADMIN
+		//              ledger, never the customer's.
+		orgID, _ := claims.EffectiveOrg(selectedOrg)
+		ledgerOrg := claims.LedgerOrg(selectedOrg)
 		userID := claims.Subject
 		// IAM may leave "sub" empty — fall back to preferred_username then name
 		if userID == "" {
@@ -698,12 +711,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// + isAdmin. Auxiliary headers (email, phone, isAdmin) are strictly
 		// derivative of the JWT and may be consumed by services that need them.
 		c.Request.Header.Set("X-User-Id", userID)
-		c.Request.Header.Set("X-Org-Id", orgID)
+		c.Request.Header.Set(iamauth.OrgHeader, orgID)
 		// X-User-Owner = the immutable HOME org (the validated JWT owner), DISTINCT
-		// from X-Org-Id (the EFFECTIVE org: == owner today; the masquerade TARGET later).
-		// Platform-sudo gate + billing debit key on the home org (owner=="admin"); data
-		// scope keys on X-Org-Id. Minted from the JWT only; the client copy was stripped
-		// at ingress, so it is never forgeable.
+		// from X-Org-Id (the EFFECTIVE org the request acts in, which a member's
+		// switch or an operator's masquerade moves). Platform-sudo gates and the
+		// billing debit key on the home org (owner=="admin"); data scope keys on
+		// X-Org-Id. Minted from the JWT only; the client copy was stripped at
+		// ingress, so it is never forgeable.
 		c.Request.Header.Set("X-User-Owner", claims.Owner)
 		// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
 		// exactly like X-Org-Id from `owner`. Absent/default project mints nothing
@@ -776,11 +790,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// BillingPaths and skip this gate. Empty BillingPaths enforces on every
 		// non-funding, non-public route.
 		//
-		// Key: the IAM "org/sub" composite — org from owner/X-Org-Id, sub from
-		// the user. Commerce's /v1/billing/balance is user-scoped under an org
-		// (the verified contract); per-org billing would require a commerce-
-		// side balance-model change first, so the org is carried in the key
-		// rather than used alone.
+		// Key: the IAM "org/sub" composite — org from claims.LedgerOrg (the org
+		// that PAYS, not necessarily the one the request acts in), sub from the
+		// user. Commerce's /v1/billing/balance is user-scoped under an org (the
+		// verified contract); per-org billing would require a commerce-side
+		// balance-model change first, so the org is carried in the key rather
+		// than used alone.
 		if cfg.BillingEnabled && userID != "" && billingPathMatch(path, cfg.BillingPaths) {
 			// Fail closed when billing is enabled but misconfigured (no URL or
 			// token) — never serve metered product we cannot bill for.
@@ -794,8 +809,8 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 
 			// Construct the Commerce user identifier: org/username
 			billingUser := userID
-			if orgID != "" && !strings.Contains(userID, "/") {
-				billingUser = orgID + "/" + userID
+			if ledgerOrg != "" && !strings.Contains(userID, "/") {
+				billingUser = ledgerOrg + "/" + userID
 			}
 
 			hasBalance, balErr := billing.checkBalance(billingUser)

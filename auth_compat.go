@@ -23,7 +23,7 @@ func validateToken(raw string, cache *jwksCache, issuer string, audiences []stri
 	return iamauth.ValidateToken(raw, cache, issuer, audiences)
 }
 
-func stripIdentityHeaders(r *http.Request)          { iamauth.StripIdentityHeaders(r) }
+func stripIdentityHeaders(r *http.Request) string   { return iamauth.StripIdentityHeaders(r) }
 func isAPIKey(token string) bool                    { return iamauth.IsAPIKey(token) }
 func extractBearerToken(r *http.Request) string     { return iamauth.BearerToken(r) }
 func extractTokenFromCookie(r *http.Request) string { return iamauth.CookieToken(r) }

@@ -21,7 +21,7 @@ func TestInjectIdentity_BillingAccount(t *testing.T) {
 	} {
 		t.Run(account, func(t *testing.T) {
 			r := req(nil)
-			InjectIdentity(r, &Claims{Owner: "acme", BillingAccount: account})
+			InjectIdentity(r, &Claims{Owner: "acme", BillingAccount: account}, "")
 			if got := r.Header.Get("X-Billing-Account-Id"); got != account {
 				t.Fatalf("X-Billing-Account-Id = %q, want the minted claim %q", got, account)
 			}
@@ -34,7 +34,7 @@ func TestInjectIdentity_BillingAccount(t *testing.T) {
 // one — Payer's legacy rule then answers, billing the account it always did.
 func TestInjectIdentity_NoBillingAccountClaimMintsNoHeader(t *testing.T) {
 	r := req(nil)
-	InjectIdentity(r, &Claims{Owner: "acme"})
+	InjectIdentity(r, &Claims{Owner: "acme"}, "")
 	if got := r.Header.Get("X-Billing-Account-Id"); got != "" {
 		t.Fatalf("X-Billing-Account-Id = %q, want omitted when the token names no payer", got)
 	}
@@ -59,7 +59,7 @@ func TestStripIdentityHeaders_BillingAccountForgery(t *testing.T) {
 func TestBillingAccount_ForgedHeaderIsOverwrittenByTheClaim(t *testing.T) {
 	r := req(map[string]string{"X-Billing-Account-Id": "org:hanzo"}) // forged: the pool
 	StripIdentityHeaders(r)
-	InjectIdentity(r, &Claims{Owner: "hanzo", BillingAccount: "person:hanzo/mallory"})
+	InjectIdentity(r, &Claims{Owner: "hanzo", BillingAccount: "person:hanzo/mallory"}, "")
 	if got := r.Header.Get("X-Billing-Account-Id"); got != "person:hanzo/mallory" {
 		t.Fatalf("X-Billing-Account-Id = %q, want the validated claim — the forgery must not decide who pays", got)
 	}
