@@ -128,14 +128,14 @@ func TestVerifyContentNegotiation(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 
-			cfg.handleVerify(w, r)
+			cfg.handleVerify(w, r, adminPolicy)
 
 			if w.Code != tc.wantStatus {
 				t.Fatalf("status=%d want %d; body=%s loc=%s", w.Code, tc.wantStatus, w.Body.String(), w.Header().Get("Location"))
 			}
 			if tc.wantStatus == http.StatusNoContent {
-				if w.Header().Get("X-Admin-Guard") != "allow" {
-					t.Errorf("admin allow: missing X-Admin-Guard=allow header")
+				if w.Header().Get("X-Admin-Guard") != "allow-admin" {
+					t.Errorf("admin allow: X-Admin-Guard=%q want allow-admin", w.Header().Get("X-Admin-Guard"))
 				}
 				if w.Header().Get("X-Org-Id") != "admin" {
 					t.Errorf("admin allow: X-Org-Id=%q want admin", w.Header().Get("X-Org-Id"))
@@ -166,7 +166,7 @@ func TestVerifyRejectsTamperedCookie(t *testing.T) {
 	r.AddCookie(tampered)
 	w := httptest.NewRecorder()
 
-	cfg.handleVerify(w, r)
+	cfg.handleVerify(w, r, adminPolicy)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("tampered admin cookie: status=%d want 401 (must not authenticate)", w.Code)
 	}
@@ -183,7 +183,7 @@ func TestVerifyRejectsExpiredCookie(t *testing.T) {
 	r.AddCookie(expired)
 	w := httptest.NewRecorder()
 
-	cfg.handleVerify(w, r)
+	cfg.handleVerify(w, r, adminPolicy)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatalf("expired admin cookie: status=%d want 401 (must not authenticate past expiry)", w.Code)
 	}

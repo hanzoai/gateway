@@ -76,7 +76,7 @@ func TestBrandCookieDomainAndConsole(t *testing.T) {
 			r.Header.Set("X-Forwarded-Uri", "/")
 			r.Header.Set("Accept", "text/html")
 			w := httptest.NewRecorder()
-			cfg.handleVerify(w, r)
+			cfg.handleVerify(w, r, adminPolicy)
 
 			if w.Code != http.StatusFound {
 				t.Fatalf("anon browser: status=%d want 302", w.Code)
@@ -110,7 +110,7 @@ func TestBrandCookieDomainAndConsole(t *testing.T) {
 			r.Header.Set("Accept", "text/html")
 			r.AddCookie(cfg.guardCookie("acme", false)) // authed, non-admin
 			w := httptest.NewRecorder()
-			cfg.handleVerify(w, r)
+			cfg.handleVerify(w, r, adminPolicy)
 
 			if w.Code != http.StatusFound {
 				t.Fatalf("non-admin: status=%d want 302", w.Code)
@@ -126,7 +126,7 @@ func TestBrandCookieDomainAndConsole(t *testing.T) {
 			r.Header.Set("Accept", "text/html")
 			r.AddCookie(cfg.guardCookie("admin", true)) // global admin
 			w := httptest.NewRecorder()
-			cfg.handleVerify(w, r)
+			cfg.handleVerify(w, r, adminPolicy)
 			if w.Code != http.StatusNoContent {
 				t.Fatalf("admin on %s: status=%d want 204 (global admin allowed on every brand)", b.host, w.Code)
 			}
