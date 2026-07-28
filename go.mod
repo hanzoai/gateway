@@ -1,6 +1,6 @@
 module github.com/hanzoai/gateway/v2
 
-go 1.26.4
+go 1.26.5
 
 require github.com/hanzoai/cloud v1.801.218
 
@@ -15,7 +15,7 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/zap-proto/http v0.3.0
+	github.com/zap-proto/http v0.3.1
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -457,7 +457,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.10.0
+	github.com/zap-proto/zip v1.17.2
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
