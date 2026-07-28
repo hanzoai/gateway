@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # admin-guard — the single forward-auth gate for Hanzo's raw global-admin
 # surfaces. Tiny static Go binary; reuses github.com/hanzoai/gateway/v2/iamauth.
-ARG GOLANG_VERSION=1.26.4
+ARG GOLANG_VERSION=1.26.5
 ARG ALPINE_VERSION=3.23
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
