@@ -38,7 +38,7 @@ func (noopKMSResolver) FetchRoutes(string) ([]byte, error) {
 //
 //	POST /v1/kms/auth/login                              {clientId, clientSecret}
 //	                                                     -> {accessToken}
-//	GET  /v1/kms/orgs/{org}/secrets/{path}/{name}?env=   -> {"secret":{"value"}}
+//	GET  /v1/kms/secrets/{path}/{name}?env=              -> {"secret":{"value"}} (org = the token's)
 //
 // It used to call Infisical's shape — POST /api/v1/auth/universal-auth/login,
 // then GET /api/v3/secrets/raw/<path> reading .secret.secretValue. kms.hanzo.ai
@@ -118,8 +118,13 @@ func (r *httpKMSResolver) FetchRoutes(path string) ([]byte, error) {
 	for i, s := range segs {
 		segs[i] = url.PathEscape(s)
 	}
-	endpoint := fmt.Sprintf("%s/v1/kms/orgs/%s/secrets/%s?env=%s",
-		r.endpoint, url.PathEscape(r.org), strings.Join(segs, "/"), url.QueryEscape(r.env))
+	// The org is the TOKEN's, never a path segment: the bearer minted at
+	// /v1/kms/auth/login carries owner=<org>, and cloud scopes the read to it.
+	// The old /v1/kms/orgs/{org}/... shape was removed server-side (a URL that
+	// names a tenant is caller-selectable); r.org still selects WHICH credential
+	// logs in, which is the one honest place an org belongs.
+	endpoint := fmt.Sprintf("%s/v1/kms/secrets/%s?env=%s",
+		r.endpoint, strings.Join(segs, "/"), url.QueryEscape(r.env))
 	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("kms: build request: %w", err)
