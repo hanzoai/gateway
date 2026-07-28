@@ -207,13 +207,12 @@ func TestHTTPKMSResolver_FetchRoutes_RoundTrip(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"accessToken": "test-token"})
 	})
 	// {rest...} is split at its LAST slash into (path, name): "gateway/routes"
-	// must arrive as path "gateway", name "routes".
-	mux.HandleFunc("GET /v1/kms/orgs/{org}/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
+	// must arrive as path "gateway", name "routes". The URL names NO org —
+	// the server scopes the read to the bearer's org; here the bearer itself
+	// (minted by the login above) is the whole proof of identity.
+	mux.HandleFunc("GET /v1/kms/secrets/{rest...}", func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer test-token" {
 			t.Fatalf("missing/wrong bearer: %q", got)
-		}
-		if got := r.PathValue("org"); got != "hanzo" {
-			t.Fatalf("org = %q, want the hanzo default", got)
 		}
 		if got := r.PathValue("rest"); got != "gateway/routes" {
 			t.Fatalf("rest = %q, want %q (path separators must survive escaping)", got, "gateway/routes")
