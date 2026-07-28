@@ -513,3 +513,5 @@ replace github.com/mailgun/minheap => github.com/containous/minheap v0.0.0-20190
 replace github.com/vulcand/oxy/v2 => github.com/hanzoai/oxy/v2 v2.0.0-20260126093803-fb11d60e0fdf
 
 replace github.com/mattn/go-sqlite3 v2.0.3+incompatible => github.com/mattn/go-sqlite3 v1.14.47
+
+exclude github.com/hanzoai/o11y v1.5.31-0.20260726155004-2b66f3201d03
