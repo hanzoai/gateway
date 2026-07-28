@@ -110,13 +110,19 @@ type config struct {
 // place it is declared. It is surfaced in the startup log and on the health
 // endpoint so operators can confirm which guard build made an authorization
 // decision. Bump the PATCH on every behavior change (never a lazy major).
-const guardVersion = "v0.1.7"
+const guardVersion = "v0.1.8"
 
 const (
-	verifyPath   = "/__guard/verify"
-	callbackPath = "/__guard/callback"
-	logoutPath   = "/__guard/logout"
-	healthPath   = "/__guard/healthz"
+	verifyPath = "/__guard/verify"
+	// verifyAuthnPath gates a surface on being AUTHENTICATED rather than on
+	// being an admin, and mints X-Org-Id so the surface can scope its data to
+	// the caller's org. Wire a surface here ONLY once it actually scopes by
+	// X-Org-Id — this endpoint grants reach to every authenticated user, and a
+	// surface that ignores the header would show all orgs to all of them.
+	verifyAuthnPath = "/__guard/verify-authn"
+	callbackPath    = "/__guard/callback"
+	logoutPath      = "/__guard/logout"
+	healthPath      = "/__guard/healthz"
 
 	stateCookie = "hanzo_admin_guard_state"
 
@@ -154,7 +160,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = io.WriteString(w, "ok "+guardVersion)
 	})
-	mux.HandleFunc(verifyPath, cfg.handleVerify)
+	mux.HandleFunc(verifyPath, cfg.verifyHandler(adminPolicy))
+	mux.HandleFunc(verifyAuthnPath, cfg.verifyHandler(authnPolicy))
 	mux.HandleFunc(callbackPath, cfg.handleCallback)
 	mux.HandleFunc(logoutPath, cfg.handleLogout)
 
@@ -207,22 +214,31 @@ func loadConfig() *config {
 // Forward-auth verdict
 // ----------------------------------------------------------------------------
 
-// handleVerify is the ForwardAuth target. It computes the original request URL
-// from the X-Forwarded-* headers the ingress sets, then resolves the caller's
-// org and renders one of three verdicts.
-func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
+// verifyHandler builds a ForwardAuth target for one policy. Identity resolution
+// is IDENTICAL for every policy — same three sources, same order, same
+// fail-closed rules — so it lives here once and the policy is the only thing
+// that varies. Which handler an ingress middleware points at IS the policy
+// choice; nothing in the request can influence it.
+func (c *config) verifyHandler(pol policy) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) { c.handleVerify(w, r, pol) }
+}
+
+// handleVerify computes the original request URL from the X-Forwarded-* headers
+// the ingress sets, resolves the caller's principal, and renders the verdict
+// that pol calls for.
+func (c *config) handleVerify(w http.ResponseWriter, r *http.Request, pol policy) {
 	orig := originalURL(r)
 
 	// (1) Guard session cookie — the browser fast path.
 	if p, ok := c.sessionPrincipal(r); ok {
-		c.decide(w, r, p, orig)
+		c.decide(w, r, p, orig, pol)
 		return
 	}
 
 	// (2) Bearer/Basic JWT — the API path. The JWT carries the full principal
 	// (owner, isAdmin, org-membership set) directly.
 	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
-		c.decide(w, r, principalFromClaims(claims), orig)
+		c.decide(w, r, principalFromClaims(claims), orig, pol)
 		return
 	} else if err != nil && err != iamauth.ErrNoToken {
 		// A token was presented but did not validate. For an API caller, fail
@@ -236,7 +252,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 
 	// (3) IAM session cookie — resolve via IAM get-account server-side.
 	if p, ok := c.iamSessionPrincipal(r); ok {
-		c.decide(w, r, p, orig)
+		c.decide(w, r, p, orig, pol)
 		return
 	}
 
@@ -250,24 +266,28 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 }
 
 // decide renders the allow/redirect verdict for a resolved principal against the
-// surface it is trying to reach. The host is the ingress-set request host — the
-// sole, trusted determinant of the tenant org (see authorize).
-func (c *config) decide(w http.ResponseWriter, r *http.Request, p principal, orig string) {
+// surface it is trying to reach, under pol. The host is the ingress-set request
+// host — the sole, trusted determinant of the tenant org (see authorize).
+func (c *config) decide(w http.ResponseWriter, r *http.Request, p principal, orig string, pol policy) {
 	host := requestHost(r)
-	if c.authorize(p, host) {
-		// Allowed — global sudo or tenant admin of THIS surface's org. Pass the
-		// resolved home org downstream for app-side auditing + defense in depth:
-		// a global grant carries X-Org-Id==adminOrg, a tenant grant the brand org,
-		// so a downstream global surface can still require X-Org-Id==adminOrg.
+	if pol.allow(c, p, host) {
+		// Allowed. Pass the resolved home org downstream — for an admin grant it
+		// is auditing + defense in depth (a global grant carries
+		// X-Org-Id==adminOrg, a tenant grant the brand org, so a downstream global
+		// surface can still require X-Org-Id==adminOrg). For an AUTHN surface it
+		// is load-bearing: X-Org-Id is the ONLY thing scoping what that surface
+		// renders, so it must come from the verified `owner` claim and never from
+		// the request. Traefik overwrites any client-sent X-Org-Id with this one
+		// via the middleware's authResponseHeaders.
 		w.Header().Set("X-Org-Id", p.owner)
-		w.Header().Set("X-Admin-Guard", "allow")
+		w.Header().Set("X-Admin-Guard", "allow-"+pol.name)
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	// Authenticated, but NOT authorized for THIS surface → THIS brand's client
 	// surface (zoo→zoo console, lux→lux console), never a foreign brand's console.
 	if isAPIClient(r) {
-		http.Error(w, "admin access required", http.StatusForbidden)
+		http.Error(w, pol.denial, http.StatusForbidden)
 		return
 	}
 	http.Redirect(w, r, c.consoleFor(host), http.StatusFound)

@@ -117,6 +117,66 @@ func (c *config) authorize(p principal, host string) bool {
 	return p.adminOf(org)
 }
 
+// ----------------------------------------------------------------------------
+// Policy — WHICH question the gate asks
+// ----------------------------------------------------------------------------
+
+// policy is the surface-class predicate: given a resolved principal and the
+// trusted request host, may it through? It exists because the guard fronts two
+// genuinely different KINDS of surface and conflating them is what forced every
+// non-admin surface to be admin-only:
+//
+//   - ADMIN surfaces (platform, studio, commerce-admin, kms/admin) ask
+//     "is this an admin of THIS surface's org, or platform sudo?"
+//   - AUTHENTICATED surfaces (ci.hanzo.ai, and in time functions/training) ask
+//     only "is this anyone at all?", then scope the DATA by the X-Org-Id the
+//     guard mints.
+//
+// Separating them keeps identity resolution (the three-source cascade in
+// handleVerify) orthogonal to authorization: one resolver, two policies. The
+// policy is chosen by the INGRESS — which verify endpoint a middleware points
+// at — and never by anything in the request, so a caller cannot downgrade the
+// gate on an admin surface by asking nicely.
+type policy struct {
+	// name is the policy's identity, echoed in X-Admin-Guard so a verdict can be
+	// traced to the policy that produced it without reading the ingress config.
+	name string
+	// denial is what an authenticated-but-refused API caller is told.
+	denial string
+	// allow is the predicate. Pure over (principal, trusted host).
+	allow func(c *config, p principal, host string) bool
+}
+
+// adminPolicy is the original, unchanged gate: platform sudo anywhere, or an
+// owner/admin of the org an `admin.<brand>` surface belongs to. Every surface
+// wired before 2026-07-27 uses this and its behavior is byte-for-byte what it
+// was — the refactor added a second policy, it did not loosen this one.
+var adminPolicy = policy{
+	name:   "admin",
+	denial: "admin access required",
+	allow:  func(c *config, p principal, host string) bool { return c.authorize(p, host) },
+}
+
+// authnPolicy admits ANY principal the guard could resolve, and nothing else.
+// It is deliberately not "allow all": an empty owner means identity resolution
+// produced no org, and a surface that scopes its data by X-Org-Id would then
+// render every org's rows to a caller with no org. So an empty owner is refused
+// here rather than passed through as a blank scope — fail closed on the exact
+// field the downstream trusts.
+//
+// host is ignored ON PURPOSE. This policy grants reach, not visibility: what a
+// caller SEES is decided downstream by the X-Org-Id the guard mints from the
+// verified `owner` claim. Attaching it to a surface that does not scope by
+// X-Org-Id would publish that surface to every authenticated user — so a
+// surface must scope before it is wired here.
+var authnPolicy = policy{
+	name:   "authn",
+	denial: "authentication required",
+	allow: func(_ *config, p principal, _ string) bool {
+		return strings.TrimSpace(p.owner) != ""
+	},
+}
+
 // adminSubdomain is the leftmost label that marks a host as a TENANT admin
 // surface. Only `admin.<brand>.<domain>` is a tenant surface; every other
 // subdomain of a brand (platform.hanzo.ai, studio.hanzo.ai, the bare brand

@@ -136,7 +136,7 @@ func verdictBearer(cfg *config, host, bearer string) int {
 	r.Header.Set("Accept", "application/json")
 	r.Header.Set("Authorization", "Bearer "+bearer)
 	w := httptest.NewRecorder()
-	cfg.handleVerify(w, r)
+	cfg.handleVerify(w, r, adminPolicy)
 	return w.Code
 }
 
@@ -150,7 +150,7 @@ func verdictCookie(cfg *config, host string, cookie *http.Cookie) int {
 	r.Header.Set("Accept", "application/json")
 	r.AddCookie(cookie)
 	w := httptest.NewRecorder()
-	cfg.handleVerify(w, r)
+	cfg.handleVerify(w, r, adminPolicy)
 	return w.Code
 }
 
