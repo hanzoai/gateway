@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Private cross-repo modules are fetched via authenticated git (gh_token secret),
 # bypassing the public proxy + checksum DB — matches the gateway Dockerfile.
-ENV GOPRIVATE=github.com/hanzoai/*,github.com/luxfi/*,github.com/zap-proto/*
+ENV GOPRIVATE=github.com/hanzoai/*,github.com/lux-private/*,github.com/zap-proto/*
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
