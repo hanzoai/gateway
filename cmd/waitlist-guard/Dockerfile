@@ -4,7 +4,7 @@
 # object.User.IsApproved); waitlisted callers are bounced to the viral waitlist
 # (browser) or 403'd (API). Tiny static Go binary; reuses
 # github.com/hanzoai/gateway/v2/iamauth.
-ARG GOLANG_VERSION=1.26.4
+ARG GOLANG_VERSION=1.26.5
 ARG ALPINE_VERSION=3.23
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder

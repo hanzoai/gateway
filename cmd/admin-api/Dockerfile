@@ -3,7 +3,7 @@
 # Aggregates every product into the ZAP-native datastore and serves the
 # superadmin-gated /v1/admin/* read API. Reuses github.com/hanzoai/gateway/v2
 # iamauth + github.com/hanzoai/datastore-go/v2.
-ARG GOLANG_VERSION=1.26.4
+ARG GOLANG_VERSION=1.26.5
 ARG ALPINE_VERSION=3.23
 
 FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} AS builder
