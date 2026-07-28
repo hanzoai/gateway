@@ -40,7 +40,7 @@ ENV GOEXPERIMENT=${GO_EXPERIMENT}
 # the committed go.mod/go.sum authoritative and fails the build rather than
 # silently rewriting them.
 ENV GOPRIVATE=github.com/zap-proto/* \
-    GONOSUMDB=github.com/zap-proto/*,github.com/hanzoai/*,github.com/luxfi/* \
+    GONOSUMDB=github.com/zap-proto/*,github.com/hanzoai/*,github.com/lux-private/* \
     GOPROXY=https://proxy.golang.org,direct
 
 RUN --mount=type=cache,target=/go/pkg/mod \
