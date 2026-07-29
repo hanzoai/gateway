@@ -1,11 +1,12 @@
 {
+	"@comment": "The `rss` decoder composed with `group` + `allow`: two RSS backends fan out in parallel, each namespaced under its group, each stripped to the one allowed field. Both are now the harness's OWN mock (integration.go rssEndpoint). They used to be http://showrss.info/ over plaintext HTTP, which made this suite's verdict depend on a third party nobody here operates.",
 	"in": {
 		"method": "GET",
 		"url": "http://localhost:8080/show/1482"
 	},
 	"out": {
 		"status_code": 200,
-		"body": "{\"available\":{\"title\":\"showRSS personal feed\"},\"schedule\":{\"title\":\"showRSS schedule feed\"}}",
+		"body": "{\"available\":{\"title\":\"personal feed\"},\"schedule\":{\"title\":\"schedule feed\"}}",
 		"header": {
 			"content-type": ["application/json; charset=utf-8"],
 			"Cache-Control": ["public, max-age=3600"],

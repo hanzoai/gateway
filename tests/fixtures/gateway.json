@@ -450,9 +450,9 @@
             "backend": [
                 {
                     "host": [
-                        "http://showrss.info/"
+                        "http://127.0.0.1:8081"
                     ],
-                    "url_pattern": "/user/schedule/{id}.rss",
+                    "url_pattern": "/rss/schedule/{id}",
                     "encoding": "rss",
                     "group": "schedule",
                     "allow": ["title"],
@@ -467,9 +467,9 @@
                 },
                 {
                     "host": [
-                        "http://showrss.info/"
+                        "http://127.0.0.1:8081"
                     ],
-                    "url_pattern": "/user/{id}.rss",
+                    "url_pattern": "/rss/user/{id}",
                     "encoding": "rss",
                     "group": "available",
                     "allow": ["title"],
