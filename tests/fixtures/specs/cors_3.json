@@ -1,22 +1,20 @@
 {
+	"@comment": "Suffix look-alike. isAllowedOrigin (widget_security.go) matches a brand domain only on a DOT boundary, so an attacker host that merely CONTAINS a brand domain — hanzo.ai.attacker.example — is not a subdomain of it and gets no grant. Drop the boundary and the rule reads as 'ends with hanzo.ai', which any attacker-registered name satisfies.",
 	"in": {
 		"method": "OPTIONS",
 		"url": "http://localhost:8080/param_forwarding/some/foo/bar?a=1&b=2",
 		"header": {
 			"User-Agent": "some",
-			"Origin": "http://foo.example",
+			"Origin": "https://hanzo.ai.attacker.example",
 			"Access-Control-Request-Method": "POST",
 			"Access-Control-Request-Headers": "X-PINGOTHER"
 		}
 	},
 	"out": {
-		"status_code": 204,
-		"body": "",
+		"status_code": 405,
 		"header": {
-			"content-type": [""],
-			"Cache-Control": [""],
-			"X-Gateway-Completed": [""],
 			"Access-Control-Allow-Origin": [""],
+			"Access-Control-Allow-Credentials": [""],
 			"Access-Control-Allow-Methods": [""],
 			"Access-Control-Allow-Headers": [""]
 		}

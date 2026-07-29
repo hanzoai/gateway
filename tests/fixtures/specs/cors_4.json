@@ -1,24 +1,22 @@
 {
+	"@comment": "Simple (non-preflight) cross-origin GET from an ALLOWLISTED origin: the grant is stamped on the real response too — echoed, credentialed, Vary:Origin. Pairs with cors_5, the same request from a foreign origin.",
 	"in": {
-		"method": "OPTIONS",
-		"url": "http://localhost:8080/param_forwarding/some/foo/bar?a=1&b=2",
+		"method": "GET",
+		"url": "http://localhost:8080/param_forwarding/some/foo/bar",
 		"header": {
 			"User-Agent": "some",
-			"Origin": "http://foo.example.tld",
-			"Access-Control-Request-Method": "GET",
-			"Access-Control-Request-Headers": "content-type,origin"
+			"Origin": "http://localhost:3000"
 		}
 	},
 	"out": {
-		"status_code": 204,
-		"body": "",
+		"status_code": 200,
 		"header": {
-			"content-type": [""],
-			"Cache-Control": [""],
-			"X-Gateway-Completed": [""],
-			"Access-Control-Allow-Origin": ["*"],
-			"Access-Control-Allow-Methods": ["GET"],
-			"Access-Control-Allow-Headers": ["content-type,origin"]
+			"content-type": ["application/json; charset=utf-8"],
+			"Cache-Control": ["public, max-age=3600"],
+			"X-Gateway-Completed": ["true"],
+			"Access-Control-Allow-Origin": ["http://localhost:3000"],
+			"Access-Control-Allow-Credentials": ["true"],
+			"Vary": ["Origin"]
 		}
 	}
 }
