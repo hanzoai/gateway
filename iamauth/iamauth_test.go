@@ -125,13 +125,23 @@ func TestInjectIdentity(t *testing.T) {
 	if r.Header.Get("X-User-Email") != "z@hanzo.ai" {
 		t.Fatalf("X-User-Email: got %q", r.Header.Get("X-User-Email"))
 	}
-	if r.Header.Get("X-User-IsAdmin") != "true" {
-		t.Fatalf("X-User-IsAdmin: got %q", r.Header.Get("X-User-IsAdmin"))
+	// An ORG-level admin (owner="hanzo") is NOT a platform admin, and the header
+	// that carries platform authority is X-User-IsAdmin — that is what cloud,
+	// commerce and every gate in the fleet read it as.
+	//
+	// This assertion used to be inverted: it required X-User-IsAdmin for this
+	// org-level admin and only checked that the long-retired
+	// X-User-IsGlobalAdmin stayed empty. Two repos held opposite beliefs about
+	// which header means what, each internally consistent, and this test wrote
+	// the wrong one down — so every org owner was minted as a platform admin.
+	if r.Header.Get("X-User-IsAdmin") != "" {
+		t.Fatalf("X-User-IsAdmin minted for an ORG-level admin: got %q", r.Header.Get("X-User-IsAdmin"))
 	}
-	// An ORG-level admin (owner="hanzo") is NOT a platform admin: the superadmin
-	// header (the money authority commerce reads) must NOT be minted.
+	if r.Header.Get("X-User-IsOrgAdmin") != "true" {
+		t.Fatalf("X-User-IsOrgAdmin: got %q", r.Header.Get("X-User-IsOrgAdmin"))
+	}
 	if r.Header.Get("X-User-IsGlobalAdmin") != "" {
-		t.Fatalf("X-User-IsGlobalAdmin minted for org-level admin: got %q", r.Header.Get("X-User-IsGlobalAdmin"))
+		t.Fatalf("X-User-IsGlobalAdmin minted: got %q", r.Header.Get("X-User-IsGlobalAdmin"))
 	}
 	// No project claim ⟹ default project ⟹ X-Project-Id omitted (present iff
 	// a non-default project is in scope), preserving single-project behavior.
