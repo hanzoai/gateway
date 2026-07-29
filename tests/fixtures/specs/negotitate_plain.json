@@ -1,4 +1,5 @@
 {
+	"@comment": "output_encoding=negotiate with Accept: text/plain resolves to the YAML renderer. Both values below moved with gin and are the CURRENT correct ones, not a regression: gin >=1.10 emits the RFC 9512 media type application/yaml (application/x-yaml was the pre-RFC name), and gin 1.12 marshals with goccy/go-yaml, whose indent is 2 where gopkg.in/yaml.v3's was 4.",
 	"in": {
 		"method": "GET",
 		"url": "http://localhost:8080/negotiate",
@@ -8,9 +9,9 @@
 	},
 	"out": {
 		"status_code": 200,
-		"body": "user:\n    -type: admin\n    name: Elliot\n    social:\n        facebook: https://facebook.com\n        twitter: https://twitter.com\n        youtube: https://youtube.com\n",
+		"body": "user:\n  -type: admin\n  name: Elliot\n  social:\n    facebook: https://facebook.com\n    twitter: https://twitter.com\n    youtube: https://youtube.com\n",
 		"header": {
-			"content-type": ["application/x-yaml; charset=utf-8"],
+			"content-type": ["application/yaml; charset=utf-8"],
 			"Cache-Control": ["public, max-age=3600"],
 			"X-Gateway-Completed": ["true"]
 		}

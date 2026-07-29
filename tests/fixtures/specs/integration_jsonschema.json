@@ -1,25 +1,24 @@
 {
-    "@comment": "Makes sure that the health endpoint contains three fields with the right types",
-    "in": {
-        "url": "http://localhost:8080/healthz"
-    },
-    "out": {
-        "status_code": 200,
-        "schema": {
-          "$schema": "http://json-schema.org/draft-07/schema#",
-          "required": ["agents","now","status"],
-          "properties": {
-            "agents": {
-                "type": "object"
-            },
-            "now": {
-                "type": "string"
-            },
-            "status": {
-                "type": "string",
-                "enum": ["ok"]
-            }
-          }
-        }
-    }
+	"@comment": "The platform health contract: /healthz answers 200 with exactly {\"status\":\"ok\"} and nothing else. This gateway registers its own /healthz (legacy_engine.go) and forces disable_health so lura's /__health cannot also claim a route; the schema below is that endpoint's, not lura's. It used to require lura's agents/now fields — inherited when the spec was retargeted from /__health to /healthz in 5b250d9a and never rewritten — which no build of this gateway has ever satisfied. additionalProperties:false is the point: a probe body must not grow fields that leak internal state.",
+	"in": {
+		"url": "http://localhost:8080/healthz"
+	},
+	"out": {
+		"status_code": 200,
+		"header": {
+			"content-type": ["application/json; charset=utf-8"]
+		},
+		"schema": {
+			"$schema": "http://json-schema.org/draft-07/schema#",
+			"type": "object",
+			"required": ["status"],
+			"additionalProperties": false,
+			"properties": {
+				"status": {
+					"type": "string",
+					"enum": ["ok"]
+				}
+			}
+		}
+	}
 }
