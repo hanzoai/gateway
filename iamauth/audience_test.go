@@ -1,6 +1,6 @@
 package iamauth
 
-// Bug A regression: IAM (Casdoor) stamps user tokens with aud=<client_id>
+// Bug A regression: IAM stamps user tokens with aud=<client_id>
 // (e.g. hanzo-app, hanzo-chat), never the gateway origin. A single fixed
 // expected audience therefore rejected EVERY normal user JWT (cowork AI 401,
 // user billing 401). ValidateToken now matches the token audience against an

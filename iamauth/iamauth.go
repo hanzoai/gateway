@@ -267,8 +267,8 @@ type Config struct {
 	JWKSURL string
 	Issuer  string
 	// Audiences is the allowlist of acceptable `aud` values. A token passes
-	// when its audience matches ANY entry (OR semantics). IAM (Casdoor)
-	// stamps user tokens with aud=<client_id> (e.g. hanzo-app), never the
+	// when its audience matches ANY entry (OR semantics). IAM stamps
+	// user tokens with aud=<client_id> (e.g. hanzo-app), never the
 	// gateway origin, so a single fixed audience rejects every normal user
 	// JWT — the allowlist is the fix. An empty list disables the audience
 	// check; AudiencesFromEnv never returns empty, so it is always enforced.

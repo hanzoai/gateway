@@ -195,7 +195,7 @@ gateway/
 
 `iamauth.ValidateToken` validates `iss` (strict, env `AUTH_ISSUER`, prod
 `https://iam.hanzo.ai`) and `aud` against an **allowlist** (OR semantics — a
-token passes if its `aud` matches ANY entry). IAM (Casdoor) stamps user tokens
+token passes if its `aud` matches ANY entry). IAM stamps user tokens
 with `aud = <client_id>` (the seeded app name: `hanzo-app`, `hanzo-console`,
 `hanzo-chat`, `hanzo-id`, …), never the gateway origin — so the prior single
 fixed audience (`https://api.hanzo.ai`) rejected EVERY normal user JWT (cowork
