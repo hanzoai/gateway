@@ -53,14 +53,23 @@ var (
 		1500*time.Millisecond,
 		"The time to wait to let servers startup before start testing",
 	)
+	// POLL for readiness; do not guess at it. Empty here meant waitForStartup
+	// fell back to sleeping gateway_startup_wait (1.5s) and then testing whatever
+	// was listening — so on a loaded machine every single spec failed with
+	// `connection refused` and the suite reported ~60 unrelated failures for one
+	// cause. The readiness probe already existed and was simply switched off.
+	// Port 8080 is the harness config's port and is hardcoded in every spec URL.
 	defaultReadyURL *string = flag.String(
 		"gateway_ready_url",
-		"",
+		"http://localhost:8080/healthz",
 		"The url to check for system under test readiness.",
 	)
+	// A ceiling, not a delay: waitForReady returns as soon as the probe answers
+	// 200, so a generous budget costs a fast machine nothing and keeps a slow or
+	// loaded one honest.
 	defaultReadyURLWait *time.Duration = flag.Duration(
 		"gateway_ready_url_wait",
-		1500*time.Millisecond,
+		30*time.Second,
 		"The maximum time to wait for the ready url to return a 200 Ok response.",
 	)
 )
@@ -304,7 +313,10 @@ func waitForReady(readyURL string, readyURLWait time.Duration) error {
 	}
 
 	if resp != nil && resp.StatusCode == 200 {
-		fmt.Printf("system under test %s is ready\n", readyURL)
+		// stderr: this is progress, not program output. ExampleNewIntegration
+		// asserts on the harness's STDOUT, so a diagnostic printed there fails
+		// the example for saying something true.
+		fmt.Fprintf(os.Stderr, "system under test %s is ready\n", readyURL)
 		return nil
 	}
 
@@ -603,6 +615,7 @@ func (mockBackendBuilder) New(cfg *Config) http.Server {
 	mux.HandleFunc("/collection/", checkXForwardedFor(http.HandlerFunc(collectionEndpoint)))
 	mux.HandleFunc("/delayed/", checkXForwardedFor(delayedEndpoint(cfg.getDelay(), http.HandlerFunc(echoEndpoint))))
 	mux.HandleFunc("/redirect/", checkXForwardedFor(http.HandlerFunc(redirectEndpoint)))
+	mux.HandleFunc("/rss/", checkXForwardedFor(http.HandlerFunc(rssEndpoint)))
 	mux.HandleFunc("/jwk/symmetric", http.HandlerFunc(symmetricJWKEndpoint))
 
 	return http.Server{ // skipcq: GO-S2112
@@ -640,6 +653,23 @@ func delayedEndpoint(d time.Duration, h http.Handler) http.HandlerFunc {
 		<-time.After(d)
 		h.ServeHTTP(rw, req)
 	}
+}
+
+// rssEndpoint backs the /show/{id} spec, which pins the `rss` decoder composed
+// with `group` + `allow`. Both of its backends used to be http://showrss.info/ —
+// a third party, over plaintext HTTP — so the suite's verdict depended on a site
+// nobody here operates. The channel title is the only field the spec allows
+// through, so the feed only has to be well-formed RSS with a distinguishable
+// title per path.
+func rssEndpoint(rw http.ResponseWriter, r *http.Request) {
+	title := "personal feed"
+	if strings.HasPrefix(r.URL.Path, "/rss/schedule/") {
+		title = "schedule feed"
+	}
+	rw.Header().Add("Content-Type", "application/rss+xml; charset=utf-8")
+	fmt.Fprintf(rw, `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>%s</title><link>http://127.0.0.1/</link>
+<description>gateway integration fixture</description></channel></rss>`, title)
 }
 
 func xmlEndpoint(rw http.ResponseWriter, _ *http.Request) {
