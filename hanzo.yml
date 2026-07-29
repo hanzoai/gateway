@@ -1,0 +1,34 @@
+# Canonical CI/CD config for hanzoai/gateway — read by the hanzoai/ci reusable
+# workflow (.github/workflows/cicd.yml) and by platform.hanzo.ai.
+#
+# TEST ONLY, deliberately. This repo had NO workflow at all, so `make test` was
+# never a gate anywhere: it went years reporting `build constraints exclude all
+# Go files` on every tree, healthy or broken, and nothing looked. Turning the
+# GATE on is this file's whole job.
+#
+# `images:` and `deploy:` are intentionally absent. The edge image is rolled by
+# an explicitly pinned tag in k8s/*/deployment.yaml (a reviewed decision, per
+# cluster); wiring the build+push+rollout lane here would change how a
+# production gateway ships, which is a separate call to make deliberately — not
+# a side effect of fixing the test gate. hanzoai/ci handles a test-only caller
+# natively ("no images: in hanzo.yml — test-only caller, skipping build").
+test:
+  - name: go-test
+    # `make test`, not a bare `go test` — the target carries the two things a
+    # bare run gets wrong: BUILD_TAGS=legacy (every file under tests/ is behind
+    # //go:build legacy, and so is the engine the shipping image runs), and the
+    # `build` prerequisite (the fixture harness spawns ./gateway as the system
+    # under test). It runs ./... , so the root package's own suites — auth, CORS,
+    # widget security, production headers, AI-endpoint routing — are in scope too.
+    run: |
+      set -e
+      export GOPRIVATE='github.com/hanzoai/*' GOWORK=off
+      make test
+  - name: go-vet
+    # The DEFAULT (untagged) build is the HIP-0110 ZAP relay — a different file
+    # set from the legacy edge above. Vet both so neither half rots unnoticed.
+    run: |
+      set -e
+      export GOPRIVATE='github.com/hanzoai/*' GOWORK=off
+      go vet ./...
+      go vet -tags legacy ./...
