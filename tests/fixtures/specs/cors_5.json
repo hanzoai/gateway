@@ -1,4 +1,5 @@
 {
+	"@comment": "cors_4's request from a FOREIGN origin: the endpoint still answers 200 (it is not origin-gated) but carries no CORS grant, so the browser refuses to hand the body to the page. Also pins the posture ProductionHeadersMiddleware (rebrand.go) stamps on EVERY response: no X-Powered-By and no X-KRAKEND — the framework and its version are never disclosed — plus Server / nosniff / HSTS.",
 	"in": {
 		"method": "GET",
 		"url": "http://localhost:8080/param_forwarding/some/foo/bar",
@@ -9,15 +10,18 @@
 	},
 	"out": {
 		"status_code": 200,
-		"body": "{\"foo\":42,\"headers\":{\"Accept-Encoding\":[\"gzip\"],\"User-Agent\":[\"hanzoai/gateway Version 2.13.0\"],\"X-Forwarded-Host\":[\"localhost:8080\"]},\"path\":\"/param_forwarding/bar\",\"query\":{\"foo\":[\"foo\"]}}",
 		"header": {
 			"content-type": ["application/json; charset=utf-8"],
 			"Cache-Control": ["public, max-age=3600"],
 			"X-Gateway-Completed": ["true"],
-			"X-Powered-By": ["hanzoai/gateway Version 2.13.0"],
-			"Vary": ["Origin"],
-			"Access-Control-Allow-Origin": ["*"],
-			"Access-Control-Expose-Headers": ["Content-Length"]
+			"Access-Control-Allow-Origin": [""],
+			"Access-Control-Allow-Credentials": [""],
+			"X-Powered-By": [""],
+			"X-Krakend": [""],
+			"X-Krakend-Completed": [""],
+			"Server": ["gateway"],
+			"X-Content-Type-Options": ["nosniff"],
+			"Strict-Transport-Security": ["max-age=63072000; includeSubDomains"]
 		}
 	}
 }

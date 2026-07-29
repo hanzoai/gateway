@@ -1,4 +1,5 @@
 {
+	"@comment": "Preflight from a NON-allowlisted origin. The property under test is the ABSENCE of every Access-Control-Allow-* header: an arbitrary site must never be granted a credentialed cross-origin read. The preflight middleware declines to answer, so gin's HandleMethodNotAllowed replies 405 + Allow for a method this endpoint does not serve — the correct HTTP answer, and equally unusable to the browser. (Upstream KrakenD's cors service plugin answered 204 with a wildcard here; that plugin is deliberately not wired — routes.go owns the ONE CORS policy.)",
 	"in": {
 		"method": "OPTIONS",
 		"url": "http://localhost:8080/param_forwarding/some/foo/bar?a=1&b=2",
@@ -9,15 +10,13 @@
 		}
 	},
 	"out": {
-		"status_code": 204,
-		"body": "",
+		"status_code": 405,
 		"header": {
-			"content-type": [""],
-			"Cache-Control": [""],
-			"X-Gateway-Completed": [""],
 			"Access-Control-Allow-Origin": [""],
+			"Access-Control-Allow-Credentials": [""],
 			"Access-Control-Allow-Methods": [""],
-			"Access-Control-Allow-Headers": [""]
+			"Access-Control-Allow-Headers": [""],
+			"Allow": ["GET, POST"]
 		}
 	}
 }
