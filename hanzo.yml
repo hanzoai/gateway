@@ -14,12 +14,14 @@
 # natively ("no images: in hanzo.yml — test-only caller, skipping build").
 test:
   - name: go-test
-    # `make test`, not a bare `go test` — the target carries the two things a
+    # `make test`, not a bare `go test` — the target carries the three things a
     # bare run gets wrong: BUILD_TAGS=legacy (every file under tests/ is behind
-    # //go:build legacy, and so is the engine the shipping image runs), and the
+    # //go:build legacy, and so is the engine the shipping image runs), the
     # `build` prerequisite (the fixture harness spawns ./gateway as the system
-    # under test). It runs ./... , so the root package's own suites — auth, CORS,
-    # widget security, production headers, AI-endpoint routing — are in scope too.
+    # under test), and a second, UNTAGGED pass so the `!legacy` half is gated too
+    # (cmd/gateway/main_test.go had never executed). It runs ./... both ways, so
+    # the root package's own suites — auth, CORS, widget security, production
+    # headers, AI-endpoint routing — are in scope as they build in each image.
     run: |
       set -e
       export GOPRIVATE='github.com/hanzoai/*' GOWORK=off

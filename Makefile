@@ -55,8 +55,16 @@ build-ingress: ## Build the ingress binary
 # package (auth, CORS, widget security, production headers, routing) were never
 # in scope at all. `./tests` also needs `build` first: the fixture harness spawns
 # ./gateway as the system under test.
-test: build ## Build and run tests
+#
+# BOTH halves, for the same reason `go vet` already runs twice: a build tag
+# selects a different file set, so one run can only ever gate one of them.
+# cmd/gateway/main_test.go is `//go:build !legacy` — TestShutdownGraceFromEnv
+# (six cases over the drain window a rollout depends on) and TestEnvOr — and the
+# legacy run excludes it, so those tests existed and had never executed. Same
+# defect as the fixture suite, one tag over: the whole tree, both ways it builds.
+test: build ## Build and run tests (both builds: the legacy edge and the default relay)
 	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 -v ./...
+	go test -mod=readonly -count=1 ./...
 
 # cmd/gateway/schema/schema.json is COMMITTED, not fetched.
 #
