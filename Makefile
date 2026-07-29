@@ -49,7 +49,7 @@ build-ingress: ## Build the ingress binary
 	@echo "You can now use ./ingress"
 
 test: build ## Build and run tests
-	go test -v ./tests
+	go test -mod=readonly -tags "${BUILD_TAGS}" -v ./tests
 
 # cmd/gateway/schema/schema.json is COMMITTED, not fetched.
 #
