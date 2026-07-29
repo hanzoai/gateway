@@ -405,7 +405,7 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 }
 
 // principalFromAccount extracts the user's principal (org + org-admin bit) from
-// an IAM get-account response. IAM (Casdoor) get-account returns the User object
+// an IAM get-account response. IAM get-account returns the User object
 // either at the top level or wrapped under `data`; the org slug is `owner` and
 // the org-admin flag is `isAdmin`. An error/unsigned response has status:"error"
 // and no owner → not a principal (fail closed).
