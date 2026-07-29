@@ -48,8 +48,15 @@ build-ingress: ## Build the ingress binary
 	@CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=${VERSION}" -o ingress ./cmd/ingress
 	@echo "You can now use ./ingress"
 
+# ./... , not ./tests — the gate runs every package, tagged the way the binary is
+# built. Two ways to run zero tests were live here at once: the target passed no
+# ${BUILD_TAGS}, so the `legacy`-tagged fixture suite under tests/ was excluded
+# wholesale; and it named ONE directory, so the 20-odd _test.go files in the root
+# package (auth, CORS, widget security, production headers, routing) were never
+# in scope at all. `./tests` also needs `build` first: the fixture harness spawns
+# ./gateway as the system under test.
 test: build ## Build and run tests
-	go test -mod=readonly -tags "${BUILD_TAGS}" -v ./tests
+	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 -v ./...
 
 # cmd/gateway/schema/schema.json is COMMITTED, not fetched.
 #
