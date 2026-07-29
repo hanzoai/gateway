@@ -44,21 +44,20 @@ import (
 
 // NewEngine creates a new gin engine with middlewares and routing.
 func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine {
-	// Inject disable_health into the service config JSON so lura's NewEngine
-	// Must modify the raw JSON bytes because lura parses ExtraConfig from JSON,
-	// not from the map.
-	if cfg.ExtraConfig == nil {
-		cfg.ExtraConfig = map[string]interface{}{}
-	}
-	cfg.ExtraConfig[luragin.Namespace] = map[string]interface{}{
-		"disable_health": true,
-	}
+	// Force disable_health ON: lura's own /__health would collide with the
+	// /healthz registered below (duplicate-route panic), so this gateway always
+	// serves its own.
+	//
+	// MERGE it into whatever the operator configured under the `router`
+	// namespace — do NOT replace that map. Replacing it silently discarded every
+	// other key an operator set, and `router: {"return_error_msg": true}` is set
+	// in BOTH shipping configs (configs/hanzo, configs/lux): the deployed edge
+	// answered every upstream failure with a bare status and a zero-length body,
+	// so a caller seeing a 500 had nothing to report. The clobber also made the
+	// error_body 404/405 re-read at the bottom of this function dead code — it
+	// re-read the map it had just overwritten.
+	cfg.ExtraConfig = withRouterOption(cfg.ExtraConfig, "disable_health", true)
 	engine := luragin.NewEngine(cfg, opt)
-
-	// Disable gin's case-insensitive path redirect — triggers a panic in gin 1.9.1
-	// when routes have mixed static/param nodes (e.g., /v1/ats/assets/:id/quote).
-	// See: https://github.com/gin-gonic/gin/issues/3348
-	engine.RedirectFixedPath = false
 
 	// Load routes from config (KMS or file).
 	if err := loadRoutesFromEnv(); err != nil {
@@ -131,6 +130,29 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	botdetector.Register(cfg, opt.Logger, engine)
 
 	return engine
+}
+
+// withRouterOption returns ec with key=value set inside the lura gin-router
+// extra_config namespace (config alias `router`), preserving every other key the
+// operator put there. It is the ONE way this package forces a router option, so
+// no caller has to know that the namespace is a nested map or that clobbering it
+// drops the operator's settings.
+//
+// It never mutates the caller's nested map: the service config is shared with
+// the audit/check commands, so the override is copy-on-write.
+func withRouterOption(ec config.ExtraConfig, key string, value interface{}) config.ExtraConfig {
+	if ec == nil {
+		ec = config.ExtraConfig{}
+	}
+	merged := map[string]interface{}{}
+	if existing, ok := ec[luragin.Namespace].(map[string]interface{}); ok {
+		for k, v := range existing {
+			merged[k] = v
+		}
+	}
+	merged[key] = value
+	ec[luragin.Namespace] = merged
+	return ec
 }
 
 func defaultHandler(c *gin.Context) {
