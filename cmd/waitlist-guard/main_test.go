@@ -50,7 +50,7 @@ func browserReq() *http.Request {
 	r.Header.Set("X-Forwarded-Host", "console.hanzo.ai")
 	r.Header.Set("X-Forwarded-Proto", "https")
 	r.Header.Set("X-Forwarded-Uri", "/")
-	r.Header.Set("Cookie", "casdoor_session_id=abc")
+	r.Header.Set("Cookie", "hanzo_session=abc")
 	return r
 }
 

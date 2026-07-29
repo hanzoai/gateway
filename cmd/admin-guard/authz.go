@@ -31,9 +31,9 @@ import (
 // SAME shape regardless of source (guard session cookie, Bearer/Basic JWT, IAM
 // get-account), so authorization is a pure function of a principal + a host.
 //
-//   - owner   : the subject's HOME org slug (Casdoor `owner`) — identity anchor.
+//   - owner   : the subject's HOME org slug (IAM `owner`) — identity anchor.
 //   - isAdmin : the subject is an org-level admin/owner of its HOME org
-//     (Casdoor `isAdmin`). This is NEVER the platform-sudo bit (that is owner ==
+//     (IAM `isAdmin`). This is NEVER the platform-sudo bit (that is owner ==
 //     adminOrg); it is the per-org owner flag, so it authorizes ONLY the home
 //     org's own tenant surface.
 //   - orgs    : the full org-membership set with per-org roles. Populated ONLY on
@@ -61,7 +61,8 @@ func principalFromClaims(c *iamauth.Claims) principal {
 //
 // A plain `member` role never satisfies it — so a regular member of the lux org
 // is NOT a lux tenant admin. Comparison is case- and space-insensitive to match
-// iamauth (Casdoor may vary casing); an empty org is never an admin target.
+// iamauth (org slug casing is not guaranteed); an empty org is never an admin
+// target.
 func (p principal) adminOf(org string) bool {
 	org = strings.TrimSpace(org)
 	if org == "" {
@@ -183,7 +184,7 @@ var authnPolicy = policy{
 // domain) is NOT, and so admits global sudo only.
 const adminSubdomain = "admin"
 
-// hostOrgDomains maps a brand's REGISTRABLE domain to its Casdoor org slug (the
+// hostOrgDomains maps a brand's REGISTRABLE domain to its IAM org slug (the
 // org slug IS the brand key). It MIRRORS the canonical HIP-0111 brand registry
 // — hanzoai/cloud brand.go `brands` (Domain + AltDomains → id). It is duplicated
 // here rather than imported ON PURPOSE: package cloud is a 75-file dependency
@@ -226,7 +227,7 @@ func tenantOrgForHost(host string) (string, bool) {
 	return org, ok
 }
 
-// loginOrg is the Casdoor `organization` hint the guard pins for the interactive
+// loginOrg is the IAM `organization` hint the guard pins for the interactive
 // PKCE login on a host. A TENANT admin surface (admin.<brand>) pins that brand's
 // org so a tenant admin authenticates into the org the host belongs to; the
 // global/DO-infra surfaces (platform.hanzo.ai, …) and any unrecognized host pin
