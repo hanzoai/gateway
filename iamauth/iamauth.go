@@ -196,6 +196,39 @@ func (c *Claims) Machine() bool {
 	return false
 }
 
+// OrgAdmin reports whether these claims administer the named org — admin OF
+// ONE'S OWN org, which is org-scoped self-service and NEVER platform authority.
+// PlatformSudo is the other question and the two must never be conflated;
+// conflating them is a privilege escalation.
+//
+// The role set is FOLDED: an org's `owner` administers it as surely as its
+// `admin` does. Matching only "admin" refused every self-serve founder from
+// their own org's admin surface — a real incident, with a real user carrying
+// orgs:[{org:hanzo,role:admin}] getting 403 on their own org.
+//
+// The org is compared VERBATIM. "acme" and "acme " are distinct org identifiers
+// to IAM, so a trim here would fold two tenants into one.
+//
+// A MACHINE never administers an org through this predicate: a
+// client_credentials app is issued for a purpose, not given an org's admin
+// surface, and IsAdmin on a machine token is IAM's org-role bit rather than a
+// grant of self-service.
+func (c *Claims) OrgAdmin(org string) bool {
+	if c == nil || c.Machine() || org == "" {
+		return false
+	}
+	if c.IsAdmin && org == c.Owner {
+		return true
+	}
+	for _, m := range c.Orgs {
+		if m.Org != org {
+			continue
+		}
+		return m.Role == "owner" || m.Role == "admin"
+	}
+	return false
+}
+
 // Masquerade reports whether these claims may act in an org OUTSIDE the signed
 // membership set — the platform operator's cross-org view. It is PlatformSudo
 // narrowed to a HUMAN, and it is the predicate BOTH org questions branch on
@@ -778,11 +811,24 @@ func InjectIdentity(r *http.Request, c *Claims, selected string) {
 	if c.Email != "" {
 		r.Header.Set("X-User-Email", c.Email)
 	}
-	if c.IsAdmin {
+	// TWO ADMIN SCOPES, TWO HEADERS, and they are not interchangeable.
+	//
+	// X-User-IsAdmin is PLATFORM SUDO — Masquerade, i.e. a HUMAN whose home org is
+	// the reserved admin org. It used to be minted from c.IsAdmin, which is the
+	// ORG-role bit that PlatformSudo's own comment says is "deliberately NOT
+	// trusted"; every backend gating on this header therefore admitted any org
+	// owner as a platform admin. The bit and the header had opposite meanings and
+	// one line joined them.
+	if c.Masquerade() {
 		r.Header.Set("X-User-IsAdmin", "true")
 	}
-	// NO platform-admin boolean is minted. Platform sudo is org == AdminOrg
-	// (carried by X-Org-Id from the validated `owner`); subsystems gate on that.
+	// X-User-IsOrgAdmin is admin OF ONE'S OWN org, resolved against the EFFECTIVE
+	// org so an operator viewing another tenant does not carry that tenant's
+	// self-service authority. A gate admitting either scope writes both predicates
+	// explicitly, so the superset is visible at the gate.
+	if c.OrgAdmin(effective) {
+		r.Header.Set("X-User-IsOrgAdmin", "true")
+	}
 	// The legacy X-User-IsGlobalAdmin header is still stripped on ingress so a
 	// client can never forge it — it is simply never emitted.
 }
