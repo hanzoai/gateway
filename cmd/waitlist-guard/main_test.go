@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -18,9 +19,9 @@ import (
 	"testing"
 	"time"
 
-	gojose "github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // newTestConfig builds a guard config pointed at a fake IAM, with a real (but
@@ -37,7 +38,7 @@ func newTestConfig(iamURL string, failOpen bool) *config {
 		cookieName:   "hanzo_waitlist_guard",
 		cookieTTL:    8 * time.Hour,
 		hmacKey:      []byte("0123456789abcdef0123456789abcdef"),
-		validator:    iamauth.NewValidator(iamauth.Config{Issuer: "https://iam.hanzo.ai"}),
+		validator:    token.NewValidator(token.Config{Issuer: "https://iam.hanzo.ai"}),
 	}
 }
 
@@ -90,13 +91,10 @@ func jwtSignerConfig(t *testing.T, iamURL string, failOpen bool) (*config, strin
 		t.Fatalf("rsa: %v", err)
 	}
 	const kid, iss, aud = "wg-test-key", "https://iam.hanzo.ai", "hanzo-waitlist-guard"
-	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid)
-	signer, err := gojose.NewSigner(gojose.SigningKey{Algorithm: gojose.RS256, Key: key}, opts)
-	if err != nil {
-		t.Fatalf("signer: %v", err)
-	}
-	jwks, _ := json.Marshal(gojose.JSONWebKeySet{Keys: []gojose.JSONWebKey{{
-		Key: &key.PublicKey, KeyID: kid, Algorithm: string(gojose.RS256), Use: "sig",
+	jwks, _ := json.Marshal(map[string]any{"keys": []map[string]any{{
+		"kty": "RSA", "kid": kid, "use": "sig", "alg": "RS256",
+		"n": base64.RawURLEncoding.EncodeToString(key.PublicKey.N.Bytes()),
+		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(key.PublicKey.E)).Bytes()),
 	}}})
 	jwksSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -105,18 +103,20 @@ func jwtSignerConfig(t *testing.T, iamURL string, failOpen bool) (*config, strin
 	t.Cleanup(jwksSrv.Close)
 
 	now := time.Now()
-	claims := iamauth.Claims{Claims: jwt.Claims{
-		Issuer: iss, Subject: "alice", Audience: jwt.Audience{aud},
-		IssuedAt: jwt.NewNumericDate(now.Add(-time.Minute)),
-		Expiry:   jwt.NewNumericDate(now.Add(10 * time.Minute)),
+	claims := authz.Claims{RegisteredClaims: jwt.RegisteredClaims{
+		Issuer: iss, Subject: "alice", Audience: jwt.ClaimStrings{aud},
+		IssuedAt:  jwt.NewNumericDate(now.Add(-time.Minute)),
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 	}, Owner: "hanzo", Name: "alice"}
-	raw, err := jwt.Signed(signer).Claims(claims).Serialize()
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	tok.Header["kid"] = kid
+	raw, err := tok.SignedString(key)
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}
 
 	c := newTestConfig(iamURL, failOpen)
-	c.validator = iamauth.NewValidator(iamauth.Config{
+	c.validator = token.NewValidator(token.Config{
 		JWKSURL: jwksSrv.URL, Issuer: iss, Audiences: []string{aud}, JWKSTTL: time.Minute,
 	})
 	return c, raw
@@ -321,14 +321,14 @@ func TestSessionForgeryRejected(t *testing.T) {
 
 // TestStripMiddlewareCoversAuthoritativeSet is the DRY guard: the generated
 // ingress `waitlist-strip` MUST enumerate every exact header the gateway strips
-// (iamauth.StripIdentityHeaderNames) plus the guard's own minted headers, so the
+// (authz.Headers) plus the guard's own minted headers, so the
 // ingress config fronting a direct-to-backend route can never silently drift and
 // leave a forgeable identity header (Red H-2).
 func TestStripMiddlewareCoversAuthoritativeSet(t *testing.T) {
 	var buf bytes.Buffer
 	printStripMiddleware(&buf)
 	out := buf.String()
-	for _, h := range append(append([]string{}, iamauth.StripIdentityHeaderNames...), waitlistMintedHeaders...) {
+	for _, h := range append(append([]string{}, authz.Headers...), waitlistMintedHeaders...) {
 		if !strings.Contains(out, h+`: ""`) {
 			t.Fatalf("generated waitlist-strip is MISSING %q — ingress strip would drift from the guard", h)
 		}

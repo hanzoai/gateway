@@ -15,10 +15,10 @@
 //     without a superadmin session or JWT. Fail-closed.
 //
 // Identity is resolved exactly like the rest of the platform: a Bearer/Basic
-// JWT validated through iamauth, or the first-party session cookie minted by
+// JWT validated through the edge, or the first-party session cookie minted by
 // cloud (forwarded to /v1/ai/account). Either way the predicate is the
 // same single fact — owner == AdminOrg — the same one admin-guard enforces at
-// the edge.
+// the edge (hanzoai/authz/edge).
 package main
 
 import (
@@ -31,7 +31,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 type config struct {
@@ -56,7 +56,7 @@ type config struct {
 
 	syncInterval time.Duration
 
-	validator *iamauth.Validator
+	validator *token.Validator
 }
 
 func loadConfig() *config {
@@ -80,7 +80,7 @@ func loadConfig() *config {
 
 		syncInterval: envDuration("ADMIN_SYNC_INTERVAL", 5*time.Minute),
 
-		validator: iamauth.NewValidator(iamauth.ConfigFromEnv()),
+		validator: token.NewValidator(token.ConfigFromEnv()),
 	}
 }
 

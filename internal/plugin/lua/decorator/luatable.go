@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/client"
 	"github.com/hanzoai/gateway/v2/internal/pkg/binder"
 	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua"
-	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/client"
 )
 
 func RegisterLuaTable(b *binder.Binder) {

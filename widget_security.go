@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hanzoai/authz/edge"
 )
 
 // WidgetSecurityConfig holds configuration for widget key rate limiting
@@ -243,7 +244,7 @@ func NewWidgetSecurityMiddleware(cfg WidgetSecurityConfig) gin.HandlerFunc {
 	allowedOrigins := widgetAllowedOrigins(cfg.AllowedOrigins)
 
 	return func(c *gin.Context) {
-		token := extractBearerToken(c.Request)
+		token := edge.Bearer(c.Request.Header)
 		if !isWidgetKey(token) {
 			c.Next()
 			return

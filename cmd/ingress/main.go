@@ -19,7 +19,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 type PathBackend struct {
@@ -31,7 +32,7 @@ type HostRoute struct {
 	Host string `json:"host"`
 	// Auth, when true, gates this host behind a valid Hanzo IAM token
 	// (Bearer or HTTP Basic password — the `go`/.netrc proxy path). The
-	// ingress validates via the shared iamauth package, strips any
+	// ingress validates via the shared the edge package, strips any
 	// client-supplied identity headers, and injects the canonical X-User-*
 	// from the validated claims before proxying. This is the IAM edge for
 	// non-API hosts like goproxy.hanzo.ai.
@@ -49,7 +50,7 @@ type router struct {
 	mu        sync.RWMutex
 	routes    map[string][]backendEntry
 	authHosts map[string]bool
-	validator *iamauth.Validator
+	validator *token.Validator
 }
 
 type backendEntry struct {
@@ -121,8 +122,8 @@ func newRouter(cfg *Config) *router {
 	// issuer, audience) comes from the same AUTH_* env the gateway uses, so
 	// the ingress and gateway trust the same IAM authority.
 	if len(r.authHosts) > 0 {
-		cfg := iamauth.ConfigFromEnv()
-		r.validator = iamauth.NewValidator(cfg)
+		cfg := token.ConfigFromEnv()
+		r.validator = token.NewValidator(cfg)
 		log.Printf("ingress IAM auth enabled for %d host(s): issuer=%s audiences=%v",
 			len(r.authHosts), cfg.Issuer, cfg.Audiences)
 	}
@@ -148,8 +149,8 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	// identity from the claims. The credential header is removed before
 	// proxying so the IAM token never reaches the backend.
 	if authRequired {
-		selectedOrg := iamauth.StripIdentityHeaders(req)
-		claims, err := r.validator.Validate(req)
+		selectedOrg := edge.Strip(req.Header)
+		claims, err := r.validator.Verify(req.Header)
 		if err != nil {
 			// Prompt Basic so the `go` module client attaches its
 			// ~/.netrc credential (login = email, password = IAM token).
@@ -159,7 +160,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte(`{"error":"unauthorized","message":"valid Hanzo IAM token required"}`))
 			return
 		}
-		iamauth.InjectIdentity(req, claims, selectedOrg)
+		edge.Inject(req.Header, claims, selectedOrg, nil)
 		req.Header.Del("Authorization")
 		req.Header.Del("X-Authorization")
 	}

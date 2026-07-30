@@ -55,15 +55,15 @@ func TestIsAllowedOrigin(t *testing.T) {
 		expected bool
 	}{
 		{"hanzo.ai", true},
-		{"docs.hanzo.ai", true},       // subdomain match
-		{"www.hanzo.ai", true},         // subdomain match
-		{"app.hanzo.bot", true},        // subdomain match
-		{"localhost", true},            // exact match
-		{"evil.com", false},            // not allowed
-		{"nothanzo.ai", false},         // partial suffix, not subdomain
-		{"evil.com.hanzo.ai", true},    // subdomain (technically valid)
-		{"hanzo.ai.evil.com", false},   // suffix attack
-		{"", false},                    // empty
+		{"docs.hanzo.ai", true},      // subdomain match
+		{"www.hanzo.ai", true},       // subdomain match
+		{"app.hanzo.bot", true},      // subdomain match
+		{"localhost", true},          // exact match
+		{"evil.com", false},          // not allowed
+		{"nothanzo.ai", false},       // partial suffix, not subdomain
+		{"evil.com.hanzo.ai", true},  // subdomain (technically valid)
+		{"hanzo.ai.evil.com", false}, // suffix attack
+		{"", false},                  // empty
 	}
 	for _, tt := range tests {
 		if got := isAllowedOrigin(tt.host, allowed); got != tt.expected {

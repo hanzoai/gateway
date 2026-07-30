@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/google/cel-go/cel"
-	"github.com/hanzoai/gateway/v2/internal/plugin/cel/internal"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	"github.com/hanzoai/gateway/v2/internal/plugin/cel/internal"
 )
 
 func ProxyFactory(l logging.Logger, pf proxy.Factory) proxy.Factory {

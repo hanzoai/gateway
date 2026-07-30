@@ -33,7 +33,7 @@
 //  1. the guard's own signed session cookie (set after a prior PKCE login) —
 //     the browser fast path, carrying owner+isAdmin, scoped to the request's
 //     registrable domain;
-//  2. a Bearer / Basic JWT validated through iamauth (the API path) — carries
+//  2. a Bearer / Basic JWT validated through the edge (the API path) — carries
 //     owner, isAdmin, and the full org-membership set, so no IAM round-trip;
 //  3. an IAM session cookie, resolved by calling IAM get-account server-side
 //     (the path for a browser that has an IAM session but no guard cookie yet).
@@ -58,7 +58,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // config holds the guard's runtime configuration, all from the environment so
@@ -103,7 +104,7 @@ type config struct {
 
 	// validator validates Bearer/Basic JWTs (issuer + audience + expiry) and
 	// exposes claims.owner — the same edge validator the gateway uses.
-	validator *iamauth.Validator
+	validator *token.Validator
 }
 
 // guardVersion is the admin-guard's own semantic version — the ONE canonical
@@ -189,9 +190,9 @@ func loadConfig() *config {
 	}
 
 	iamPublic := envOr("IAM_PUBLIC_URL", "https://hanzo.id")
-	// iamauth validates against the JWKS issuer; reuse its env (AUTH_ISSUER /
+	// the edge validates against the JWKS issuer; reuse its env (AUTH_ISSUER /
 	// AUTH_JWKS_URL) so the guard and gateway agree on the IAM authority.
-	vcfg := iamauth.ConfigFromEnv()
+	vcfg := token.ConfigFromEnv()
 
 	return &config{
 		addr:           envOr("GUARD_ADDR", ":8080"),
@@ -206,7 +207,7 @@ func loadConfig() *config {
 		cookieName:     envOr("GUARD_COOKIE_NAME", "hanzo_admin_guard"),
 		cookieTTL:      envDuration("GUARD_COOKIE_TTL", 8*time.Hour),
 		hmacKey:        hmacKey,
-		validator:      iamauth.NewValidator(vcfg),
+		validator:      token.NewValidator(vcfg),
 	}
 }
 
@@ -237,10 +238,10 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request, pol policy
 
 	// (2) Bearer/Basic JWT — the API path. The JWT carries the full principal
 	// (owner, isAdmin, org-membership set) directly.
-	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
+	if claims, err := c.validator.Verify(r.Header); err == nil && claims != nil {
 		c.decide(w, r, principalFromClaims(claims), orig, pol)
 		return
-	} else if err != nil && err != iamauth.ErrNoToken {
+	} else if err != nil && err != token.ErrNoToken {
 		// A token was presented but did not validate. For an API caller, fail
 		// closed with 401 (don't bounce a non-browser through a login redirect).
 		if isAPIClient(r) {
@@ -531,7 +532,7 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 // exchange swaps the auth code for tokens and resolves the principal from the ID
-// token (validated via iamauth) or, failing that, the userinfo endpoint.
+// token (validated via the edge) or, failing that, the userinfo endpoint.
 func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (principal, error) {
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
@@ -570,12 +571,12 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 
 	// Prefer the ID token's validated claims (owner, isAdmin, membership set).
 	if tok.IDToken != "" {
-		if claims, verr := c.validator.ValidateRaw(tok.IDToken); verr == nil && claims.Owner != "" {
+		if claims, verr := c.validator.VerifyRaw(tok.IDToken); verr == nil && claims.Owner != "" {
 			return principalFromClaims(claims), nil
 		}
 	}
 	if tok.AccessToken != "" {
-		if claims, verr := c.validator.ValidateRaw(tok.AccessToken); verr == nil && claims.Owner != "" {
+		if claims, verr := c.validator.VerifyRaw(tok.AccessToken); verr == nil && claims.Owner != "" {
 			return principalFromClaims(claims), nil
 		}
 	}
@@ -714,7 +715,7 @@ func parseBrandMap(s string) map[string]string {
 // isAPIClient reports whether the caller looks like a non-browser API client
 // (so we fail closed with a status code instead of an interactive redirect).
 func isAPIClient(r *http.Request) bool {
-	if iamauth.BearerToken(r) != "" || iamauth.BasicToken(r) != "" {
+	if edge.Bearer(r.Header) != "" || edge.Basic(r.Header) != "" {
 		return true
 	}
 	accept := r.Header.Get("X-Forwarded-Accept")

@@ -33,13 +33,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	luragin "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
 	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/gin"
 	httpsecure "github.com/hanzoai/gateway/v2/internal/plugin/httpsecure/gin"
 	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua/router/gin"
 	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/router/gin"
-	"github.com/hanzoai/gateway/v2/internal/lura/config"
-	luragin "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
-	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
 )
 
 // NewEngine creates a new gin engine with middlewares and routing.

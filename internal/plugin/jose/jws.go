@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	jose "github.com/go-jose/go-jose/v3"
-	"github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 )
 
 const (

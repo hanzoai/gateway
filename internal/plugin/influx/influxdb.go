@@ -5,10 +5,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
-	ginmetrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	ginmetrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
+	"github.com/influxdata/influxdb/client/v2"
 
 	"github.com/hanzoai/gateway/v2/internal/plugin/influx/counter"
 	"github.com/hanzoai/gateway/v2/internal/plugin/influx/gauge"

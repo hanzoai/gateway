@@ -10,14 +10,14 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/hanzoai/gateway/v2/internal/pkg/binder"
-	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua"
-	"github.com/hanzoai/gateway/v2/internal/plugin/lua/decorator"
-	"github.com/hanzoai/gateway/v2/internal/plugin/lua/router"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	krakendgin "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	"github.com/hanzoai/gateway/v2/internal/pkg/binder"
+	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua"
+	"github.com/hanzoai/gateway/v2/internal/plugin/lua/decorator"
+	"github.com/hanzoai/gateway/v2/internal/plugin/lua/router"
 	glua "github.com/yuin/gopher-lua"
 )
 

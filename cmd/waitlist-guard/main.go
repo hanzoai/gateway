@@ -20,7 +20,7 @@
 //
 //  1. the guard's own signed session cookie (set after a prior PKCE login) —
 //     the browser fast path, shared across *.hanzo.ai via a parent-domain cookie;
-//  2. a Bearer / Basic JWT validated through iamauth (the API path) — the JWT
+//  2. a Bearer / Basic JWT validated through the edge (the API path) — the JWT
 //     already carries `owner`, so no IAM round-trip is needed;
 //  3. an IAM session cookie, resolved by calling IAM get-account server-side
 //     (the path for a browser that has an IAM session but no guard cookie yet).
@@ -45,7 +45,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // config holds the guard's runtime configuration, all from the environment so
@@ -95,7 +97,7 @@ type config struct {
 
 	// validator validates Bearer/Basic JWTs (issuer + audience + expiry) and
 	// exposes claims.owner — the same edge validator the gateway uses.
-	validator *iamauth.Validator
+	validator *token.Validator
 }
 
 const (
@@ -114,7 +116,7 @@ var waitlistMintedHeaders = []string{"X-Waitlist-Guard", "X-Waitlist-Approved"}
 
 func main() {
 	// DRY generator: emit the ingress `waitlist-strip` middleware from the SINGLE
-	// source of truth (iamauth.StripIdentityHeaderNames + waitlistMintedHeaders) so
+	// source of truth (authz.Headers + waitlistMintedHeaders) so
 	// the ingress config that fronts a DIRECT-to-backend route cannot drift from
 	// the guard's own strip. Regenerate the universe canary-ingress waitlist-strip
 	// block with: `waitlist-guard -print-strip-middleware`.
@@ -155,9 +157,9 @@ func loadConfig() *config {
 	}
 
 	iamPublic := envOr("IAM_PUBLIC_URL", "https://hanzo.id")
-	// iamauth validates against the JWKS issuer; reuse its env (AUTH_ISSUER /
+	// the edge validates against the JWKS issuer; reuse its env (AUTH_ISSUER /
 	// AUTH_JWKS_URL) so the guard and gateway agree on the IAM authority.
-	vcfg := iamauth.ConfigFromEnv()
+	vcfg := token.ConfigFromEnv()
 
 	return &config{
 		addr:         envOr("GUARD_ADDR", ":8080"),
@@ -173,7 +175,7 @@ func loadConfig() *config {
 		cookieName:   envOr("GUARD_COOKIE_NAME", "hanzo_waitlist_guard"),
 		cookieTTL:    envDuration("GUARD_COOKIE_TTL", 1*time.Hour),
 		hmacKey:      hmacKey,
-		validator:    iamauth.NewValidator(vcfg),
+		validator:    token.NewValidator(vcfg),
 	}
 }
 
@@ -206,7 +208,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	// guard's own logic (defense in depth). The AUTHORITATIVE strip for the
 	// upstream request is the ingress headers middleware (see the guard's ingress
 	// wiring) — this mirrors it so the two agree.
-	iamauth.StripIdentityHeaders(r)
+	edge.Strip(r.Header)
 	stripWaitlistHeaders(r)
 
 	orig := c.originalURL(r)
@@ -222,7 +224,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 	// (2) Bearer/Basic JWT — the API path. The JWT carries `owner`/`isAdmin` but
 	//     NOT the live approval property (a token can lag an approval), so the
 	//     authoritative status comes from IAM. Admins are always approved.
-	if claims, err := c.validator.Validate(r); err == nil && claims != nil {
+	if claims, err := c.validator.Verify(r.Header); err == nil && claims != nil {
 		if claims.IsAdmin || claims.Owner == c.adminOrg {
 			c.decide(w, r, claims.Owner, true, orig)
 			return
@@ -239,7 +241,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 		}
 		c.decide(w, r, claims.Owner, approved, orig)
 		return
-	} else if err != nil && err != iamauth.ErrNoToken {
+	} else if err != nil && err != token.ErrNoToken {
 		if isAPIClient(r) {
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
@@ -616,7 +618,7 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 		if t == "" {
 			continue
 		}
-		if claims, verr := c.validator.ValidateRaw(t); verr == nil && claims.Owner != "" {
+		if claims, verr := c.validator.VerifyRaw(t); verr == nil && claims.Owner != "" {
 			owner, name, isAdmin = claims.Owner, claims.Name, claims.IsAdmin
 			break
 		}
@@ -747,7 +749,7 @@ func (c *config) callbackURI(r *http.Request) string {
 // isAPIClient reports whether the caller looks like a non-browser API client
 // (so we fail closed with a status code instead of an interactive redirect).
 func isAPIClient(r *http.Request) bool {
-	if iamauth.BearerToken(r) != "" || iamauth.BasicToken(r) != "" {
+	if edge.Bearer(r.Header) != "" || edge.Basic(r.Header) != "" {
 		return true
 	}
 	accept := r.Header.Get("X-Forwarded-Accept")
@@ -835,7 +837,7 @@ func parseHostSet(v string) map[string]bool {
 
 // stripWaitlistHeaders deletes the guard's OWN minted headers from an inbound
 // request so a client can never forge the allow verdict the guard later stamps.
-// Complements iamauth.StripIdentityHeaders (which covers X-Org-Id et al.).
+// Complements edge.Strip (which covers X-Org-Id et al.).
 func stripWaitlistHeaders(r *http.Request) {
 	for h := range r.Header {
 		if ch := http.CanonicalHeaderKey(h); ch == "X-Waitlist-Guard" || strings.HasPrefix(ch, "X-Waitlist-") {
@@ -847,12 +849,12 @@ func stripWaitlistHeaders(r *http.Request) {
 // printStripMiddleware writes the ingress `waitlist-strip` middleware YAML from
 // the authoritative header set, so the ingress config fronting a direct-to-backend
 // route is GENERATED, never hand-maintained (no drift with the guard's own
-// iamauth.StripIdentityHeaders). Every identity header is now brand-neutral and
+// edge.Strip). Every identity header is now brand-neutral and
 // EXACT (no X-VENDOR-* wildcard family), so the generated strip covers the FULL
 // set with NO gap — an ingress `headers` middleware can remove every one by name.
 func printStripMiddleware(w io.Writer) {
 	fmt.Fprintln(w, "# GENERATED by `waitlist-guard -print-strip-middleware` — DO NOT hand-edit.")
-	fmt.Fprintln(w, "# Source of truth: iamauth.StripIdentityHeaderNames + waitlistMintedHeaders.")
+	fmt.Fprintln(w, "# Source of truth: authz.Headers + waitlistMintedHeaders.")
 	fmt.Fprintln(w, "# All names are brand-neutral + exact — no wildcard family, so this covers")
 	fmt.Fprintln(w, "# the complete identity-header set with no gap.")
 	fmt.Fprintln(w, "http:")
@@ -860,7 +862,7 @@ func printStripMiddleware(w io.Writer) {
 	fmt.Fprintln(w, "    waitlist-strip:")
 	fmt.Fprintln(w, "      headers:")
 	fmt.Fprintln(w, "        customRequestHeaders:")
-	names := append(append([]string{}, iamauth.StripIdentityHeaderNames...), waitlistMintedHeaders...)
+	names := append(append([]string{}, authz.Headers...), waitlistMintedHeaders...)
 	for _, h := range names {
 		fmt.Fprintf(w, "          %s: \"\"\n", h)
 	}

@@ -5,12 +5,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector"
-	krakend "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	krakendgin "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector"
+	krakend "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
 )
 
 const logPrefix = "[SERVICE: Gin][Botdetector]"

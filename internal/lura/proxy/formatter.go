@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/hanzoai/gateway/v2/internal/pkg/flatmap/tree"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/pkg/flatmap/tree"
 )
 
 // EntityFormatter formats the response data
