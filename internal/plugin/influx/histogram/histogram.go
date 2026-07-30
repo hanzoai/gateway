@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/influxdata/influxdb/client/v2"
-	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 func Points(hostname string, now time.Time, histograms map[string]metrics.HistogramData, logger logging.Logger) []*client.Point {

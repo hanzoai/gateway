@@ -23,7 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/hanzoai/cloud"
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/gateway/v2/token"
 	"github.com/zap-proto/zip"
 )
 
@@ -131,10 +131,10 @@ func zipFromGin(h gin.HandlerFunc) zip.Handler {
 // cloud-friendly defaults derived from deps when env is unset.
 func authConfigFromEnv(deps cloud.Deps) AuthConfig {
 	// Audience allowlist: the shared known-client_id + origin set
-	// (iamauth.AudiencesFromEnv, overridable via GATEWAY_ALLOWED_AUDIENCES).
+	// (token.AudiencesFromEnv, overridable via GATEWAY_ALLOWED_AUDIENCES).
 	// A JWT_AUDIENCE override widens the set (parity with AUTH_AUDIENCE) — it
 	// never narrows it to one value, which would reject every user JWT.
-	audiences := iamauth.AudiencesFromEnv()
+	audiences := token.AudiencesFromEnv()
 	if a := strings.TrimSpace(getenv("JWT_AUDIENCE", "")); a != "" {
 		audiences = appendUniqueAud(audiences, a)
 	}

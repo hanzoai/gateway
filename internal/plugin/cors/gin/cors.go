@@ -5,10 +5,10 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	krakendcors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
-	"github.com/hanzoai/gateway/v2/internal/plugin/cors/mux"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	krakendcors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
+	"github.com/hanzoai/gateway/v2/internal/plugin/cors/mux"
 	"github.com/rs/cors"
 	wrapper "github.com/rs/cors/wrapper/gin"
 )

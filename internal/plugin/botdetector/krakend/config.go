@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector"
 )
 
 // Namespace is the key used to store the bot detector config at the ExtraConfig struct

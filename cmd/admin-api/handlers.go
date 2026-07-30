@@ -45,7 +45,7 @@ func (s *server) gate(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *server) authenticate(r *http.Request) (identity, bool) {
 	// (1) JWT (Bearer/Basic) — carries `owner` directly.
-	if claims, err := s.cfg.validator.Validate(r); err == nil && claims != nil {
+	if claims, err := s.cfg.validator.Verify(r.Header); err == nil && claims != nil {
 		if claims.Owner == s.cfg.adminOrg {
 			return identity{
 				Owner: claims.Owner, Name: claims.Name, Email: claims.Email,

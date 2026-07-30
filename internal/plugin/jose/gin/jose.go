@@ -10,12 +10,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-jose/go-jose/v3/jwt"
-	auth0 "github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
-	krakendjose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	ginlura "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	auth0 "github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
+	krakendjose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
 )
 
 func HandlerFactory(hf ginlura.HandlerFactory, logger logging.Logger, rejecterF krakendjose.RejecterFactory) ginlura.HandlerFactory {

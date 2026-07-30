@@ -8,11 +8,11 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter"
 	bf_rpc "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/rpc"
 	"github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/rpc/server"
-	"github.com/hanzoai/gateway/v2/internal/lura/config"
-	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 )
 
 // Namespace for bloomfilter

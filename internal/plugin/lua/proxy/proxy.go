@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hanzoai/gateway/v2/internal/pkg/binder"
-	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua"
-	"github.com/hanzoai/gateway/v2/internal/plugin/lua/decorator"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	"github.com/hanzoai/gateway/v2/internal/pkg/binder"
+	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua"
+	"github.com/hanzoai/gateway/v2/internal/plugin/lua/decorator"
 )
 
 const (

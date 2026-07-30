@@ -22,12 +22,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // testConfig builds a guard config with a fixed HMAC key and no live IAM
 // dependency. The validator is constructed but never hit on the cookie/anonymous
-// paths exercised here (no Bearer token ⇒ iamauth returns ErrNoToken).
+// paths exercised here (no Bearer token ⇒ the edge returns ErrNoToken).
 func testConfig() *config {
 	return &config{
 		adminOrg:       "admin",
@@ -38,7 +38,7 @@ func testConfig() *config {
 		cookieName:     "hanzo_admin_guard",
 		cookieTTL:      8 * time.Hour,
 		hmacKey:        []byte("0123456789abcdef-test-key"),
-		validator:      iamauth.NewValidator(iamauth.ConfigFromEnv()),
+		validator:      token.NewValidator(token.ConfigFromEnv()),
 	}
 }
 

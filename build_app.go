@@ -69,7 +69,7 @@ type RelayDeps struct {
 //   - forward.RegisterReversePushHandler(node): routes backend→gateway
 //     Push frames (SSE / WebSocket) back to the originating client conn.
 //
-// The gate reuses package iamauth + gateway's permission bit-field math;
+// The gate reuses hanzoai/authz/edge + this gateway's money bit-field math;
 // there is exactly one auth implementation. pick routes /v1/base/* to the
 // base peer, everything else to cloud.
 func RegisterRelay(deps RelayDeps) error {

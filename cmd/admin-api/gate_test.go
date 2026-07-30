@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // fakeCloudAPI stands in for cloud's GET /v1/ai/account. It echoes a
@@ -52,7 +52,7 @@ func newTestServer(cloudURL, iamURL string) *server {
 		adminOrg:    "admin",
 		cloudURL:    cloudURL,
 		iamInternal: iamURL,
-		validator:   iamauth.NewValidator(iamauth.Config{}), // no token in tests → ErrNoToken → session path
+		validator:   token.NewValidator(token.Config{}), // no token in tests → ErrNoToken → session path
 	}
 	return &server{cfg: cfg, agg: &aggregator{cfg: cfg}}
 }

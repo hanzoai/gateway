@@ -17,20 +17,22 @@ package main
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	gojose "github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // tenant_test.go proves the tenant-aware authorization boundary end-to-end
 // through handleVerify (the real forward-auth entrypoint) on BOTH identity
-// paths that carry a tenant admin: a Bearer JWT validated by the real iamauth
+// paths that carry a tenant admin: a Bearer JWT validated by the real the edge
 // validator, and a guard session cookie. The keystone invariant: a Lux tenant
 // admin reaches ONLY admin.lux.* and is denied on every other brand's surface
 // and on the global/DO-infra surfaces; the global platform-sudo org reaches
@@ -39,12 +41,11 @@ import (
 const guardTestIssuer = "https://hanzo.id"
 
 // guardSigner is a self-contained RSA signer + JWKS server so the tenant tests
-// mint tokens the REAL iamauth validator accepts (issuer + audience + expiry +
+// mint tokens the REAL the edge validator accepts (issuer + audience + expiry +
 // signature all enforced) — no shortcut around validation.
 type guardSigner struct {
-	key    *rsa.PrivateKey
-	keyID  string
-	signer gojose.Signer
+	key   *rsa.PrivateKey
+	keyID string
 }
 
 func newGuardSigner(t *testing.T) *guardSigner {
@@ -53,24 +54,16 @@ func newGuardSigner(t *testing.T) *guardSigner {
 	if err != nil {
 		t.Fatalf("generate RSA key: %v", err)
 	}
-	kid := "admin-guard-test-key"
-	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid)
-	signer, err := gojose.NewSigner(gojose.SigningKey{Algorithm: gojose.RS256, Key: key}, opts)
-	if err != nil {
-		t.Fatalf("new signer: %v", err)
-	}
-	return &guardSigner{key: key, keyID: kid, signer: signer}
+	return &guardSigner{key: key, keyID: "admin-guard-test-key"}
 }
 
 func (gs *guardSigner) serveJWKS(t *testing.T) *httptest.Server {
 	t.Helper()
-	jwks := gojose.JSONWebKeySet{Keys: []gojose.JSONWebKey{{
-		Key:       &gs.key.PublicKey,
-		KeyID:     gs.keyID,
-		Algorithm: string(gojose.RS256),
-		Use:       "sig",
-	}}}
-	data, err := json.Marshal(jwks)
+	data, err := json.Marshal(map[string]any{"keys": []map[string]any{{
+		"kty": "RSA", "kid": gs.keyID, "use": "sig", "alg": "RS256",
+		"n": base64.RawURLEncoding.EncodeToString(gs.key.PublicKey.N.Bytes()),
+		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(gs.key.PublicKey.E)).Bytes()),
+	}}})
 	if err != nil {
 		t.Fatalf("marshal jwks: %v", err)
 	}
@@ -82,22 +75,24 @@ func (gs *guardSigner) serveJWKS(t *testing.T) *httptest.Server {
 
 // signPrincipal mints a valid JWT carrying the identity fields the guard trusts:
 // owner (home org), isAdmin (home-org admin bit), and the org-membership set.
-func (gs *guardSigner) signPrincipal(t *testing.T, owner string, isAdmin bool, orgs []iamauth.Membership) string {
+func (gs *guardSigner) signPrincipal(t *testing.T, owner string, isAdmin bool, orgs []authz.Membership) string {
 	t.Helper()
 	now := time.Now()
-	claims := iamauth.Claims{
-		Claims: jwt.Claims{
-			Issuer:   guardTestIssuer,
-			Subject:  owner + "/z",
-			Audience: jwt.Audience{"hanzo-admin-guard"},
-			IssuedAt: jwt.NewNumericDate(now.Add(-time.Minute)),
-			Expiry:   jwt.NewNumericDate(now.Add(10 * time.Minute)),
+	claims := authz.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    guardTestIssuer,
+			Subject:   owner + "/z",
+			Audience:  jwt.ClaimStrings{"hanzo-admin-guard"},
+			IssuedAt:  jwt.NewNumericDate(now.Add(-time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		},
 		Owner:   owner,
 		IsAdmin: isAdmin,
 		Orgs:    orgs,
 	}
-	raw, err := jwt.Signed(gs.signer).Claims(claims).Serialize()
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	tok.Header["kid"] = gs.keyID
+	raw, err := tok.SignedString(gs.key)
 	if err != nil {
 		t.Fatalf("sign: %v", err)
 	}
@@ -116,7 +111,7 @@ func tenantTestConfig(jwksURL string) *config {
 		cookieName:     "hanzo_admin_guard",
 		cookieTTL:      8 * time.Hour,
 		hmacKey:        []byte("0123456789abcdef-tenant-test-key"),
-		validator: iamauth.NewValidator(iamauth.Config{
+		validator: token.NewValidator(token.Config{
 			JWKSURL:   jwksURL,
 			Issuer:    guardTestIssuer,
 			Audiences: []string{"hanzo-admin-guard"},
@@ -259,7 +254,7 @@ func TestTenantMember_NotAdmin_Denied(t *testing.T) {
 	cfg := tenantTestConfig(srv.URL)
 
 	// (1) Home org lux, but only a member (isAdmin=false, role=member).
-	luxMemberJWT := gs.signPrincipal(t, "lux", false, []iamauth.Membership{{Org: "lux", Role: "member"}})
+	luxMemberJWT := gs.signPrincipal(t, "lux", false, []authz.Membership{{Org: "lux", Role: "member"}})
 	if got := verdictBearer(cfg, "admin.lux.cloud", luxMemberJWT); got != http.StatusForbidden {
 		t.Fatalf("lux member (JWT) on admin.lux.cloud: status=%d want 403 (member is not a tenant admin)", got)
 	}
@@ -280,7 +275,7 @@ func TestTenantAdmin_ViaMembershipSet(t *testing.T) {
 	cfg := tenantTestConfig(srv.URL)
 
 	// Home org "acme" (non-admin there), but an ADMIN member of lux.
-	crossOrgLuxAdmin := gs.signPrincipal(t, "acme", false, []iamauth.Membership{
+	crossOrgLuxAdmin := gs.signPrincipal(t, "acme", false, []authz.Membership{
 		{Org: "lux", Role: "admin"},
 		{Org: "zoo", Role: "member"},
 	})
@@ -365,7 +360,7 @@ func TestAuthorizeMatrix(t *testing.T) {
 	sudo := principal{owner: "admin", isAdmin: true}
 	luxAdmin := principal{owner: "lux", isAdmin: true}
 	luxMember := principal{owner: "lux", isAdmin: false}
-	crossLuxAdmin := principal{owner: "acme", orgs: []iamauth.Membership{{Org: "lux", Role: "owner"}}}
+	crossLuxAdmin := principal{owner: "acme", orgs: []authz.Membership{{Org: "lux", Role: "owner"}}}
 	anon := principal{}
 
 	cases := []struct {

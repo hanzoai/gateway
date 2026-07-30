@@ -24,6 +24,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hanzoai/authz"
 	luxlog "github.com/luxfi/log"
 	zaplib "github.com/luxfi/zap"
 	"github.com/luxfi/zap/forward"
@@ -71,6 +72,7 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	// The money/admin bit MUST NOT be granted; only Live (real-money mode).
 	claims := validClaims(cfg.Issuer, cfg.Audiences[0])
 	claims.IsAdmin = true
+	claims.Orgs = []authz.Membership{{Org: "hanzo", Role: "admin"}}
 	token := tj.signToken(t, claims)
 
 	gate := newGate(cfg)
@@ -92,8 +94,12 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	if f.UserID != "alice" {
 		t.Errorf("UserID: got %q want alice", f.UserID)
 	}
-	if !f.IsAdmin {
-		t.Error("IsAdmin: got false want true")
+	// forward re-emits f.IsAdmin as X-User-IsAdmin, the fleet's PLATFORM header. An
+	// ORG admin must not carry it: setting it from claims.IsAdmin — IAM's org-role
+	// bit — made every org owner a platform admin on the relay path too, and this
+	// test asserted that, which is why it survived.
+	if f.IsAdmin {
+		t.Error("SECURITY: an org admin was marked a PLATFORM admin on the relay")
 	}
 	// Org-level admin -> Live ONLY (the Admin money bit is global-admin-only).
 	if wantBits := permissionBits["live"]; f.Permissions != wantBits {
@@ -117,8 +123,11 @@ func TestGatePlatformSudoGetsAdminBit(t *testing.T) {
 	defer closeJWKS()
 
 	claims := validClaims(cfg.Issuer, cfg.Audiences[0])
-	claims.Owner = "admin" // global admin org
+	claims.Owner = "admin" // the reserved platform org
 	claims.IsAdmin = true
+	// The home-org membership every user token carries. Without it this is a MACHINE,
+	// which holds no platform authority however its owner reads.
+	claims.Orgs = []authz.Membership{{Org: "admin", Role: "admin"}}
 	token := tj.signToken(t, claims)
 
 	gate := newGate(cfg)
@@ -130,7 +139,10 @@ func TestGatePlatformSudoGetsAdminBit(t *testing.T) {
 	}
 	wantBits := permissionBits["admin"] | permissionBits["live"]
 	if f.Permissions != wantBits {
-		t.Errorf("global-admin Permissions: got %d want %d (Admin|Live)", f.Permissions, wantBits)
+		t.Errorf("platform-sudo Permissions: got %d want %d (Admin|Live)", f.Permissions, wantBits)
+	}
+	if !f.IsAdmin {
+		t.Error("the platform operator lost platform authority on the relay")
 	}
 }
 

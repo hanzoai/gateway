@@ -11,8 +11,8 @@ import (
 	"math/rand"
 	"time"
 
-	krakendrate "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	krakendrate "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit"
 )
 
 // Namespace is the key to use to store and access the custom config data for the router

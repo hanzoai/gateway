@@ -4,9 +4,9 @@ import (
 	"fmt"
 
 	"github.com/google/cel-go/cel"
-	"github.com/hanzoai/gateway/v2/internal/plugin/cel/internal"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/plugin/cel/internal"
 )
 
 func NewRejecter(l logging.Logger, cfg *config.EndpointConfig) *Rejecter {
