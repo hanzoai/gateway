@@ -97,7 +97,7 @@ type config struct {
 
 	// validator validates Bearer/Basic JWTs (issuer + audience + expiry) and
 	// exposes claims.owner — the same edge validator the gateway uses.
-	validator *token.Validator
+	validator *edge.Verifier
 }
 
 const (

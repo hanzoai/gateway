@@ -50,7 +50,7 @@ type router struct {
 	mu        sync.RWMutex
 	routes    map[string][]backendEntry
 	authHosts map[string]bool
-	validator *token.Validator
+	validator *edge.Verifier
 }
 
 type backendEntry struct {
