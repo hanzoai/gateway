@@ -28,7 +28,7 @@ See `docs/MEMORY_PROFILE.md` for the harness. The harness is committed; the meas
 `feat/hip-0110-gateway-edge-process` is the parallel agent's branch — it is restructuring the gateway from a legacy-engine-resident process into a thin edge binary. Two changes intersect this audit:
 
 1. `cmd/gateway/main.go` → `cmd/gateway/main_legacy.go` rename in the HIP-0110 branch.
-2. New `middleware/auth.go` package with `gateway.SetGatewayMinted` / `gateway.AssertGatewayMinted` markers — these symbols are NOT yet defined in the gateway package, so the HIP-0110 branch does not build today.
+2. New `middleware/auth.go` package with `gateway.SetGatewayWritten` / `gateway.AssertGatewayWritten` markers — these symbols are NOT yet defined in the gateway package, so the HIP-0110 branch does not build today.
 
 Recommendation: let HIP-0110 land first. The breaker primitive in zip is the only piece of this audit's source-level scope that gateway will need to consume; it ships independently in `hanzoai/zip` and will be importable when HIP-0110 wires it into the gateway's ZAP client.
 

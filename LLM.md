@@ -193,7 +193,7 @@ gateway/
 
 ## JWT Audience Allowlist (edge auth)
 
-`iamauth.ValidateToken` validates `iss` (strict, env `AUTH_ISSUER`, prod
+`edge.Verifier.VerifyRaw` validates `iss` (strict, env `AUTH_ISSUER`, prod
 `https://iam.hanzo.ai`) and `aud` against an **allowlist** (OR semantics — a
 token passes if its `aud` matches ANY entry). IAM stamps user tokens
 with `aud = <client_id>` (the seeded app name: `hanzo-app`, `hanzo-console`,
@@ -201,8 +201,8 @@ with `aud = <client_id>` (the seeded app name: `hanzo-app`, `hanzo-console`,
 fixed audience (`https://api.hanzo.ai`) rejected EVERY normal user JWT (cowork
 AI 401, user billing 401).
 
-- Single source of truth: `iamauth.DefaultAudiences` (the known user-facing
-  client_ids + `https://api.hanzo.ai`) and `iamauth.AudiencesFromEnv()`. Shared
+- Single source of truth: hanzoai/authz/edge.DefaultAudiences` (the known user-facing
+  client_ids + `https://api.hanzo.ai`) and `token.AudiencesFromEnv()`. Shared
   by the gin/Lura middleware (`auth_middleware.go`), the relay gate
   (`gate.go`), the unified-binary mount (`mount.go`), and the ingress
   (`cmd/ingress`). One implementation, four callers.
@@ -213,7 +213,7 @@ AI 401, user billing 401).
 - The allowlist is never empty by construction, so the audience check is
   ALWAYS enforced. `aud` outside the set fails; a missing/empty `iss` fails.
 - Forwards-only: append new client_ids to `DefaultAudiences`, never remove.
-- Regression: `iamauth/audience_test.go` (aud=hanzo-app/hanzo-chat PASS,
+- Regression: `token/token.go` (aud=hanzo-app/hanzo-chat PASS,
   aud=evil FAIL, wrong issuer FAIL) + `TestJWTAuth_RejectsWrongAudience`.
 
 ## Identity Headers (Trust Boundary)
@@ -331,7 +331,7 @@ and downgrades the running gateway — live is ahead of the manifest).
 
 **Audience is enforced ONLY at the Go edge, NEVER in `gateway.json`.** The Go
 `NewAuthMiddleware` validates `aud` against an ANY-of allowlist
-(`iamauth.DefaultAudiences`, go-jose v4 `AnyAudience`): a token passes when its
+(hanzoai/authz/edge.DefaultAudiences`, go-jose v4 `AnyAudience`): a token passes when its
 single `aud=<client_id>` matches ANY entry. The config-declared `auth/validator`
 (krakend-jose → go-auth0 → go-jose **v3**) validates audience with
 ALL-semantics — the token must carry EVERY configured `aud`. IAM stamps ONE
@@ -339,7 +339,7 @@ ALL-semantics — the token must carry EVERY configured `aud`. IAM stamps ONE
 block 401s EVERY user JWT. `TestGatewayConfig_NoJWTAudience` guards this —
 keep `gateway.json` audience-free.
 
-**`X-Project-Id` is stripped at the edge** (`iamauth.StripIdentityHeaders`): it
+**`X-Project-Id` is stripped at the edge** (`edge.Strip`): it
 is forgeable and written from no claim, so it can never reach a backend
 (cross-project IDOR). Write it here from a validated claim if/when IAM carries
 one — same pattern as `X-Org-Id`.
@@ -397,16 +397,16 @@ Endpoints:
 - `GET /__guard/logout`, `GET /__guard/healthz`.
 
 Identity resolution — one predicate (`owner == AdminOrg`), three sources tried
-in order, all reusing `iamauth`:
+in order, all reusing hanzoai/authz/edge:
   1. the guard's own signed session cookie (HMAC, parent-domain `.hanzo.ai`, so
      one admin login covers every guarded `*.hanzo.ai` host) — browser fast path;
-  2. a Bearer/Basic JWT via `iamauth.Validator.Validate` (the JWT already carries
+  2. a Bearer/Basic JWT via hanzoai/authz/edge.Validator.Validate` (the JWT already carries
      `owner`, no IAM round-trip) — API path;
   3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/get-account`
      server-side and reading `owner` — browser-with-IAM-session path.
 
 Login is standard OAuth2 PKCE against IAM (`client_id=hanzo-admin-guard`, app is
-org-locked to `admin`). `Validator.ValidateRaw` (added to `iamauth`) validates
+org-locked to `admin`). `Validator.ValidateRaw` (added to hanzoai/authz/edge) validates
 the id_token/access_token from the code exchange.
 
 Config (env): `IAM_PUBLIC_URL` (browser IAM), `IAM_INTERNAL_URL` (in-cluster IAM
@@ -449,7 +449,7 @@ Hardening vs the admin-guard clone (Red rework):
   hits `iamUnavailable` is let THROUGH so an IAM blip never blackholes the money
   path; a 4xx never fails open; anonymous never fails open. The durable fast path
   is the HMAC-signed guard cookie (8h) — it short-circuits IAM entirely.
-- **Inbound identity strip.** `handleVerify` runs `iamauth.StripIdentityHeaders`
+- **Inbound identity strip.** `handleVerify` runs `edge.Strip`
   (+ `stripWaitlistHeaders`) up front so a forged `X-Org-Id`/`X-Waitlist-*` can't
   be read by the guard. The AUTHORITATIVE upstream strip is the ingress headers
   middleware (must strip these before forwardAuth; the guard rewrites `X-Org-Id`
