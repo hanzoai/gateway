@@ -11,10 +11,10 @@ import (
 // These tests pin the CTO's orthogonal-route-class design for the tokenless
 // Sentry/o11y DSN ingest edge:
 //   - Class 1 (ingest): POST .../{envelope,store}[/] forwards to cloud with NO
-//     IAM-JWT gate and NO minted/forwarded identity (cloud DSN-auths + org-from-DSN).
-//   - Class 2 (authed): every other /v1/* validates the IAM-JWT and MINTS identity
+//     IAM-JWT gate and NO written/forwarded identity (cloud DSN-auths + org-from-DSN).
+//   - Class 2 (authed): every other /v1/* validates the IAM-JWT and WRITES identity
 //     FROM the JWT over a stripped slate — the gateway is the SOLE identity source.
-// The global ingress strip is load-bearing (several identity headers are minted only
+// The global ingress strip is load-bearing (several identity headers are written only
 // conditionally, so a forged copy would otherwise survive on the authed class).
 
 type backendSaw struct {
@@ -73,8 +73,8 @@ func TestIngestClass_AuthedReadRequiresJWT(t *testing.T) {
 // Scenario 3 (+ the load-bearing-strip proof): a valid JWT with a forged X-Org-Id
 // AND a forged X-User-IsGlobalAdmin — the backend must see the JWT's org (hanzo),
 // NOT the forged org, and must NOT see global-admin (the JWT asserts neither, and
-// the conditional mint does not re-set it, so the strip is what defeats the forge).
-func TestIngestClass_AuthedMintOverwritesForgedIdentity(t *testing.T) {
+// the conditional write does not re-set it, so the strip is what defeats the forge).
+func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	r, tj, jwks := setupMiddlewareWithJWKS(t, nil)
 	defer jwks.Close()
 	var saw backendSaw
@@ -99,7 +99,7 @@ func TestIngestClass_AuthedMintOverwritesForgedIdentity(t *testing.T) {
 		t.Errorf("SECURITY: backend saw X-User-Owner %q, want JWT owner \"hanzo\" (home org from JWT; forged \"admin\" overwritten)", saw.owner)
 	}
 	if saw.glob != "" {
-		t.Errorf("SECURITY: forged legacy X-User-IsGlobalAdmin survived (%q) — never minted now (platform sudo = org==admin); the ingress strip must drop a forged copy", saw.glob)
+		t.Errorf("SECURITY: forged legacy X-User-IsGlobalAdmin survived (%q) — never written now (platform sudo = org==admin); the ingress strip must drop a forged copy", saw.glob)
 	}
 }
 

@@ -321,14 +321,14 @@ func TestSessionForgeryRejected(t *testing.T) {
 
 // TestStripMiddlewareCoversAuthoritativeSet is the DRY guard: the generated
 // ingress `waitlist-strip` MUST enumerate every exact header the gateway strips
-// (authz.Headers) plus the guard's own minted headers, so the
+// (authz.Headers) plus the guard's own response headers, so the
 // ingress config fronting a direct-to-backend route can never silently drift and
 // leave a forgeable identity header (Red H-2).
 func TestStripMiddlewareCoversAuthoritativeSet(t *testing.T) {
 	var buf bytes.Buffer
 	printStripMiddleware(&buf)
 	out := buf.String()
-	for _, h := range append(append([]string{}, authz.Headers...), waitlistMintedHeaders...) {
+	for _, h := range append(append([]string{}, authz.Headers...), waitlistHeaders...) {
 		if !strings.Contains(out, h+`: ""`) {
 			t.Fatalf("generated waitlist-strip is MISSING %q — ingress strip would drift from the guard", h)
 		}

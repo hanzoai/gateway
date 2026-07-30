@@ -131,7 +131,7 @@ func (c *config) authorize(p principal, host string) bool {
 //     "is this an admin of THIS surface's org, or platform sudo?"
 //   - AUTHENTICATED surfaces (ci.hanzo.ai, and in time functions/training) ask
 //     only "is this anyone at all?", then scope the DATA by the X-Org-Id the
-//     guard mints.
+//     guard writes.
 //
 // Separating them keeps identity resolution (the three-source cascade in
 // handleVerify) orthogonal to authorization: one resolver, two policies. The
@@ -166,7 +166,7 @@ var adminPolicy = policy{
 // field the downstream trusts.
 //
 // host is ignored ON PURPOSE. This policy grants reach, not visibility: what a
-// caller SEES is decided downstream by the X-Org-Id the guard mints from the
+// caller SEES is decided downstream by the X-Org-Id the guard writes from the
 // verified `owner` claim. Attaching it to a surface that does not scope by
 // X-Org-Id would publish that surface to every authenticated user — so a
 // surface must scope before it is wired here.

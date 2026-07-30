@@ -116,7 +116,7 @@ const guardVersion = "v0.1.8"
 const (
 	verifyPath = "/__guard/verify"
 	// verifyAuthnPath gates a surface on being AUTHENTICATED rather than on
-	// being an admin, and mints X-Org-Id so the surface can scope its data to
+	// being an admin, and writes X-Org-Id so the surface can scope its data to
 	// the caller's org. Wire a surface here ONLY once it actually scopes by
 	// X-Org-Id — this endpoint grants reach to every authenticated user, and a
 	// surface that ignores the header would show all orgs to all of them.

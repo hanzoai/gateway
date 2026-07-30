@@ -14,7 +14,7 @@ import (
 //
 // This file used to be a shim over a gateway-local copy of the whole contract —
 // claims, org resolution, the two admin scopes, the header lists. That copy drifted
-// from the estate's and the drift was live: the platform-authority header was minted
+// from the estate's and the drift was live: the platform-authority header was written
 // from Claims.IsAdmin, IAM's ORG-role bit, so every org owner arrived a platform
 // admin. The zip edge had already been corrected; this one had not, because there
 // were two statements of one rule.
@@ -28,7 +28,7 @@ import (
 // identity header is brand-neutral and named exactly in authz.Headers, so this
 // catches only stray vendor junk a backend might someday read.
 //
-// It is brand-NEUTRAL in effect because it only ever DELETES — never mints, never
+// It is brand-NEUTRAL in effect because it only ever DELETES — never writes, never
 // requires — so it stays correct on every deployment this edge fronts.
 var vendorPrefixes = []string{"X-IAM-", "X-HANZO-"}
 
@@ -55,13 +55,13 @@ func stripClaimed(h http.Header) string {
 	return claimed
 }
 
-// mintIdentity applies the identity a verified token earns to the request the
+// writeIdentity writes the identity a verified token earns onto the request the
 // backend will read, then adds the one header whose meaning is this gateway's
 // rather than the estate's.
 //
 // selected is the org the client asked for, as returned by [edge.Strip]. It is
 // honoured only where the signed membership set admits it.
-func mintIdentity(h edge.Headers, claims *authz.Claims, selected string) {
+func writeIdentity(h edge.Headers, claims *authz.Claims, selected string) {
 	edge.Apply(h, claims, selected, nil)
 
 	// X-User-Permissions is the MONEY authority commerce gates on: it reads this
@@ -69,7 +69,7 @@ func mintIdentity(h edge.Headers, claims *authz.Claims, selected string) {
 	// satisfies every credit-creating and card-charging endpoint. It is therefore
 	// PLATFORM-sudo only — granting it to an org owner was a live free-money hole.
 	//
-	// It is minted here rather than by edge.Mint because the bit VOCABULARY is this
+	// It is written here rather than by edge.Render because the bit VOCABULARY is this
 	// deployment's commerce contract, not part of what an identity is. The name is in
 	// the strip set either way, so a client copy never survives to be trusted.
 	//

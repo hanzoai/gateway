@@ -1,7 +1,7 @@
 // Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 // Package gateway is the Hanzo Gateway edge: the JWT trust boundary
-// (identity strip + mint), the host/path routing table, and the HIP-0106
+// (identity strip + write), the host/path routing table, and the HIP-0106
 // in-process mount surface consumed by the unified cloud binary.
 //
 // # Mount

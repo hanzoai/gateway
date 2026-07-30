@@ -220,7 +220,7 @@ AI 401, user billing 401).
 
 Gateway is the **only** authority that may emit identity headers downstream.
 On every request the middleware unconditionally `Header.Del`s every header it
-mints (see `stripIdentityHeaders` in `auth_middleware.go`) BEFORE any bypass
+writes (see `stripIdentityHeaders` in `auth_middleware.go`) BEFORE any bypass
 path runs (public hosts, public paths, API keys, no-token pass-through). After
 JWT validation, the gateway re-injects the headers from the validated claims.
 
@@ -247,13 +247,13 @@ The single source of truth for bit positions is
 `commerce/util/permission/permission.go` — `permissionBits` here mirrors the
 iota order there. Forwards-only: never re-number, only append.
 
-**Strip-list ⊇ mint-list contract**: every header in
-`gatewayMintedIdentityHeaders` MUST be stripped on ingress. The contract is
-enforced by `TestStripList_CoversAllMintedHeaders` and
+**Strip-list ⊇ write-list contract**: every header in
+`authz.Headers` MUST be stripped on ingress. The contract is
+enforced by `TestStripList_CoversAllWrittenHeaders` and
 `TestStripIdentityHeaders_AllVariants` — these MUST pass before merge.
 
 Red P0-1 closed (2026-04-27): prior to this fix, the gateway neither stripped
-nor minted `X-User-Permissions`, allowing `curl -H "X-User-Permissions: 16"`
+nor wrote `X-User-Permissions`, allowing `curl -H "X-User-Permissions: 16"`
 to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 
 ## Edge Route Auth Classes + Billing (must-gate hardening, 2026-06-27)
@@ -340,8 +340,8 @@ block 401s EVERY user JWT. `TestGatewayConfig_NoJWTAudience` guards this —
 keep `gateway.json` audience-free.
 
 **`X-Project-Id` is stripped at the edge** (`iamauth.StripIdentityHeaders`): it
-is forgeable and minted from no claim, so it can never reach a backend
-(cross-project IDOR). Mint it here from a validated claim if/when IAM carries
+is forgeable and written from no claim, so it can never reach a backend
+(cross-project IDOR). Write it here from a validated claim if/when IAM carries
 one — same pattern as `X-Org-Id`.
 
 **`GET /v1/ai/providers/global` is must-gate.** It dumps the admin provider
@@ -452,7 +452,7 @@ Hardening vs the admin-guard clone (Red rework):
 - **Inbound identity strip.** `handleVerify` runs `iamauth.StripIdentityHeaders`
   (+ `stripWaitlistHeaders`) up front so a forged `X-Org-Id`/`X-Waitlist-*` can't
   be read by the guard. The AUTHORITATIVE upstream strip is the ingress headers
-  middleware (must strip these before forwardAuth; the guard re-mints `X-Org-Id`
+  middleware (must strip these before forwardAuth; the guard rewrites `X-Org-Id`
   via authResponseHeaders on allow).
 - **Forwarded-Host allowlist.** `safeHost`/`hostAllowed` honor `X-Forwarded-Host`
   only for the cookie-domain suffix (or explicit `GUARD_ALLOWED_HOSTS`), else fall

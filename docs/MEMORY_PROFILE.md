@@ -83,7 +83,7 @@ stacks, GC arenas); track both.
 - After every dep bump that touches `fasthttp`, `gin`, `lura`,
   or `the koanf parser` (the heavy bottom-of-stack libs).
 - After every change to `auth_middleware.go` that adds new per-request
-  allocations (e.g. new claim extraction, new headers minted).
+  allocations (e.g. new claim extraction, new headers written).
 - After every change to `zap_backend.go` or `base_ha_backend.go`
   affecting backend transport pooling.
 

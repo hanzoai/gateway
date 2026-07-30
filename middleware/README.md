@@ -8,7 +8,7 @@ the gateway subsystem (not the generic web framework) per HIP-0106.
 
 | Name | Purpose |
 |---|---|
-| `Auth(verifier AuthVerifier)` | Validate JWT, populate request context with claims, mint X-Org-Id |
+| `Auth(verifier AuthVerifier)` | Validate JWT, populate request context with claims, write X-Org-Id |
 | `StripIdentityHeaders()` | Strip client-supplied X-Org-Id / X-User-Id / X-User-Email / X-User-IsAdmin / X-Roles / X-User-Permissions before validation |
 
 ## Pipeline order
@@ -20,9 +20,9 @@ import (
 )
 
 app.Use(middleware.StripIdentityHeaders())  // first — strip client spoofing
-app.Use(middleware.Auth(verifier))           // then — validate + mint
-// downstream handlers see gateway-minted X-Org-Id
-// and gw.AssertGatewayMinted(c) returns true
+app.Use(middleware.Auth(verifier))           // then — validate + write
+// downstream handlers see gateway-written X-Org-Id
+// and gw.AssertGatewayWritten(c) returns true
 ```
 
 `AuthVerifier` is a one-method interface that adapts gateway's
@@ -37,8 +37,8 @@ request flowed through gateway via:
 ```go
 import gw "github.com/hanzoai/gateway"
 
-if !gw.AssertGatewayMinted(c) {
-    return zip.Errorf(502, "expected gateway-minted X-Org-Id")
+if !gw.AssertGatewayWritten(c) {
+    return zip.Errorf(502, "expected gateway-written X-Org-Id")
 }
 ```
 
@@ -50,9 +50,9 @@ client problem.
 
 ## Why not in zip/middleware?
 
-JWT validation + identity-header minting are the gateway subsystem's
+JWT validation + identity-header writing are the gateway subsystem's
 responsibility per HIP-0106. Other subsystems mounted inside the
-unified `cloud` binary trust the gateway-minted `X-Org-Id` header and
+unified `cloud` binary trust the gateway-written `X-Org-Id` header and
 do NOT re-validate JWTs themselves — re-running JWT validation
 per-subsystem is wasteful and risks divergent validation rules.
 

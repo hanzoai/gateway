@@ -3,7 +3,7 @@
 // Package gateway exposes the HIP-0106 unified-binary mount surface for
 // the Hanzo Gateway. In the unified cloud binary the gateway acts as
 // the trust boundary: it validates JWTs, strips client-supplied
-// identity headers, and mints the gateway-authorized X-Org-Id /
+// identity headers, and writes the gateway-authorized X-Org-Id /
 // X-User-Id / X-User-Email / X-Roles / X-User-Permissions /
 // X-User-IsAdmin / X-Phone-Number set documented in HIP-0026.
 //
@@ -31,7 +31,7 @@ import (
 // does three things:
 //
 //  1. Installs the canonical zip middleware chain (strip client-supplied
-//     identity headers, validate JWT, mint X-* headers) so every
+//     identity headers, validate JWT, write X-* headers) so every
 //     downstream subsystem on the same zip.App sees a clean trust
 //     boundary.
 //
@@ -111,12 +111,12 @@ func zipFromGin(h gin.HandlerFunc) zip.Handler {
 		engine.Use(h)
 		engine.NoRoute(func(c *gin.Context) {
 			// Delegate straight to next: c.Request already carries the
-			// headers the gin handler minted (X-Org-Id / X-User-Id / …),
+			// headers the gin handler wrote (X-Org-Id / X-User-Id / …),
 			// because the middleware mutates c.Request.Header in place.
 			//
 			// Do NOT copy request headers onto c.Writer.Header(). That
 			// writes them to the RESPONSE, reflecting Authorization,
-			// Cookie and the minted identity set straight back to the
+			// Cookie and the written identity set straight back to the
 			// caller — a credential leak to anything that observes or
 			// caches response headers. It also never served the stated
 			// purpose, since the downstream reads c.Request.

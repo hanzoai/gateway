@@ -451,7 +451,7 @@ func isSentryIngestPath(method, path string) bool {
 // Sentry wire (isSentryIngestPath). Both are POST-only + suffix-anchored on
 // {envelope,store}, so this selector can NEVER match a read — every Sentry/o11y
 // READ routes to the authed class and stays JWT-gated. Cloud DSN-authenticates
-// this class and resolves the org FROM the DSN; the gateway mints no identity for
+// this class and resolves the org FROM the DSN; the gateway writes no identity for
 // it. This is the routing selector for class 1 — not a bypass hole in a global gate.
 func isIngestPath(method, path string) bool {
 	return isErrorIngestPath(method, path) || isSentryIngestPath(method, path)
@@ -495,24 +495,24 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// This MUST be the first action, before any route-class dispatch.
 		//
 		// GLOBAL IDENTITY INVARIANT — applies to EVERY class, unconditionally:
-		// identity headers are gateway-MINTED, never client-accepted. Load-bearing,
+		// identity headers are gateway-WRITTEN, never client-accepted. Load-bearing,
 		// NOT a bypass-afterthought:
-		//   • Authed class mints X-User-Id / X-Org-Id / X-User-Email unconditionally,
+		//   • Authed class writes X-User-Id / X-Org-Id / X-User-Email unconditionally,
 		//     but X-Project-Id, X-Billing-Account-Id, X-Roles, X-Phone-Number,
-		//     X-User-IsAdmin, X-User-Permissions are minted ONLY when the validated JWT
+		//     X-User-IsAdmin, X-User-Permissions are written ONLY when the validated JWT
 		//     asserts them — a forged copy of any of THOSE would otherwise survive
 		//     un-overwritten below → privilege / tenant spoof. (Legacy X-User-IsGlobalAdmin
-		//     is NEVER minted now — platform sudo is org=="admin" — but stays in the
+		//     is NEVER written now — platform sudo is org=="admin" — but stays in the
 		//     strip set so a forged copy is still dropped.)
-		//   • Ingest class (class 1) mints NOTHING, so this guarantees no client
+		//   • Ingest class (class 1) writes NOTHING, so this guarantees no client
 		//     identity ever reaches cloud, which resolves the org solely from the DSN.
 		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
 		//
 		// The strip RETURNS the org the client selected (the inbound X-Org-Id) as it
 		// deletes it — the one identity value that survives, and only as an INTENT.
 		// It is used solely below, after JWT validation, where EffectiveOrg checks it
-		// against the token's signed membership set before any of it is re-minted. On
-		// every class that mints nothing (ingest, public host, public path, tokenless,
+		// against the token's signed membership set before any of it is rewritten. On
+		// every class that writes nothing (ingest, public host, public path, tokenless,
 		// API key) it is simply discarded, so those paths are untouched.
 		selectedOrg := stripClaimed(c.Request.Header)
 
@@ -523,7 +523,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// POST /v1/sentry/<project>/{envelope,store}[/] and the o11y errortracking
 		// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
 		// decision, NOT a hole punched in the authed gate: this class has its own
-		// (empty) auth — forward to cloud with NO IAM-JWT gate and NO minted identity;
+		// (empty) auth — forward to cloud with NO IAM-JWT gate and NO written identity;
 		// cloud DSN-authenticates and derives the org FROM the DSN. isIngestPath is
 		// POST-only + suffix-anchored, so every Sentry/o11y READ falls through to the
 		// authed class below and stays JWT-gated.
@@ -535,7 +535,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// ── ROUTE CLASS 2 — authed API (every other /v1/*) ──────────────────────
 		// Its own auth chain, below: no-auth allowlist (public IAM/login hosts +
 		// public paths) → IAM-JWT validate (401 if absent-and-required, or invalid) →
-		// MINT the canonical identity headers FROM the validated JWT (overwriting the
+		// WRITE the canonical identity headers FROM the validated JWT (overwriting the
 		// stripped slate) → balance gate. On this class the gateway is the SOLE source
 		// of identity; a client-supplied value can never reach a backend.
 
@@ -592,12 +592,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		}
 
 		// The org that PAYS. It is a SEPARATE question from the org the request ACTS
-		// in (which mintIdentity resolves and mints): an operator viewing a customer
+		// in (which writeIdentity resolves and writes): an operator viewing a customer
 		// reads the customer's data and spends the ADMIN ledger, never the customer's.
 		ledgerOrg := claims.LedgerOrg(selectedOrg)
 		userID := claims.UserID()
 
-		// ONE mint, from the one place that decides it. This block used to compute
+		// ONE write, from the one place that decides it. This block used to compute
 		// every header inline — the two orgs, the sub-scopes, the two admin scopes,
 		// the permission bits — and that copy is where the escalation lived: the
 		// PLATFORM header X-User-IsAdmin was set from claims.IsAdmin, IAM's ORG-role
@@ -605,14 +605,14 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// had already been corrected; this one had not, because the rule was stated
 		// twice. It is now stated once, in hanzoai/authz/edge.
 		//
-		// Three headers the old block minted are gone because IAM never emitted the
+		// Three headers the old block wrote are gone because IAM never emitted the
 		// claims they read. `roles`, `permissions` and `phone` are absent from the
 		// signed claim set (internal/oidc/jwt.go) and from claims_supported, so
 		// X-Roles and X-Phone-Number were always empty and the permission bit-field
 		// only ever carried what the two predicates put there — which is what
-		// mintIdentity computes. They stay in the STRIP set, so a forged copy of any
+		// writeIdentity computes. They stay in the STRIP set, so a forged copy of any
 		// of them still never survives.
-		mintIdentity(c.Request.Header, claims, selectedOrg)
+		writeIdentity(c.Request.Header, claims, selectedOrg)
 
 		// Balance gate — path-scoped + fail-closed (see checkBalance).
 		//
