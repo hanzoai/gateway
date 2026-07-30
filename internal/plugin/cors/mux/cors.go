@@ -5,10 +5,10 @@ import (
 	"io"
 	"log"
 
-	krakendcors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
 	"github.com/hanzoai/gateway/v2/internal/lura/router/mux"
+	krakendcors "github.com/hanzoai/gateway/v2/internal/plugin/cors"
 	"github.com/rs/cors"
 )
 

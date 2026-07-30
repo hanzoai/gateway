@@ -23,7 +23,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz"
 )
 
 // commerceStub stands in for commerce's GET /v1/billing/balance. It records the
@@ -42,7 +42,7 @@ func commerceStub(t *testing.T, billed *string) *httptest.Server {
 // orgRequest drives one request through the middleware with the given claims and
 // (optional) client org selection, returning the org the backend saw, the home org
 // it saw, and the user commerce was asked to bill.
-func orgRequest(t *testing.T, claims hanzoJWTClaims, selected string) (org, home, billed string) {
+func orgRequest(t *testing.T, claims authz.Claims, selected string) (org, home, billed string) {
 	t.Helper()
 	commerce := commerceStub(t, &billed)
 	defer commerce.Close()
@@ -77,11 +77,11 @@ func orgRequest(t *testing.T, claims hanzoJWTClaims, selected string) (org, home
 
 // memberClaims is a person whose home org is acme and who also belongs to
 // beta-team — the ordinary switcher subject, with IAM's signed membership set.
-func memberClaims() hanzoJWTClaims {
+func memberClaims() authz.Claims {
 	c := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	c.Owner = "acme"
-	c.Claims.Subject = "alice"
-	c.Orgs = []iamauth.Membership{{Org: "acme", Role: "admin"}, {Org: "beta-team", Role: "member"}}
+	c.RegisteredClaims.Subject = "alice"
+	c.Orgs = []authz.Membership{{Org: "acme", Role: "admin"}, {Org: "beta-team", Role: "member"}}
 	return c
 }
 
@@ -161,7 +161,10 @@ func TestOrg_NonMemberReadsNothing(t *testing.T) {
 func TestOrg_MasqueradeSpendsAdminLedger(t *testing.T) {
 	operator := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	operator.Owner = "admin"
-	operator.Claims.Subject = "z"
+	operator.RegisteredClaims.Subject = "z"
+	// A user token always carries its home org first (store.MemberOrgRefs), which is
+	// what distinguishes an operator from an app in the same org.
+	operator.Orgs = []authz.Membership{{Org: "admin", Role: "admin"}}
 
 	org, home, billed := orgRequest(t, operator, "customer")
 	if org != "customer" {
@@ -183,8 +186,12 @@ func TestOrg_MasqueradeSpendsAdminLedger(t *testing.T) {
 func TestOrg_MachineCannotMasquerade(t *testing.T) {
 	machine := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	machine.Owner = "admin"
-	machine.Claims.Subject = "kms-sync"
-	machine.Type = "application"
+	machine.RegisteredClaims.Subject = "admin/kms-sync"
+	// IAM's client_credentials grant signs NO membership set — that is the machine
+	// signal. The fixture used to set tokenType "application", a value IAM assigns
+	// nowhere, so this test passed against a token that cannot exist while the real
+	// escalation stayed open.
+	machine.Orgs = nil
 
 	org, _, billed := orgRequest(t, machine, "victim")
 	if org != "admin" {
@@ -200,7 +207,7 @@ func TestOrg_MachineCannotMasquerade(t *testing.T) {
 // and client selection, and returns the org the gate put on the envelope.
 // forward.Forward.TenantID IS X-Org-Id: the relay lifts it inbound and re-emits it
 // as that header at the backend, so this is the same contract on a second wire.
-func relayOrg(t *testing.T, claims hanzoJWTClaims, selected string) string {
+func relayOrg(t *testing.T, claims authz.Claims, selected string) string {
 	t.Helper()
 	tj := newTestJWKS(t)
 	cfg, closeJWKS := gateConfig(t, tj, true)
@@ -230,7 +237,7 @@ func TestOrg_RelayHonorsSelection(t *testing.T) {
 
 	for _, tc := range []struct {
 		name     string
-		claims   hanzoJWTClaims
+		claims   authz.Claims
 		selected string
 		want     string
 	}{

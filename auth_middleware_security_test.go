@@ -11,25 +11,32 @@ package gateway
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	gojose "github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // testJWKS holds a test RSA key pair and provides helpers for creating
 // signed JWTs and serving a JWKS endpoint.
+// testJWKS is a throwaway signing identity plus the key set that publishes it.
+// It signs with golang-jwt, the SAME library IAM signs with and the one
+// hanzoai/authz verifies with — a test that mints with a different library is
+// testing a signer the estate does not run.
 type testJWKS struct {
-	key    *rsa.PrivateKey
-	keyID  string
-	signer gojose.Signer
+	key   *rsa.PrivateKey
+	keyID string
 }
 
 func newTestJWKS(t *testing.T) *testJWKS {
@@ -38,37 +45,24 @@ func newTestJWKS(t *testing.T) *testJWKS {
 	if err != nil {
 		t.Fatalf("failed to generate RSA key: %v", err)
 	}
+	return &testJWKS{key: key, keyID: "test-key-1"}
+}
 
-	kid := "test-key-1"
-	signingKey := gojose.SigningKey{Algorithm: gojose.RS256, Key: key}
-	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid)
-	signer, err := gojose.NewSigner(signingKey, opts)
-	if err != nil {
-		t.Fatalf("failed to create signer: %v", err)
-	}
-
-	return &testJWKS{
-		key:    key,
-		keyID:  kid,
-		signer: signer,
-	}
+// publicJWKS renders a key set the edge's reader accepts: kty/kid/use plus the
+// modulus and exponent as base64url unsigned integers.
+func publicJWKS(kid string, pub *rsa.PublicKey) []byte {
+	data, _ := json.Marshal(map[string]any{"keys": []map[string]any{{
+		"kty": "RSA", "kid": kid, "use": "sig", "alg": "RS256",
+		"n": base64.RawURLEncoding.EncodeToString(pub.N.Bytes()),
+		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes()),
+	}}})
+	return data
 }
 
 // jwksJSON returns the JWKS as JSON bytes (public key only).
 func (tj *testJWKS) jwksJSON(t *testing.T) []byte {
 	t.Helper()
-	jwk := gojose.JSONWebKey{
-		Key:       &tj.key.PublicKey,
-		KeyID:     tj.keyID,
-		Algorithm: string(gojose.RS256),
-		Use:       "sig",
-	}
-	jwks := gojose.JSONWebKeySet{Keys: []gojose.JSONWebKey{jwk}}
-	data, err := json.Marshal(jwks)
-	if err != nil {
-		t.Fatalf("failed to marshal JWKS: %v", err)
-	}
-	return data
+	return publicJWKS(tj.keyID, &tj.key.PublicKey)
 }
 
 // serveJWKS starts an httptest.Server that serves the JWKS endpoint.
@@ -82,27 +76,54 @@ func (tj *testJWKS) serveJWKS(t *testing.T) *httptest.Server {
 	}))
 }
 
-// signToken creates a signed JWT string with the given claims.
-func (tj *testJWKS) signToken(t *testing.T, claims interface{}) string {
+// signToken signs claims under this identity's key, naming the key in the header.
+// The kid is not optional: authz.Verify refuses a token that names no key rather
+// than trying every key in a set, which is how a reader ends up accepting a
+// signature from a key the token never claimed.
+// signToken signs either a typed claim set or a bare claim MAP. The map form
+// exists so a test can mint a shape no struct would produce — a missing issuer,
+// an unexpected claim, a wrong type — which is what a hostile token looks like.
+func (tj *testJWKS) signToken(t *testing.T, claims any) string {
 	t.Helper()
-	raw, err := jwt.Signed(tj.signer).Claims(claims).Serialize()
+	return signAs(t, tj.key, tj.keyID, claimsOf(t, claims))
+}
+
+func claimsOf(t *testing.T, c any) jwt.Claims {
+	t.Helper()
+	switch v := c.(type) {
+	case jwt.Claims:
+		return v
+	case map[string]any:
+		return jwt.MapClaims(v)
+	}
+	t.Fatalf("cannot sign claims of type %T", c)
+	return nil
+}
+
+// signAs signs claims under an arbitrary key and kid — the shape an attacker's
+// token takes when it names a real key it does not hold.
+func signAs(t *testing.T, key *rsa.PrivateKey, kid string, claims any) string {
+	t.Helper()
+	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claimsOf(t, claims))
+	tok.Header["kid"] = kid
+	raw, err := tok.SignedString(key)
 	if err != nil {
 		t.Fatalf("failed to sign token: %v", err)
 	}
 	return raw
 }
 
-// validClaims returns hanzoJWTClaims with valid issuer, audience, subject,
+// validClaims returns authz.Claims with valid issuer, audience, subject,
 // owner, and expiry for use in tests.
-func validClaims(issuer, audience string) hanzoJWTClaims {
+func validClaims(issuer, audience string) authz.Claims {
 	now := time.Now()
-	return hanzoJWTClaims{
-		Claims: jwt.Claims{
-			Issuer:   issuer,
-			Subject:  "alice",
-			Audience: jwt.Audience{audience},
-			IssuedAt: jwt.NewNumericDate(now.Add(-1 * time.Minute)),
-			Expiry:   jwt.NewNumericDate(now.Add(10 * time.Minute)),
+	return authz.Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    issuer,
+			Subject:   "alice",
+			Audience:  jwt.ClaimStrings{audience},
+			IssuedAt:  jwt.NewNumericDate(now.Add(-1 * time.Minute)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		},
 		Owner: "hanzo",
 		Name:  "Alice",
@@ -192,7 +213,7 @@ func TestJWTAuth_RejectsEmptyIssuer(t *testing.T) {
 
 	// Create JWT with empty issuer
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
-	claims.Claims.Issuer = "" // Empty issuer -- this MUST be rejected
+	claims.RegisteredClaims.Issuer = "" // Empty issuer -- this MUST be rejected
 	token := tj.signToken(t, claims)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -306,7 +327,7 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "acme-corp"
-	claims.Claims.Subject = "bob"
+	claims.RegisteredClaims.Subject = "bob"
 	claims.Email = "bob@acme-corp.com"
 	token := tj.signToken(t, claims)
 
@@ -656,8 +677,8 @@ func TestJWTAuth_RejectsExpiredToken(t *testing.T) {
 
 	// Create expired JWT (expired 10 minutes ago, beyond the 2min leeway)
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
-	claims.Claims.Expiry = jwt.NewNumericDate(time.Now().Add(-10 * time.Minute))
-	claims.Claims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-20 * time.Minute))
+	claims.RegisteredClaims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(-10 * time.Minute))
+	claims.RegisteredClaims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-20 * time.Minute))
 	token := tj.signToken(t, claims)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -724,18 +745,8 @@ func TestJWTAuth_RejectsWrongSigningKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to generate attacker key: %v", err)
 	}
-	attackerSigningKey := gojose.SigningKey{Algorithm: gojose.RS256, Key: attackerKey}
-	opts := (&gojose.SignerOptions{}).WithType("JWT").WithHeader("kid", "attacker-key")
-	attackerSigner, err := gojose.NewSigner(attackerSigningKey, opts)
-	if err != nil {
-		t.Fatalf("failed to create attacker signer: %v", err)
-	}
-
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
-	raw, err := jwt.Signed(attackerSigner).Claims(claims).Serialize()
-	if err != nil {
-		t.Fatalf("failed to sign with attacker key: %v", err)
-	}
+	raw := signAs(t, attackerKey, "attacker-key", claims)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
 	req.Host = "api.hanzo.ai"
@@ -773,7 +784,7 @@ func TestStripIdentityHeaders_CaseInsensitive(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(header, "forged-value")
 
-			stripIdentityHeaders(req)
+			stripClaimed(req.Header)
 
 			if v := req.Header.Get(header); v != "" {
 				t.Errorf("SECURITY: header %q was NOT stripped (got %q)", header, v)
@@ -793,7 +804,7 @@ func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 	// This one should be stripped
 	req.Header.Set("X-Org-Id", "forged")
 
-	stripIdentityHeaders(req)
+	stripClaimed(req.Header)
 
 	preserved := map[string]string{
 		"Content-Type":    "application/json",
@@ -855,7 +866,7 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		req.Header.Set(h, "forged")
 	}
 
-	stripIdentityHeaders(req)
+	stripClaimed(req.Header)
 
 	for _, h := range attackerHeaders {
 		if v := req.Header.Get(h); v != "" {
@@ -864,135 +875,184 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 	}
 }
 
-// --- Test 14b: Canonical 3 header emission from valid JWT ---
+// --- Test 14: the identity headers a validated token mints, and the two it does not ---
 
-func TestCanonicalHeaders_EmittedFromJWT(t *testing.T) {
+// mintedFor runs one request through the live middleware and reports the identity
+// the backend would see.
+func mintedFor(t *testing.T, tj *testJWKS, jwksURL string, claims map[string]any) map[string]string {
+	t.Helper()
+	gin.SetMode(gin.TestMode)
+	seen := map[string]string{}
+	r := gin.New()
+	r.Use(NewAuthMiddleware(AuthConfig{
+		Enabled: true, JWKSURL: jwksURL, Issuer: "https://hanzo.id",
+		Audiences: []string{"https://api.hanzo.ai"}, RequireAuth: true,
+	}))
+	r.GET("/x", func(c *gin.Context) {
+		for _, h := range append(append([]string{}, authz.Headers...), authz.Retired...) {
+			seen[h] = c.Request.Header.Get(h)
+		}
+		c.Status(http.StatusOK)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/x", nil)
+	req.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("request was refused with %d: %s", w.Code, w.Body.String())
+	}
+	return seen
+}
+
+func iamToken(owner string, extra map[string]any) map[string]any {
+	now := time.Now()
+	c := map[string]any{
+		"iss": "https://hanzo.id", "sub": "uuid-alice",
+		"aud": []string{"https://api.hanzo.ai"},
+		"iat": now.Add(-time.Minute).Unix(), "exp": now.Add(10 * time.Minute).Unix(),
+		"owner": owner, "email": "alice@hanzo.ai", "preferred_username": "alice",
+	}
+	for k, v := range extra {
+		c[k] = v
+	}
+	return c
+}
+
+// An ORG ADMIN gets the org-admin header and NOT the platform one. isAdmin is IAM's
+// org-role bit; minting platform authority from it made every org owner a platform
+// admin, which is the escalation this whole path was rebuilt to make unrepeatable.
+func TestOrgAdminNeverMintsPlatformAuthority(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	now := time.Now()
-	// Legacy shape: roles as []{"name": "..."}
-	claims := map[string]interface{}{
-		"iss":     "https://hanzo.id",
-		"sub":     "alice",
-		"aud":     []string{"https://api.hanzo.ai"},
-		"iat":     now.Add(-1 * time.Minute).Unix(),
-		"exp":     now.Add(10 * time.Minute).Unix(),
-		"owner":   "hanzo",
-		"email":   "alice@hanzo.ai",
+	got := mintedFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
 		"isAdmin": true,
-		"roles": []map[string]string{
-			{"name": "admin"},
-			{"name": "operator"},
-		},
-	}
-	token := tj.signToken(t, claims)
-
-	gin.SetMode(gin.TestMode)
-	var got struct {
-		userID  string
-		orgID   string
-		roles   string
-		email   string
-		isAdmin string
-	}
-	r := gin.New()
-	r.Use(NewAuthMiddleware(AuthConfig{
-		Enabled:     true,
-		JWKSURL:     jwksServer.URL,
-		Issuer:      "https://hanzo.id",
-		Audiences:   []string{"https://api.hanzo.ai"},
-		RequireAuth: true,
+		"orgs":    []map[string]any{{"org": "hanzo", "role": "admin"}},
 	}))
-	r.GET("/x", func(c *gin.Context) {
-		got.userID = c.Request.Header.Get("X-User-Id")
-		got.orgID = c.Request.Header.Get("X-Org-Id")
-		got.roles = c.Request.Header.Get("X-Roles")
-		got.email = c.Request.Header.Get("X-User-Email")
-		got.isAdmin = c.Request.Header.Get("X-User-IsAdmin")
-		c.Status(http.StatusOK)
-	})
 
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
+	if got[authz.HeaderUserAdmin] != "" {
+		t.Errorf("%s = %q — an org admin was minted PLATFORM authority",
+			authz.HeaderUserAdmin, got[authz.HeaderUserAdmin])
+	}
+	if got[authz.HeaderUserOrgAdmin] != "true" {
+		t.Errorf("%s = %q, want true", authz.HeaderUserOrgAdmin, got[authz.HeaderUserOrgAdmin])
+	}
+	if got[authz.HeaderOrg] != "hanzo" {
+		t.Errorf("%s = %q, want hanzo", authz.HeaderOrg, got[authz.HeaderOrg])
+	}
+	if got[authz.HeaderUser] != "uuid-alice" {
+		t.Errorf("%s = %q, want uuid-alice", authz.HeaderUser, got[authz.HeaderUser])
+	}
+	if got[authz.HeaderUserEmail] != "alice@hanzo.ai" {
+		t.Errorf("%s = %q, want alice@hanzo.ai", authz.HeaderUserEmail, got[authz.HeaderUserEmail])
+	}
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+	// The money bit-field carries `live` (a real top-up, on the org role) and NOT
+	// `admin` (platform money authority). Commerce reads this with intersection
+	// semantics, so an org owner holding admin was the free-money hole.
+	bits := got[authz.HeaderUserPermissions]
+	if bits == "" {
+		t.Fatalf("%s was not minted for an org admin", authz.HeaderUserPermissions)
 	}
-	if got.userID != "alice" {
-		t.Errorf("X-User-Id = %q, want %q", got.userID, "alice")
+	n, err := strconv.ParseInt(bits, 10, 64)
+	if err != nil {
+		t.Fatalf("%s = %q, not a bit-field", authz.HeaderUserPermissions, bits)
 	}
-	if got.orgID != "hanzo" {
-		t.Errorf("X-Org-Id = %q, want %q", got.orgID, "hanzo")
+	if n&permissionBits["admin"] != 0 {
+		t.Errorf("an org admin carries the PLATFORM money bit (%s=%q)", authz.HeaderUserPermissions, bits)
 	}
-	if got.roles != "admin,operator" {
-		t.Errorf("X-Roles = %q, want %q", got.roles, "admin,operator")
-	}
-	if got.email != "alice@hanzo.ai" {
-		t.Errorf("X-User-Email = %q, want %q", got.email, "alice@hanzo.ai")
-	}
-	if got.isAdmin != "true" {
-		t.Errorf("X-User-IsAdmin = %q, want %q", got.isAdmin, "true")
+	if n&permissionBits["live"] == 0 {
+		t.Errorf("an org admin lost the live bit (%s=%q) — their own real top-up would break", authz.HeaderUserPermissions, bits)
 	}
 }
 
-// --- Test 14c: Roles claim as plain []string also parses ---
-
-func TestCanonicalHeaders_RolesAsStringArray(t *testing.T) {
-	raw := []byte(`["admin","viewer"]`)
-	got := extractRoleNames(raw)
-	if got != "admin,viewer" {
-		t.Errorf("extractRoleNames = %q, want %q", got, "admin,viewer")
-	}
-}
-
-// --- Test 14d: Empty/absent roles -> no X-Roles header ---
-
-func TestCanonicalHeaders_NoRolesNoHeader(t *testing.T) {
+// A platform operator gets both the platform header and the money bit.
+func TestPlatformOperatorMintsPlatformAuthority(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	now := time.Now()
-	claims := map[string]interface{}{
-		"iss":   "https://hanzo.id",
-		"sub":   "bob",
-		"aud":   []string{"https://api.hanzo.ai"},
-		"iat":   now.Add(-1 * time.Minute).Unix(),
-		"exp":   now.Add(10 * time.Minute).Unix(),
-		"owner": "acme",
-		// no roles claim
+	got := mintedFor(t, tj, jwksServer.URL, iamToken(authz.AdminOrg, map[string]any{
+		"isAdmin": true,
+		"orgs":    []map[string]any{{"org": authz.AdminOrg, "role": "admin"}},
+	}))
+
+	if got[authz.HeaderUserAdmin] != "true" {
+		t.Errorf("%s = %q, want true", authz.HeaderUserAdmin, got[authz.HeaderUserAdmin])
 	}
-	token := tj.signToken(t, claims)
+	n, _ := strconv.ParseInt(got[authz.HeaderUserPermissions], 10, 64)
+	if n&permissionBits["admin"] == 0 {
+		t.Errorf("the platform operator lost the money bit (%s=%q)",
+			authz.HeaderUserPermissions, got[authz.HeaderUserPermissions])
+	}
+}
+
+// A MACHINE in the reserved admin org gets neither, and cannot name another tenant.
+// IAM's client_credentials grant signs no membership set, which is what marks it a
+// machine; the predicate that used to look for tokenType "application" never fired,
+// because IAM assigns that value nowhere.
+func TestAdminOrgMachineMintsNoAuthority(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	claims := iamToken(authz.AdminOrg, map[string]any{"isAdmin": true, "tokenType": "access-token"})
+	claims["sub"] = authz.AdminOrg + "/kms-sync"
+	delete(claims, "orgs")
 
 	gin.SetMode(gin.TestMode)
-	var gotRoles string
+	seen := map[string]string{}
 	r := gin.New()
 	r.Use(NewAuthMiddleware(AuthConfig{
-		Enabled:     true,
-		JWKSURL:     jwksServer.URL,
-		Issuer:      "https://hanzo.id",
-		Audiences:   []string{"https://api.hanzo.ai"},
-		RequireAuth: true,
+		Enabled: true, JWKSURL: jwksServer.URL, Issuer: "https://hanzo.id",
+		Audiences: []string{"https://api.hanzo.ai"}, RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
-		gotRoles = c.Request.Header.Get("X-Roles")
+		for _, h := range authz.Headers {
+			seen[h] = c.Request.Header.Get(h)
+		}
 		c.Status(http.StatusOK)
 	})
-
 	req := httptest.NewRequest(http.MethodGet, "/x", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims))
+	req.Header.Set(authz.HeaderOrg, "victim") // the org it asks to act in
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", w.Code)
+	if seen[authz.HeaderUserAdmin] != "" {
+		t.Errorf("an admin-org machine was minted %s=%q", authz.HeaderUserAdmin, seen[authz.HeaderUserAdmin])
 	}
-	if gotRoles != "" {
-		t.Errorf("X-Roles = %q, want empty (no roles in JWT)", gotRoles)
+	if seen[authz.HeaderUserOrgAdmin] != "" {
+		t.Errorf("an admin-org machine was minted %s=%q", authz.HeaderUserOrgAdmin, seen[authz.HeaderUserOrgAdmin])
+	}
+	if seen[authz.HeaderOrg] != authz.AdminOrg {
+		t.Errorf("an admin-org machine masqueraded into %q", seen[authz.HeaderOrg])
+	}
+	if n, _ := strconv.ParseInt(seen[authz.HeaderUserPermissions], 10, 64); n&permissionBits["admin"] != 0 {
+		t.Errorf("an admin-org machine carries the money bit (%q)", seen[authz.HeaderUserPermissions])
+	}
+}
+
+// X-Roles and X-Phone-Number are RETIRED: no edge mints them, and a token carrying
+// the claims the old parsers read changes nothing. IAM emits neither `roles` nor
+// `phone` — they are absent from the signed claim set and from claims_supported —
+// so the three-shape parsers were reading a claim that never arrived.
+func TestRetiredHeadersAreNeverMinted(t *testing.T) {
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
+	defer jwksServer.Close()
+
+	got := mintedFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
+		"orgs":  []map[string]any{{"org": "hanzo", "role": "member"}},
+		"roles": []map[string]string{{"name": "admin"}, {"name": "operator"}},
+		"phone": "+15555550100",
+	}))
+
+	for _, h := range authz.Retired {
+		if got[h] != "" {
+			t.Errorf("retired header %s was minted as %q", h, got[h])
+		}
 	}
 }
 
@@ -1003,7 +1063,10 @@ func TestValidateToken_IssuerAttackVectors(t *testing.T) {
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	cache := newJWKSCache(jwksServer.URL, 5*time.Minute)
+	validator := token.NewValidator(token.Config{
+		JWKSURL: jwksServer.URL, Issuer: "https://hanzo.id",
+		Audiences: []string{"https://api.hanzo.ai"},
+	})
 
 	tests := []struct {
 		name   string
@@ -1033,10 +1096,10 @@ func TestValidateToken_IssuerAttackVectors(t *testing.T) {
 			}
 			// No "iss" at all for empty issuer test
 
-			token := tj.signToken(t, claims)
-			_, err := validateToken(token, cache, "https://hanzo.id", []string{"https://api.hanzo.ai"})
+			raw := tj.signToken(t, claims)
+			_, err := validator.VerifyRaw(raw)
 			if err == nil {
-				t.Errorf("SECURITY: validateToken accepted issuer %q -- should have been rejected", tt.issuer)
+				t.Errorf("SECURITY: the edge accepted issuer %q -- should have been rejected", tt.issuer)
 			}
 		})
 	}
@@ -1277,7 +1340,7 @@ func TestStripIdentityHeaders_MultiValueAttack(t *testing.T) {
 	req.Header.Add("X-User-Id", "admin")
 	req.Header.Add("X-User-Id", "root")
 
-	stripIdentityHeaders(req)
+	stripClaimed(req.Header)
 
 	if vals := req.Header.Values("X-Org-Id"); len(vals) != 0 {
 		t.Errorf("SECURITY: X-Org-Id had %d values after stripping: %v", len(vals), vals)
@@ -1302,7 +1365,7 @@ func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "legit-org"
-	claims.Claims.Subject = "legit-user"
+	claims.RegisteredClaims.Subject = "legit-user"
 	token := tj.signToken(t, claims)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -1520,6 +1583,10 @@ func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "admin"
 	claims.IsAdmin = true
+	// A user token always carries its home org first (store.MemberOrgRefs). Without
+	// it this reads as a MACHINE, which holds no platform authority — so the fixture
+	// has to be the shape IAM actually signs.
+	claims.Orgs = []authz.Membership{{Org: "admin", Role: "admin"}}
 	token := tj.signToken(t, claims)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
@@ -1541,152 +1608,66 @@ func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	}
 }
 
-// --- Test 22: X-User-Permissions minted from permissions claim ---
+// --- Test 22: the money bit-field comes from the PREDICATES, never from a claim ---
 
-func TestPermissions_MintedFromClaim(t *testing.T) {
+// Three tests used to live here, one per shape of a `permissions` claim: a numeric
+// bit-field, a []string of names, and IAM's []*Permission objects. IAM emits NO such
+// claim — it is absent from the signed claim set (internal/oidc/jwt.go) and from
+// claims_supported — so all three exercised a parser nothing ever fed, and a token
+// that DID carry the claim was granted whatever bits it named.
+//
+// This is the invariant that replaces them, and it is stronger: the money authority
+// is a function of the two predicates, and a token asserting its own permissions
+// gains nothing from doing so.
+func TestPermissions_ClaimCannotGrantBits(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
 	now := time.Now()
-	// Legacy shape: []*Permission with name fields
-	claims := map[string]interface{}{
-		"iss":   "https://hanzo.id",
-		"sub":   "alice",
-		"aud":   []string{"https://api.hanzo.ai"},
-		"iat":   now.Add(-1 * time.Minute).Unix(),
-		"exp":   now.Add(10 * time.Minute).Unix(),
-		"owner": "hanzo",
-		"permissions": []map[string]string{
-			{"name": "admin"},
-			{"name": "live"},
-		},
+	claims := map[string]any{
+		"iss": "https://hanzo.id", "sub": "uuid-mallory",
+		"aud": []string{"https://api.hanzo.ai"},
+		"iat": now.Add(-time.Minute).Unix(), "exp": now.Add(10 * time.Minute).Unix(),
+		"owner": "acme", "preferred_username": "mallory",
+		"orgs": []map[string]any{{"org": "acme", "role": "member"}},
+		// Every shape the old parsers accepted, all naming the money bit.
+		"permissions": []map[string]string{{"name": "admin"}},
 	}
-	token := tj.signToken(t, claims)
 
 	gin.SetMode(gin.TestMode)
-	var gotPerms string
+	var gotPerms, gotAdmin string
 	r := gin.New()
 	r.Use(NewAuthMiddleware(AuthConfig{
-		Enabled:     true,
-		JWKSURL:     jwksServer.URL,
-		Issuer:      "https://hanzo.id",
-		Audiences:   []string{"https://api.hanzo.ai"},
-		RequireAuth: true,
+		Enabled: true, JWKSURL: jwksServer.URL, Issuer: "https://hanzo.id",
+		Audiences: []string{"https://api.hanzo.ai"}, RequireAuth: true,
 	}))
 	r.GET("/x", func(c *gin.Context) {
-		gotPerms = c.Request.Header.Get("X-User-Permissions")
+		gotPerms = c.Request.Header.Get(authz.HeaderUserPermissions)
+		gotAdmin = c.Request.Header.Get(authz.HeaderUserAdmin)
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	// Attacker overlays a forged value too — JWT must win.
-	req.Header.Set("X-User-Permissions", "999999")
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
-	}
-	// Admin (1<<4 = 16) | Live (1<<2 = 4) = 20
-	if gotPerms != "20" {
-		t.Errorf("X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
-	}
-}
-
-// --- Test 23: X-User-Permissions minted from string array ---
-
-func TestPermissions_MintedFromStringArray(t *testing.T) {
-	tj := newTestJWKS(t)
-	jwksServer := tj.serveJWKS(t)
-	defer jwksServer.Close()
-
-	now := time.Now()
-	claims := map[string]interface{}{
-		"iss":         "https://hanzo.id",
-		"sub":         "bob",
-		"aud":         []string{"https://api.hanzo.ai"},
-		"iat":         now.Add(-1 * time.Minute).Unix(),
-		"exp":         now.Add(10 * time.Minute).Unix(),
-		"owner":       "acme",
-		"permissions": []string{"live", "test"}, // 4 | 8 = 12
-	}
-	token := tj.signToken(t, claims)
-
-	gin.SetMode(gin.TestMode)
-	var gotPerms string
-	r := gin.New()
-	r.Use(NewAuthMiddleware(AuthConfig{
-		Enabled:     true,
-		JWKSURL:     jwksServer.URL,
-		Issuer:      "https://hanzo.id",
-		Audiences:   []string{"https://api.hanzo.ai"},
-		RequireAuth: true,
-	}))
-	r.GET("/x", func(c *gin.Context) {
-		gotPerms = c.Request.Header.Get("X-User-Permissions")
-		c.Status(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", w.Code)
-	}
-	// Live (4) | Test (8) = 12
-	if gotPerms != "12" {
-		t.Errorf("X-User-Permissions = %q, want %q (Live|Test)", gotPerms, "12")
-	}
-}
-
-// --- Test 24: X-User-Permissions minted from numeric bit-field claim ---
-
-func TestPermissions_MintedFromNumericClaim(t *testing.T) {
-	tj := newTestJWKS(t)
-	jwksServer := tj.serveJWKS(t)
-	defer jwksServer.Close()
-
-	now := time.Now()
-	claims := map[string]interface{}{
-		"iss":         "https://hanzo.id",
-		"sub":         "charlie",
-		"aud":         []string{"https://api.hanzo.ai"},
-		"iat":         now.Add(-1 * time.Minute).Unix(),
-		"exp":         now.Add(10 * time.Minute).Unix(),
-		"owner":       "acme",
-		"permissions": 64, // permission.Secret
-	}
-	token := tj.signToken(t, claims)
-
-	gin.SetMode(gin.TestMode)
-	var gotPerms string
-	r := gin.New()
-	r.Use(NewAuthMiddleware(AuthConfig{
-		Enabled:     true,
-		JWKSURL:     jwksServer.URL,
-		Issuer:      "https://hanzo.id",
-		Audiences:   []string{"https://api.hanzo.ai"},
-		RequireAuth: true,
-	}))
-	r.GET("/x", func(c *gin.Context) {
-		gotPerms = c.Request.Header.Get("X-User-Permissions")
-		c.Status(http.StatusOK)
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/x", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", w.Code)
-	}
-	if gotPerms != "64" {
-		t.Errorf("X-User-Permissions = %q, want %q", gotPerms, "64")
+	for _, shape := range []any{
+		[]map[string]string{{"name": "admin"}},
+		[]string{"admin", "live"},
+		permissionBits["admin"],
+	} {
+		claims["permissions"] = shape
+		req := httptest.NewRequest(http.MethodGet, "/x", nil)
+		req.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
+		}
+		if gotPerms != "" {
+			t.Errorf("SECURITY: a `permissions` claim of %T minted %s=%q — a plain member named its own money authority",
+				shape, authz.HeaderUserPermissions, gotPerms)
+		}
+		if gotAdmin != "" {
+			t.Errorf("SECURITY: a plain member was minted %s=%q", authz.HeaderUserAdmin, gotAdmin)
+		}
 	}
 }
 
@@ -1712,6 +1693,7 @@ func TestPermissions_IsAdminMintsAdminLive(t *testing.T) {
 		"exp":     now.Add(10 * time.Minute).Unix(),
 		"owner":   "admin",
 		"isAdmin": true,
+		"orgs":    []map[string]any{{"org": "admin", "role": "admin"}},
 	}
 	token := tj.signToken(t, claims)
 
@@ -1858,7 +1840,7 @@ func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-User-Permissions", "20")
 
-	stripIdentityHeaders(req)
+	stripClaimed(req.Header)
 
 	if v := req.Header.Get("X-User-Permissions"); v != "" {
 		t.Errorf("SECURITY: X-User-Permissions was NOT stripped (got %q)", v)
@@ -1872,12 +1854,12 @@ func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
 // mint target added without a strip pair is forgeable. This test is the
 // canonical link between the two lists.
 func TestStripList_CoversAllMintedHeaders(t *testing.T) {
-	for _, h := range gatewayMintedIdentityHeaders {
+	for _, h := range authz.Headers {
 		t.Run(h, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(h, "forged-"+h)
 
-			stripIdentityHeaders(req)
+			stripClaimed(req.Header)
 
 			if v := req.Header.Get(h); v != "" {
 				t.Errorf("SECURITY: gateway mints %q but strip list does NOT cover it (got %q)", h, v)

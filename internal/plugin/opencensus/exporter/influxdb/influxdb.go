@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/kpacha/opencensus-influxdb"
 	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
+	"github.com/kpacha/opencensus-influxdb"
 )
 
 func init() {

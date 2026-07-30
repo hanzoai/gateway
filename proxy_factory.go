@@ -6,14 +6,14 @@ package gateway
 import (
 	"fmt"
 
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/logging"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 	cel "github.com/hanzoai/gateway/v2/internal/plugin/cel"
 	jsonschema "github.com/hanzoai/gateway/v2/internal/plugin/jsonschema"
 	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua/proxy"
 	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
 	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus"
-	"github.com/hanzoai/gateway/v2/internal/lura/config"
-	"github.com/hanzoai/gateway/v2/internal/lura/logging"
-	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
 )
 
 func internalNewProxyFactory(logger logging.Logger, backendFactory proxy.BackendFactory,

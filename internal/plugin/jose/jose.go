@@ -10,8 +10,8 @@ import (
 
 	jose "github.com/go-jose/go-jose/v3"
 	"github.com/go-jose/go-jose/v3/jwt"
-	"github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	"github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 )
 
 var ErrNoHeadersToPropagate = fmt.Errorf("header propagation is disabled because there is no propagate_claims attribute")

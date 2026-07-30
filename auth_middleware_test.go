@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/authz/edge"
 )
 
 func TestExtractBearerToken(t *testing.T) {
@@ -28,7 +30,7 @@ func TestExtractBearerToken(t *testing.T) {
 			if tt.header != "" {
 				req.Header.Set("Authorization", tt.header)
 			}
-			got := extractBearerToken(req)
+			got := edge.Bearer(req.Header)
 			if got != tt.expected {
 				t.Errorf("extractBearerToken() = %q, want %q", got, tt.expected)
 			}
@@ -56,7 +58,7 @@ func TestExtractTokenFromCookie(t *testing.T) {
 			if tt.value != "" {
 				req.AddCookie(&http.Cookie{Name: tt.cookieName, Value: tt.value})
 			}
-			got := extractTokenFromCookie(req)
+			got := edge.Cookie(req.Header)
 			if got != tt.expected {
 				t.Errorf("extractTokenFromCookie() = %q, want %q", got, tt.expected)
 			}
@@ -170,8 +172,8 @@ func TestIsAPIKey(t *testing.T) {
 		{"", false},
 	}
 	for _, tt := range tests {
-		if got := isAPIKey(tt.token); got != tt.expected {
-			t.Errorf("isAPIKey(%q) = %v, want %v", tt.token, got, tt.expected)
+		if got := authz.IsAPIKey(tt.token); got != tt.expected {
+			t.Errorf("authz.IsAPIKey(%q) = %v, want %v", tt.token, got, tt.expected)
 		}
 	}
 }
@@ -301,7 +303,7 @@ func TestStripIdentityHeaders(t *testing.T) {
 	req.Header.Set("X-User-Id", "attacker-user")
 	req.Header.Set("X-User-Email", "attacker@evil.com")
 
-	stripIdentityHeaders(req)
+	edge.Strip(req.Header)
 
 	for _, h := range []string{"X-Org-Id", "X-User-Id", "X-User-Email"} {
 		if v := req.Header.Get(h); v != "" {

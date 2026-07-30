@@ -7,6 +7,13 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
+	"github.com/hanzoai/gateway/v2/internal/lura/encoding"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
+	"github.com/hanzoai/gateway/v2/internal/lura/proxy/plugin"
+	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
+	client "github.com/hanzoai/gateway/v2/internal/lura/transport/http/client/plugin"
+	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
 	bf "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/register"
 	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/krakend"
 	httpcache "github.com/hanzoai/gateway/v2/internal/plugin/httpcache"
@@ -16,13 +23,6 @@ import (
 	ratelimit "github.com/hanzoai/gateway/v2/internal/plugin/ratelimit/router"
 	rss "github.com/hanzoai/gateway/v2/internal/plugin/rss"
 	xml "github.com/hanzoai/gateway/v2/internal/plugin/xml"
-	"github.com/hanzoai/gateway/v2/internal/lura/config"
-	"github.com/hanzoai/gateway/v2/internal/lura/encoding"
-	"github.com/hanzoai/gateway/v2/internal/lura/proxy"
-	"github.com/hanzoai/gateway/v2/internal/lura/proxy/plugin"
-	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
-	client "github.com/hanzoai/gateway/v2/internal/lura/transport/http/client/plugin"
-	server "github.com/hanzoai/gateway/v2/internal/lura/transport/http/server/plugin"
 )
 
 // Parse creates a Service capturing the details of the received configuration

@@ -17,8 +17,8 @@ import (
 	"time"
 
 	jose "github.com/go-jose/go-jose/v3"
-	auth0 "github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 	"github.com/hanzoai/gateway/v2/internal/lura/core"
+	auth0 "github.com/hanzoai/gateway/v2/internal/pkg/go-auth0"
 
 	"github.com/hanzoai/gateway/v2/internal/plugin/jose/secrets"
 )

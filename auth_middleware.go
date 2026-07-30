@@ -9,13 +9,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/token"
 )
 
 // AuthConfig holds configuration for the auth middleware.
@@ -34,7 +35,7 @@ type AuthConfig struct {
 	// Audiences is the allowlist of acceptable JWT `aud` values. A token
 	// passes when its audience matches ANY entry. IAM stamps user tokens with
 	// aud=<client_id>, so a single fixed audience rejects every user JWT; the
-	// allowlist (iamauth.AudiencesFromEnv) is the fix. Override entirely with
+	// allowlist (token.AudiencesFromEnv) is the fix. Override entirely with
 	// GATEWAY_ALLOWED_AUDIENCES.
 	Audiences []string
 
@@ -70,35 +71,9 @@ type AuthConfig struct {
 }
 
 // hanzoJWTClaims and the JWKS cache, token validation, extraction, and the
-// identity-header trust boundary now live in package iamauth (the single
+// identity-header trust boundary live in hanzoai/authz + hanzoai/authz/edge (the
 // edge-auth implementation shared with cmd/ingress). Thin shims preserving
 // the symbols this file and its tests use are in auth_compat.go.
-
-// extractRoleNames converts the raw "roles" claim (either []string or
-// []{"name":"..."}) into a comma-joined list of role names.
-// Returns "" if the claim is empty/absent or unparseable.
-func extractRoleNames(raw json.RawMessage) string {
-	if len(raw) == 0 {
-		return ""
-	}
-	// Try []string first
-	var asStrings []string
-	if err := json.Unmarshal(raw, &asStrings); err == nil {
-		return strings.Join(asStrings, ",")
-	}
-	// Then []map[string]any (IAM Role objects)
-	var asObjects []map[string]any
-	if err := json.Unmarshal(raw, &asObjects); err == nil {
-		names := make([]string, 0, len(asObjects))
-		for _, o := range asObjects {
-			if n, ok := o["name"].(string); ok && n != "" {
-				names = append(names, n)
-			}
-		}
-		return strings.Join(names, ",")
-	}
-	return ""
-}
 
 // permissionBits is the canonical name → bit-position map. Values MUST
 // match commerce/util/permission/permission.go exactly; the iota order
@@ -168,65 +143,6 @@ var permissionBits = map[string]int64{
 	"return":            1 << 57,
 	"readreturn":        1 << 58,
 	"writereturn":       1 << 59,
-}
-
-// computePermissionsBitField turns the raw "permissions" claim into the
-// base-10 int64 carried by X-User-Permissions. Accepted shapes:
-//   - JSON number (already a bit-field)
-//   - []string of permission names
-//   - []{"name": "..."} IAM permission objects
-//
-// The optional `extra` argument lets the caller OR-in additional bits
-// derived from other claims (e.g. isAdmin → Admin|Live). Unknown names
-// are dropped rather than failing the request — gateway is forwards-
-// compatible with new IAM permissions, but never grants more than the
-// JWT explicitly carries.
-//
-// Returns (bits, true) when bits > 0 — caller sets the header. Returns
-// (0, false) when nothing maps — caller OMITS the header. Commerce treats
-// absent and "0" identically (bit.Field(0)), but the gateway emits the
-// minimal canonical form: present iff non-zero.
-func computePermissionsBitField(raw json.RawMessage, extra int64) (int64, bool) {
-	bits := extra
-	if len(raw) == 0 {
-		return bits, bits != 0
-	}
-
-	// Shape 1: bare numeric bit-field. JSON unmarshals into int64 cleanly.
-	var asNumber int64
-	if err := json.Unmarshal(raw, &asNumber); err == nil {
-		if asNumber > 0 {
-			bits |= asNumber
-		}
-		return bits, bits != 0
-	}
-
-	// Shape 2: []string of permission/role names.
-	var asStrings []string
-	if err := json.Unmarshal(raw, &asStrings); err == nil {
-		for _, n := range asStrings {
-			if b, ok := permissionBits[strings.ToLower(strings.TrimSpace(n))]; ok {
-				bits |= b
-			}
-		}
-		return bits, bits != 0
-	}
-
-	// Shape 3: []map[string]any — IAM []*Permission objects.
-	var asObjects []map[string]any
-	if err := json.Unmarshal(raw, &asObjects); err == nil {
-		for _, o := range asObjects {
-			if n, ok := o["name"].(string); ok {
-				if b, found := permissionBits[strings.ToLower(strings.TrimSpace(n))]; found {
-					bits |= b
-				}
-			}
-		}
-		return bits, bits != 0
-	}
-
-	// Unparseable claim — fail closed: do not propagate any bits.
-	return extra, extra != 0
 }
 
 // billingChecker checks user billing status against Commerce API.
@@ -364,12 +280,12 @@ func DefaultAuthConfig() AuthConfig {
 		issuer = "https://hanzo.id"
 	}
 
-	// Audience is validated against an allowlist (iamauth.AudiencesFromEnv):
+	// Audience is validated against an allowlist (token.AudiencesFromEnv):
 	// the known Hanzo client_ids + the gateway origin, overridable via
 	// GATEWAY_ALLOWED_AUDIENCES. IAM stamps user tokens with aud=<client_id>,
 	// so the prior single fixed audience rejected every user JWT. Audience
 	// validation is ALWAYS enforced (the allowlist is never empty).
-	audiences := iamauth.AudiencesFromEnv()
+	audiences := token.AudiencesFromEnv()
 
 	billingURL := os.Getenv("AUTH_BILLING_URL")
 	if billingURL == "" {
@@ -549,12 +465,12 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 	// client-supplied identity.
 	if !cfg.Enabled {
 		return func(c *gin.Context) {
-			stripIdentityHeaders(c.Request)
+			stripClaimed(c.Request.Header)
 			c.Next()
 		}
 	}
 
-	cache := newJWKSCache(cfg.JWKSURL, 5*time.Minute)
+	validator := newValidator(cfg)
 	billing := newBillingChecker(cfg.BillingURL, cfg.BillingToken)
 
 	// Fail-secure: billing enabled but its Commerce dependency is not fully
@@ -598,7 +514,7 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// against the token's signed membership set before any of it is re-minted. On
 		// every class that mints nothing (ingest, public host, public path, tokenless,
 		// API key) it is simply discarded, so those paths are untouched.
-		selectedOrg := stripIdentityHeaders(c.Request)
+		selectedOrg := stripClaimed(c.Request.Header)
 
 		host := strings.Split(c.Request.Host, ":")[0]
 		path := c.Request.URL.Path
@@ -638,9 +554,9 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		}
 
 		// Extract token from Authorization header or cookie
-		token := extractBearerToken(c.Request)
+		token := edge.Bearer(c.Request.Header)
 		if token == "" {
-			token = extractTokenFromCookie(c.Request)
+			token = edge.Cookie(c.Request.Header)
 		}
 
 		if token == "" {
@@ -659,13 +575,13 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 		// API keys (hk-*, sk-*, fw_*, hz_*, pk-*) are validated by the
 		// backend services directly (cloud, commerce, etc.), not by
 		// the gateway. Pass them through without JWT validation.
-		if isAPIKey(token) {
+		if authz.IsAPIKey(token) {
 			c.Next()
 			return
 		}
 
 		// Parse and validate JWT
-		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audiences)
+		claims, err := validator.VerifyRaw(token)
 		if err != nil {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"error":   "unauthorized",
@@ -675,109 +591,28 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 			return
 		}
 
-		// The two orgs a request has. They are the SAME value for everyone except a
-		// masquerading operator, and identical to claims.Owner whenever no selection
-		// was sent — so a non-switching request is byte-for-byte what it was before
-		// the switcher existed.
-		//
-		//   orgID    — the org the request ACTS IN (minted into X-Org-Id below): the
-		//              client's selection when the token's signed `orgs` set admits
-		//              it, else the home org. Honored only within the IAM-granted
-		//              set, so a member acts in a team org it belongs to and never
-		//              one beyond its membership.
-		//   ledgerOrg — the org that PAYS (the balance gate below). Same as orgID,
-		//              except an operator viewing a customer's org spends the ADMIN
-		//              ledger, never the customer's.
-		orgID, _ := claims.EffectiveOrg(selectedOrg)
+		// The org that PAYS. It is a SEPARATE question from the org the request ACTS
+		// in (which mintIdentity resolves and mints): an operator viewing a customer
+		// reads the customer's data and spends the ADMIN ledger, never the customer's.
 		ledgerOrg := claims.LedgerOrg(selectedOrg)
-		userID := claims.Subject
-		// IAM may leave "sub" empty — fall back to preferred_username then name
-		if userID == "" {
-			userID = claims.PreferredUsername
-		}
-		if userID == "" {
-			userID = claims.Name
-		}
-		userEmail := claims.Email
-		// Phone: prefer OIDC phone_number, fall back to IAM phone field
-		userPhone := claims.PhoneNumber
-		if userPhone == "" {
-			userPhone = claims.Phone
-		}
+		userID := claims.UserID()
 
-		// Inject the canonical identity headers for downstream services.
-		// X-User-Id <- sub, X-Org-Id <- owner, X-Roles <- roles (comma-joined),
-		// X-User-Permissions <- bit.Field derived from JWT permissions claim
-		// + isAdmin. Auxiliary headers (email, phone, isAdmin) are strictly
-		// derivative of the JWT and may be consumed by services that need them.
-		c.Request.Header.Set("X-User-Id", userID)
-		c.Request.Header.Set(iamauth.OrgHeader, orgID)
-		// X-User-Owner = the immutable HOME org (the validated JWT owner), DISTINCT
-		// from X-Org-Id (the EFFECTIVE org the request acts in, which a member's
-		// switch or an operator's masquerade moves). Platform-sudo gates and the
-		// billing debit key on the home org (owner=="admin"); data scope keys on
-		// X-Org-Id. Minted from the JWT only; the client copy was stripped at
-		// ingress, so it is never forgeable.
-		c.Request.Header.Set("X-User-Owner", claims.Owner)
-		// Mint the org SUB-SCOPE X-Project-Id from the validated `project` claim,
-		// exactly like X-Org-Id from `owner`. Absent/default project mints nothing
-		// (minimal-canonical form) — downstream resolves the default and keeps
-		// today's single-project behavior. The client copy was already stripped
-		// (stripIdentityHeaders), so this is never forgeable.
-		if project := claims.MintedProject(); project != "" {
-			c.Request.Header.Set("X-Project-Id", project)
-		}
-		// Mint X-Billing-Account-Id from the validated `billing_account` claim, an
-		// attribution hint mirroring X-Project-Id. Absent/empty mints nothing; the
-		// client copy was already stripped (stripIdentityHeaders), so it is never
-		// forgeable. Cloud + commerce resolve the real debit account server-side.
-		if acct := claims.MintedBillingAccount(); acct != "" {
-			c.Request.Header.Set("X-Billing-Account-Id", acct)
-		}
-		if roles := extractRoleNames(claims.Roles); roles != "" {
-			c.Request.Header.Set("X-Roles", roles)
-		}
-		c.Request.Header.Set("X-User-Email", userEmail)
-		if userPhone != "" {
-			c.Request.Header.Set("X-Phone-Number", userPhone)
-		}
-		// Propagate isAdmin for downstream RBAC (broker compliance, etc.)
-		if claims.IsAdmin {
-			c.Request.Header.Set("X-User-IsAdmin", "true")
-		}
-		// NO platform-admin boolean header is minted. Platform sudo is ONE predicate:
-		// the user's home org is the reserved `admin` org (owner == AdminOrg). There is
-		// no redundant IsGlobalAdmin/IsSuperAdmin flag — the org IS the signal, carried
-		// by X-Org-Id (minted from the validated `owner` claim above). Subsystems gate
-		// platform sudo on org == "admin". The legacy X-User-IsGlobalAdmin header is
-		// still STRIPPED at ingress (iamauth.StripIdentityHeaders) so a client can never
-		// forge it, but it is never minted.
-
-		// Mint X-User-Permissions from the validated JWT.
+		// ONE mint, from the one place that decides it. This block used to compute
+		// every header inline — the two orgs, the sub-scopes, the two admin scopes,
+		// the permission bits — and that copy is where the escalation lived: the
+		// PLATFORM header X-User-IsAdmin was set from claims.IsAdmin, IAM's ORG-role
+		// bit, so every org owner reached the fleet as a platform admin. The zip edge
+		// had already been corrected; this one had not, because the rule was stated
+		// twice. It is now stated once, in hanzoai/authz/edge.
 		//
-		// The Admin bit is the MONEY/admin authority: commerce gates every
-		// credit-creating and card-charging billing endpoint on
-		// TokenRequired(permission.Admin), and bit.Field.Has is intersection
-		// semantics — so whoever carries Admin satisfies those gates. It is
-		// therefore GLOBAL-admin-only. An org-level admin (claims.IsAdmin — an org
-		// OWNER like maxpower carries it within their own org) must NOT mint free
-		// balance or charge cards platform-wide; granting them Admin was a
-		// free-money hole (live-proven as Dave/maxpower). Live (real-money, not
-		// sandbox) mode is orthogonal to authority and stays on IsAdmin so a normal
-		// org owner's own real Square top-up keeps working. The explicit
-		// "permissions" claim is OR'd on top. Absent claim + non-admin → header
-		// omitted → commerce parses bit.Field(0), fail-closed (commerce CLAUDE.md).
-		var extraBits int64
-		if claims.IsAdmin {
-			extraBits |= permissionBits["live"]
-		}
-		// The money/admin authority bit is platform-sudo-only: owner == "admin".
-		if claims.PlatformSudo() {
-			extraBits |= permissionBits["admin"]
-		}
-		if bits, set := computePermissionsBitField(claims.Permissions, extraBits); set {
-			c.Request.Header.Set("X-User-Permissions", strconv.FormatInt(bits, 10))
-		}
+		// Three headers the old block minted are gone because IAM never emitted the
+		// claims they read. `roles`, `permissions` and `phone` are absent from the
+		// signed claim set (internal/oidc/jwt.go) and from claims_supported, so
+		// X-Roles and X-Phone-Number were always empty and the permission bit-field
+		// only ever carried what the two predicates put there — which is what
+		// mintIdentity computes. They stay in the STRIP set, so a forged copy of any
+		// of them still never survives.
+		mintIdentity(c.Request.Header, claims, selectedOrg)
 
 		// Balance gate — path-scoped + fail-closed (see checkBalance).
 		//
@@ -841,6 +676,6 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 }
 
 // validateToken, the JWKS cache, the identity-header trust boundary,
-// isAPIKey, and the token extractors now live in package iamauth — the one
+// the API-key test, and the token extractors live in hanzoai/authz/edge — the one
 // edge-auth implementation shared with cmd/ingress. The thin shims that keep
 // this file's symbols stable are in auth_compat.go.

@@ -17,7 +17,7 @@ package main
 import (
 	"strings"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz"
 )
 
 // authz.go is the guard's AUTHORIZATION CORE — the one place that answers "may
@@ -43,25 +43,25 @@ import (
 type principal struct {
 	owner   string
 	isAdmin bool
-	orgs    []iamauth.Membership
+	orgs    []authz.Membership
 }
 
 // principalFromClaims lifts a validated JWT into a principal. The claims are
-// IAM-signed (issuer + audience + expiry enforced by iamauth), so owner,
+// IAM-signed (issuer + audience + expiry enforced by the edge), so owner,
 // isAdmin, and the membership set are trusted, not client-forgeable.
-func principalFromClaims(c *iamauth.Claims) principal {
+func principalFromClaims(c *authz.Claims) principal {
 	return principal{owner: c.Owner, isAdmin: c.IsAdmin, orgs: c.Orgs}
 }
 
 // adminOf reports whether the principal holds an owner/admin role in org. Two
-// independent, trusted signals satisfy it, mirroring iamauth's model:
+// independent, trusted signals satisfy it, mirroring the edge's model:
 //
 //   - the org IS the subject's home org AND it is a home-org admin (isAdmin), or
 //   - the subject carries an explicit membership in org with role owner|admin.
 //
 // A plain `member` role never satisfies it — so a regular member of the lux org
 // is NOT a lux tenant admin. Comparison is case- and space-insensitive to match
-// iamauth (org slug casing is not guaranteed); an empty org is never an admin
+// the edge (org slug casing is not guaranteed); an empty org is never an admin
 // target.
 func (p principal) adminOf(org string) bool {
 	org = strings.TrimSpace(org)
@@ -75,7 +75,7 @@ func (p principal) adminOf(org string) bool {
 		if !strings.EqualFold(strings.TrimSpace(m.Org), org) {
 			continue
 		}
-		role := strings.TrimSpace(m.Role)
+		role := strings.TrimSpace(string(m.Role))
 		if strings.EqualFold(role, "owner") || strings.EqualFold(role, "admin") {
 			return true
 		}
@@ -85,7 +85,7 @@ func (p principal) adminOf(org string) bool {
 
 // isPlatformSudo reports whether owner is the reserved global-admin org
 // (owner == adminOrg). This is the ONE platform-sudo predicate, byte-for-byte
-// the same meaning iamauth.PlatformSudo enforces on the other side of the trust
+// the same meaning authz.Claims.PlatformSudo enforces on the other side of the trust
 // boundary. A platform-sudo principal reaches EVERY admin surface.
 func (c *config) isPlatformSudo(owner string) bool {
 	owner = strings.TrimSpace(owner)
@@ -188,7 +188,7 @@ const adminSubdomain = "admin"
 // org slug IS the brand key). It MIRRORS the canonical HIP-0111 brand registry
 // — hanzoai/cloud brand.go `brands` (Domain + AltDomains → id). It is duplicated
 // here rather than imported ON PURPOSE: package cloud is a 75-file dependency
-// graph, and admin-guard is a deliberately dependency-light edge binary (iamauth
+// graph, and admin-guard is a deliberately dependency-light edge binary (the edge
 // + net/http only). This table MUST stay in sync with brand.go — brand.go is the
 // one source of truth; a brand added there (e.g. osage) MUST be added here to
 // enable its tenant admin surface. A domain absent here FAILS CLOSED: its

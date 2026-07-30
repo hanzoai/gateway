@@ -7,7 +7,7 @@
 // envelope so the backend trusts the edge. forward.Relay then re-emits
 // the Forward with that identity and ships it to the chosen backend.
 //
-// One auth implementation: the gate reuses package iamauth (the same
+// One auth implementation: the gate reuses hanzoai/authz/edge (the same
 // JWKS cache + JWT validation + token extraction shared with cmd/ingress
 // and the gin/Lura middleware) and gateway's own permission bit-field
 // math (computePermissionsBitField / permissionBits). No second copy.
@@ -27,7 +27,8 @@ import (
 
 	"github.com/luxfi/zap/forward"
 
-	"github.com/hanzoai/gateway/v2/iamauth"
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/authz/edge"
 )
 
 // newGate builds the forward.Gate from an AuthConfig. The JWKS cache is
@@ -59,7 +60,7 @@ func newGate(cfg AuthConfig) forward.Gate {
 		}
 	}
 
-	cache := newJWKSCache(cfg.JWKSURL, jwksTTL)
+	validator := newValidator(cfg)
 
 	publicPaths := cfg.PublicPaths
 
@@ -105,11 +106,11 @@ func newGate(cfg AuthConfig) forward.Gate {
 		// Opaque API keys (hk-/sk-/fw_/hz_/pk-) are validated by the
 		// backend service directly, not as a JWT here. Pass them through
 		// with no edge identity, exactly like the gin middleware.
-		if isAPIKey(token) {
+		if authz.IsAPIKey(token) {
 			return nil, nil
 		}
 
-		claims, err := validateToken(token, cache, cfg.Issuer, cfg.Audiences)
+		claims, err := validator.VerifyRaw(token)
 		if err != nil {
 			return denyJSON(http.StatusUnauthorized, "unauthorized",
 				"Invalid token"), nil
@@ -125,36 +126,23 @@ func newGate(cfg AuthConfig) forward.Gate {
 		// its own payer policy to the org this puts on the wire.
 		f.TenantID, _ = claims.EffectiveOrg(selectedOrg)
 		f.UserID = claims.UserID()
-		f.IsAdmin = claims.IsAdmin
+		// PLATFORM authority, from the platform predicate. forward re-emits this as
+		// X-User-IsAdmin (forward/serve.go), so setting it from claims.IsAdmin — IAM's
+		// ORG-role bit — made every org owner a platform admin on the relay path too.
+		f.IsAdmin = claims.PlatformSudo()
 
-		// X-User-Permissions bit-field (same policy as the gin middleware and
-		// gate — one grant rule, three transports). The Admin (money/admin)
-		// bit is GLOBAL-admin-only: commerce gates every credit-creating and
-		// card-charging billing endpoint on TokenRequired(permission.Admin),
-		// so granting Admin to an org-level admin (claims.IsAdmin — an org
-		// owner) was a free-money hole. Live (real-money mode) is orthogonal
-		// and stays on IsAdmin. The explicit "permissions" claim is OR'd on
-		// top. Absent/unmapped -> 0, which the backend reads as no rights.
-		var extraBits int64
-		if claims.IsAdmin {
-			extraBits |= permissionBits["live"]
-		}
-		// Platform-sudo money/admin authority = home org is the reserved admin org.
-		if claims.PlatformSudo() {
-			extraBits |= permissionBits["admin"]
-		}
-		bits, _ := computePermissionsBitField(claims.Permissions, extraBits)
-		f.Permissions = bits
+		// The money bit-field, from the ONE rule both transports read (identity.go).
+		f.Permissions = moneyBits(claims)
 
 		return nil, nil
 	}
 }
 
 // tokenFromForward extracts the IAM credential from the Forward's headers
-// using the canonical iamauth extraction (Bearer / HTTP Basic password /
+// using the canonical edge.Token extraction (Bearer / HTTP Basic password /
 // session cookie incl. iam_access_token). It reconstructs a throwaway
 // *http.Request from f.Headers — the JSON map[string][]string canonical
-// header set — and delegates to iamauth.ExtractToken so there is exactly
+// header set — and delegates to edge.Token so there is exactly
 // one extraction implementation. It reads f.Headers ONLY; never f.Body.
 func tokenFromForward(f *forward.Forward) string {
 	if len(f.Headers) == 0 {
@@ -164,7 +152,7 @@ func tokenFromForward(f *forward.Forward) string {
 	if err := json.Unmarshal(f.Headers, &hdrs); err != nil {
 		return ""
 	}
-	return iamauth.ExtractToken(&http.Request{Header: http.Header(hdrs)})
+	return edge.Token(http.Header(hdrs))
 }
 
 // denyJSON builds a deny *forward.Response with a JSON error body and the
