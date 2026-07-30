@@ -1064,7 +1064,7 @@ func TestValidateToken_IssuerAttackVectors(t *testing.T) {
 	defer jwksServer.Close()
 
 	validator := token.NewValidator(token.Config{
-		JWKSURL: jwksServer.URL, Issuer: "https://hanzo.id",
+		JWKSURL: jwksServer.URL, Issuers: []string{"https://hanzo.id"},
 		Audiences: []string{"https://api.hanzo.ai"},
 	})
 
