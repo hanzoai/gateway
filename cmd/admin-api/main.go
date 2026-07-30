@@ -153,19 +153,21 @@ func identityOf(r *http.Request) identity {
 	return identity{}
 }
 
-// envelope mirrors the casibase wire shape the operator SPA already speaks:
-// { status, msg, data, data2 }. data2 carries the list total for paged reads.
+// envelope is the admin-api wire shape the operator SPA speaks:
+// { status, msg, data, total }. total carries the list total for paged
+// reads; absent means absent. (total was casibase's untyped data2 slot;
+// the transports read total first, so this emits only the named field.)
 type envelope struct {
 	Status string `json:"status"`
 	Msg    string `json:"msg"`
 	Data   any    `json:"data"`
-	Data2  any    `json:"data2,omitempty"`
+	Total  any    `json:"total,omitempty"`
 }
 
 func writeOK(w http.ResponseWriter, data any, total ...any) {
 	e := envelope{Status: "ok", Data: data}
 	if len(total) > 0 {
-		e.Data2 = total[0]
+		e.Total = total[0]
 	}
 	writeJSON(w, http.StatusOK, e)
 }
