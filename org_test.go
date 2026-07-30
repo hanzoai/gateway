@@ -99,20 +99,26 @@ func TestOrg_NoSelectionIsUnchanged(t *testing.T) {
 	}
 }
 
-// TestOrg_LegacyTokenCannotSwitch proves a token minted before the `orgs` claim
-// existed carries an EMPTY membership set, which admits nothing. Such a caller
-// stays pinned to home no matter what it selects — the rollout is safe by
-// construction, not by deployment ordering.
-func TestOrg_LegacyTokenCannotSwitch(t *testing.T) {
+// TestOrg_LegacyTokenResolvesNoOrg proves a token minted before the `orgs` claim
+// existed resolves NO org at all — not its selection, and not a home org either.
+//
+// It used to fall back to the `owner` claim, and that claim is the org of the
+// APPLICATION the token was minted through, so falling back made a person's tenant
+// follow whichever app they signed in through. Empty means empty: the request
+// reaches backends with no X-Org-Id and every org gate refuses it.
+//
+// The cost is bounded to one token TTL after rollout, and the alternative is
+// trusting an app-selected value as the user's tenant.
+func TestOrg_LegacyTokenResolvesNoOrg(t *testing.T) {
 	legacy := memberClaims()
 	legacy.Orgs = nil
 
 	org, home, billed := orgRequest(t, legacy, "beta-team")
-	if org != "acme" || home != "acme" {
-		t.Errorf("X-Org-Id/X-User-Owner = %q/%q, want acme/acme (no orgs claim ⟹ no switch)", org, home)
+	if org != "" || home != "" {
+		t.Errorf("X-Org-Id/X-User-Owner = %q/%q, want empty (no membership set ⟹ no org)", org, home)
 	}
-	if billed != "acme/alice" {
-		t.Errorf("billed %q, want acme/alice", billed)
+	if billed != "alice" {
+		t.Errorf("billed %q, want the bare subject — no org to key it on", billed)
 	}
 }
 
@@ -194,8 +200,12 @@ func TestOrg_MachineCannotMasquerade(t *testing.T) {
 	machine.Orgs = nil
 
 	org, _, billed := orgRequest(t, machine, "victim")
-	if org != "admin" {
-		t.Errorf("SECURITY: X-Org-Id = %q, want admin (a machine is not an operator)", org)
+	// NO org, which is stricter than pinning it to its own: a machine's org lives only
+	// in the `owner` claim, and that claim cannot tell "this machine's own org" from
+	// "the app a human signed in through". Whoever positively identifies a machine
+	// supplies its org; nothing is read from a claim that cannot distinguish them.
+	if org != "" {
+		t.Errorf("SECURITY: X-Org-Id = %q, want empty (a machine is not an operator)", org)
 	}
 	if billed != "admin/kms-sync" {
 		t.Errorf("billed %q, want admin/kms-sync", billed)
@@ -244,7 +254,7 @@ func TestOrg_RelayHonorsSelection(t *testing.T) {
 		{"no selection → home", memberClaims(), "", "acme"},
 		{"member team → honored", memberClaims(), "beta-team", "beta-team"},
 		{"non-member → fail closed to home", memberClaims(), "victim", "acme"},
-		{"no orgs claim → cannot switch", legacy, "beta-team", "acme"},
+		{"no orgs claim → no org at all", legacy, "beta-team", ""},
 	} {
 		if got := relayOrg(t, tc.claims, tc.selected); got != tc.want {
 			t.Errorf("%s: relay TenantID = %q, want %q", tc.name, got, tc.want)

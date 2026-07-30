@@ -62,7 +62,7 @@ func stripClaimed(h http.Header) string {
 // selected is the org the client asked for, as returned by [edge.Strip]. It is
 // honoured only where the signed membership set admits it.
 func mintIdentity(h edge.Headers, claims *authz.Claims, selected string) {
-	edge.Inject(h, claims, selected, nil)
+	edge.Apply(h, claims, selected, nil)
 
 	// X-User-Permissions is the MONEY authority commerce gates on: it reads this
 	// bit-field and bit.Field.Has is intersection semantics, so whoever carries Admin
