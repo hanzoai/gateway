@@ -2,7 +2,7 @@
 // audiences it accepts, and the keys it verifies against.
 //
 // It is deliberately thin. The identity DECISION — what a claim means, which org a
-// request acts in, who pays, which headers get minted — lives in hanzoai/authz and
+// request acts in, who pays, which headers get written — lives in hanzoai/authz and
 // hanzoai/authz/edge, because three consumers each having their own reading of one
 // contract is what drifted into a live escalation. What is left here is the part
 // that is genuinely this deployment's: the ISSUER and AUDIENCE policy, named by the

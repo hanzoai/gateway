@@ -7,12 +7,12 @@ import (
 // StripIdentityHeaders strips client-supplied X-Org-Id / X-User-Id /
 // X-User-Email / X-User-IsAdmin / X-Roles / X-User-Permissions from the
 // request before any other middleware runs. Per HIP-0026, only the
-// gateway-minted path is trusted; everything else must be stripped to
+// gateway-written path is trusted; everything else must be stripped to
 // prevent client spoofing.
 //
 // Use this when a service runs WITHOUT a Hanzo gateway in front (rare).
 // When deployed behind hanzoai/gateway, the gateway strips these
-// unconditionally and re-mints from JWT — leave this middleware OFF in
+// unconditionally and rewrites from JWT — leave this middleware OFF in
 // that topology.
 func StripIdentityHeaders() zip.Handler {
 	return func(c *zip.Ctx) error {

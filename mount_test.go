@@ -68,18 +68,18 @@ func TestMount_ServesHealth(t *testing.T) {
 // The NoRoute shim used to copy every inbound request header onto
 // c.Writer.Header() — the RESPONSE — while its comment claimed it was copying
 // them onto the downstream request. That echoed Authorization, Cookie and the
-// gateway-minted identity set (X-Org-Id / X-User-Id / X-User-Email) straight
+// gateway-written identity set (X-Org-Id / X-User-Id / X-User-Email) straight
 // back to the caller, exposing them to anything that observes or caches
 // response headers. The copy was also dead for its stated purpose: the
 // downstream reads c.Request, which the gin handler already mutated in place.
 //
-// Contract: nothing the client sent, and nothing the gateway minted onto the
+// Contract: nothing the client sent, and nothing the gateway wrote onto the
 // request, may appear in the response headers.
 func TestZipFromGin_DoesNotReflectRequestHeadersOntoResponse(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	app := zip.New(zip.Config{Logger: luxlog.New("test")})
-	// Mint an identity header onto the REQUEST, exactly as the real auth
+	// Write an identity header onto the REQUEST, exactly as the real auth
 	// middleware does after validating a JWT.
 	app.Use(zipFromGin(func(c *gin.Context) {
 		c.Request.Header.Set("X-Org-Id", "acme")
@@ -105,14 +105,14 @@ func TestZipFromGin_DoesNotReflectRequestHeadersOntoResponse(t *testing.T) {
 			t.Errorf("request header %q reflected onto response: %q", h, got)
 		}
 	}
-	// Gateway-minted identity headers are for the downstream only.
+	// Gateway-written identity headers are for the downstream only.
 	for _, h := range []string{"X-Org-Id", "X-User-Id"} {
 		if got := resp.Header.Get(h); got != "" {
-			t.Errorf("minted identity header %q leaked onto response: %q", h, got)
+			t.Errorf("written identity header %q leaked onto response: %q", h, got)
 		}
 	}
 
-	// And the downstream still observes the minted headers (the shim must
+	// And the downstream still observes the written headers (the shim must
 	// not have broken the thing the copy was mistakenly trying to do).
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -123,10 +123,10 @@ func TestZipFromGin_DoesNotReflectRequestHeadersOntoResponse(t *testing.T) {
 	}
 }
 
-// TestZipFromGin_PropagatesMintedHeadersDownstream pins the behaviour the
+// TestZipFromGin_PropagatesWrittenHeadersDownstream pins the behaviour the
 // deleted copy loop was nominally for: a header the gin middleware sets on
 // c.Request MUST be visible to the downstream zip handler.
-func TestZipFromGin_PropagatesMintedHeadersDownstream(t *testing.T) {
+func TestZipFromGin_PropagatesWrittenHeadersDownstream(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	app := zip.New(zip.Config{Logger: luxlog.New("test")})

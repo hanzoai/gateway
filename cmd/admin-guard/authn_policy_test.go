@@ -49,7 +49,7 @@ func ciRequest(accept string, cookies ...*http.Cookie) *http.Request {
 
 // TestAuthnPolicyAdmitsPlainOrgUser is the whole point of the policy: a user
 // whose home org is `lux` and who is NOT an admin anywhere reaches ci.hanzo.ai,
-// and the guard mints X-Org-Id=lux so the dashboard scopes to lux's builds.
+// and the guard writes X-Org-Id=lux so the dashboard scopes to lux's builds.
 func TestAuthnPolicyAdmitsPlainOrgUser(t *testing.T) {
 	cfg := testConfig()
 	w := httptest.NewRecorder()
@@ -99,7 +99,7 @@ func TestAuthnPolicyStillRefusesAnonymous(t *testing.T) {
 			t.Fatalf("anonymous API on authn surface: status=%d want 401", w.Code)
 		}
 		if got := w.Header().Get("X-Org-Id"); got != "" {
-			t.Errorf("denied request minted X-Org-Id=%q; must mint nothing", got)
+			t.Errorf("denied request wrote X-Org-Id=%q; must write nothing", got)
 		}
 	})
 
@@ -136,7 +136,7 @@ func TestAuthnPolicyRefusesEmptyOwner(t *testing.T) {
 // TestAuthnPolicyIgnoresHost pins the deliberate design choice: this policy
 // grants REACH and never decides visibility, so it must not accidentally acquire
 // host-dependent behavior. What a caller sees is decided downstream, by the
-// X-Org-Id minted from the verified owner claim.
+// X-Org-Id written from the verified owner claim.
 func TestAuthnPolicyIgnoresHost(t *testing.T) {
 	cfg := testConfig()
 	p := principal{owner: "zoo"}

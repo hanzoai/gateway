@@ -6,7 +6,7 @@ package gateway
 //
 // A person belongs to several orgs, picks one, and that org must be the one whose
 // data they see AND the one whose ledger is charged. The selection rides in
-// X-Org-Id, which is also the header the edge MINTS, so the whole contract is: the
+// X-Org-Id, which is also the header the edge WRITES, so the whole contract is: the
 // client's copy is deleted at ingress and can only come back if the token's SIGNED
 // `orgs` membership set admits it.
 //
@@ -86,7 +86,7 @@ func memberClaims() authz.Claims {
 }
 
 // TestOrg_NoSelectionIsUnchanged is the no-op proof for every caller that does not
-// switch: with no inbound X-Org-Id the edge mints exactly what it minted before the
+// switch: with no inbound X-Org-Id the edge writes exactly what it wrote before the
 // switcher existed — X-Org-Id == X-User-Owner == the JWT owner — and bills the same
 // org/sub key. Nothing about a non-switching request moves.
 func TestOrg_NoSelectionIsUnchanged(t *testing.T) {
@@ -187,7 +187,7 @@ func TestOrg_MasqueradeSpendsAdminLedger(t *testing.T) {
 // TestOrg_MachineCannotMasquerade closes the escalation the operator branch would
 // otherwise open: a client_credentials identity that happens to live in the admin
 // org is NOT a platform operator. Without the human narrowing, any admin-org
-// machine app could name a victim org and the edge would mint it for every backend
+// machine app could name a victim org and the edge would write it for every backend
 // that trusts the header by design.
 func TestOrg_MachineCannotMasquerade(t *testing.T) {
 	machine := validClaims("https://hanzo.id", "https://api.hanzo.ai")

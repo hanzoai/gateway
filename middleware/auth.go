@@ -4,7 +4,7 @@
 // gateway subsystem's responsibility per HIP-0106.
 //
 // Other subsystems mounted inside the unified cloud binary trust the
-// gateway-minted X-Org-Id header and do not re-validate JWTs
+// gateway-written X-Org-Id header and do not re-validate JWTs
 // themselves — re-running JWT validation per-subsystem is wasteful and
 // risks divergent validation rules.
 package middleware
@@ -24,7 +24,7 @@ import (
 // is rejected with 401.
 type AuthVerifier interface {
 	// Verify validates the bearer token and returns the canonical
-	// X-* headers to mint (Org / User / Email / IsAdmin / Roles).
+	// X-* headers to write (Org / User / Email / IsAdmin / Roles).
 	Verify(ctx context.Context, bearer string) (Identity, error)
 }
 
@@ -38,22 +38,22 @@ type Identity struct {
 }
 
 // Auth validates incoming requests via verifier. When the request already
-// carries gateway-minted X-Org-Id (i.e. behind hanzoai/gateway), the
+// carries gateway-written X-Org-Id (i.e. behind hanzoai/gateway), the
 // verifier is bypassed and the headers are trusted. Otherwise the
 // Authorization: Bearer <token> is verified.
 //
 // On successful gateway-trust or successful in-process verification,
-// Auth marks the request as gateway-minted via SetGatewayMinted so
+// Auth marks the request as gateway-written via SetGatewayWritten so
 // downstream subsystems can assert the trust boundary with
-// gateway.AssertGatewayMinted(c).
+// gateway.AssertGatewayWritten(c).
 //
-// Pass a nil verifier to only accept gateway-minted headers (no in-binary
+// Pass a nil verifier to only accept gateway-written headers (no in-binary
 // JWT validation).
 func Auth(verifier AuthVerifier) zip.Handler {
 	return func(c *zip.Ctx) error {
 		// Trust the gateway path first.
 		if c.Org() != "" || c.User() != "" {
-			gateway.SetGatewayMinted(c)
+			gateway.SetGatewayWritten(c)
 			return c.Continue()
 		}
 		if verifier == nil {
@@ -67,7 +67,7 @@ func Auth(verifier AuthVerifier) zip.Handler {
 		if err != nil {
 			return zip.ErrUnauthorized("invalid token")
 		}
-		// Mint the validated headers so handlers see the same shape as
+		// Write the validated headers so handlers see the same shape as
 		// the gateway-fronted path.
 		req := c.Fiber().Request()
 		req.Header.Set("X-Org-Id", id.Org)
@@ -79,7 +79,7 @@ func Auth(verifier AuthVerifier) zip.Handler {
 		if len(id.Roles) > 0 {
 			req.Header.Set("X-Roles", strings.Join(id.Roles, ","))
 		}
-		gateway.SetGatewayMinted(c)
+		gateway.SetGatewayWritten(c)
 		return c.Continue()
 	}
 }
