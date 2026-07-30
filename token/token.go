@@ -10,13 +10,10 @@
 package token
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/hanzoai/authz"
 	"github.com/hanzoai/authz/edge"
 )
 
@@ -115,47 +112,14 @@ func accepts(allow []string, want string) bool {
 	return false
 }
 
-// ErrNoToken reports that no credential was present, so a caller can tell "missing"
-// from "invalid" and fall through to a session or anonymous path.
-var ErrNoToken = errors.New("token: no credential")
-
-// Validator binds a Config to the edge's key cache for repeated verification.
-type Validator struct {
-	cfg  Config
-	keys *edge.Keys
+// NewValidator builds the edge's verifier from cfg. The check itself lives in
+// hanzoai/authz/edge — this package's whole job is turning THIS deployment's
+// environment into the values it takes, which is the only part that is ours.
+func NewValidator(cfg Config) *edge.Verifier {
+	return edge.NewVerifier(cfg.JWKSURL, cfg.Issuer, cfg.Audiences, cfg.JWKSTTL)
 }
 
-// NewValidator builds a Validator from cfg.
-func NewValidator(cfg Config) *Validator {
-	return &Validator{cfg: cfg, keys: edge.NewKeys(cfg.JWKSURL, cfg.JWKSTTL)}
-}
-
-// Verify extracts the credential a request carries and verifies it.
-func (v *Validator) Verify(h edge.Headers) (*authz.Claims, error) {
-	return v.VerifyRaw(edge.Token(h))
-}
-
-// VerifyRaw verifies a credential held out of band — an OAuth2 code-exchange
-// handler checking the token it just received, say.
-//
-// Signature, issuer and expiry are authz.Verify's; the audience allowlist is this
-// edge's, applied after. The order matters: an unverified token's claims are not
-// evidence of anything, so nothing is read off it before the signature holds.
-func (v *Validator) VerifyRaw(raw string) (*authz.Claims, error) {
-	if raw == "" {
-		return nil, ErrNoToken
-	}
-	claims, err := authz.Verify(raw, v.keys.Resolve, v.cfg.Issuer)
-	if err != nil {
-		return nil, err
-	}
-	if len(v.cfg.Audiences) == 0 {
-		return claims, nil
-	}
-	for _, aud := range claims.Audience {
-		if accepts(v.cfg.Audiences, aud) {
-			return claims, nil
-		}
-	}
-	return nil, fmt.Errorf("token: audience %v is not accepted here", []string(claims.Audience))
-}
+// ErrNoToken is the edge's sentinel, re-exported so a caller that already imports
+// this package for its config can compare against it without importing the edge for
+// one variable. It is the same value, not a copy.
+var ErrNoToken = edge.ErrNoToken
