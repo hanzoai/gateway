@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hanzoai/authz/edge"
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -56,7 +57,7 @@ type config struct {
 
 	syncInterval time.Duration
 
-	validator *token.Validator
+	validator *edge.Verifier
 }
 
 func loadConfig() *config {

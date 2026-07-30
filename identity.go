@@ -103,7 +103,7 @@ func moneyBits(claims *authz.Claims) int64 {
 }
 
 // validator is the credential check, built once per middleware from AuthConfig.
-func newValidator(cfg AuthConfig) *token.Validator {
+func newValidator(cfg AuthConfig) *edge.Verifier {
 	return token.NewValidator(token.Config{
 		JWKSURL:   cfg.JWKSURL,
 		Issuer:    cfg.Issuer,
