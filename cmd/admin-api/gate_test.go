@@ -33,13 +33,13 @@ func fakeIAM(t *testing.T) *httptest.Server {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "ok",
 				"data":   []map[string]any{{"owner": "admin", "name": "hanzo-cloud", "clientId": "abc123"}},
-				"data2":  1,
+				"total":  1,
 			})
 		case strings.HasPrefix(r.URL.Path, "/v1/iam/get-roles"):
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "ok",
 				"data":   []map[string]any{{"owner": "admin", "name": "operators"}},
-				"data2":  1,
+				"total":  1,
 			})
 		default:
 			http.NotFound(w, r)
@@ -147,12 +147,12 @@ func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
 	var env struct {
 		Status string           `json:"status"`
 		Data   []map[string]any `json:"data"`
-		Data2  int              `json:"data2"`
+		Total  int              `json:"total"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if env.Status != "ok" || len(env.Data) != 1 || env.Data[0]["name"] != "hanzo-cloud" {
+	if env.Status != "ok" || len(env.Data) != 1 || env.Data[0]["name"] != "hanzo-cloud" || env.Total != 1 {
 		t.Fatalf("unexpected body: %s", rec.Body.String())
 	}
 }

@@ -256,26 +256,44 @@ func (a *aggregator) syncCommerce(ctx context.Context, orgs []string) {
 	a.store.recordSync(ctx, "commerce:ledger", firstErr == "", n, firstErr)
 }
 
-// liveAudit fetches recent IAM audit records on demand (not stored — always
-// fresh). Returns the casibase records slice.
+// iamList is IAM's list envelope. The count is total; data2 is the legacy
+// untyped slot the rename vacates — read second only until IAM's rename is
+// deployed everywhere, then the fallback is deleted.
+type iamList struct {
+	Data  []map[string]any `json:"data"`
+	Total json.Number      `json:"total"`
+	Data2 json.Number      `json:"data2"`
+}
+
+// count prefers the named total, falls back to legacy data2, then to the
+// page length.
+func (l *iamList) count() int {
+	for _, n := range []json.Number{l.Total, l.Data2} {
+		if v, err := n.Int64(); err == nil && v > 0 {
+			return int(v)
+		}
+	}
+	return len(l.Data)
+}
+
+// liveList fetches one IAM list endpoint on demand (not stored — always
+// fresh) and returns the page plus its total.
+func (a *aggregator) liveList(ctx context.Context, u string) ([]map[string]any, int, error) {
+	var env iamList
+	if err := httpGetJSON(ctx, u, a.iamHeaders(), &env); err != nil {
+		return nil, 0, err
+	}
+	return env.Data, env.count(), nil
+}
+
+// liveAudit fetches recent IAM audit records on demand. Returns the
+// casibase records slice.
 func (a *aggregator) liveAudit(ctx context.Context, org string, pageSize int) ([]map[string]any, int, error) {
 	if org == "" {
 		org = a.cfg.adminOrg
 	}
-	var env struct {
-		Data  []map[string]any `json:"data"`
-		Data2 json.Number      `json:"data2"`
-	}
-	u := fmt.Sprintf("%s/v1/iam/get-records?owner=%s&pageSize=%d&p=1&sortField=createdTime&sortOrder=descend",
-		a.cfg.iamInternal, url.QueryEscape(org), pageSize)
-	if err := httpGetJSON(ctx, u, a.iamHeaders(), &env); err != nil {
-		return nil, 0, err
-	}
-	total := len(env.Data)
-	if n, err := env.Data2.Int64(); err == nil && n > 0 {
-		total = int(n)
-	}
-	return env.Data, total, nil
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-records?owner=%s&pageSize=%d&p=1&sortField=createdTime&sortOrder=descend",
+		a.cfg.iamInternal, url.QueryEscape(org), pageSize))
 }
 
 // liveApplications fetches IAM OAuth applications on demand (not stored —
@@ -290,20 +308,8 @@ func (a *aggregator) liveApplications(ctx context.Context, owner string, pageSiz
 	if pageSize <= 0 {
 		pageSize = 100
 	}
-	var env struct {
-		Data  []map[string]any `json:"data"`
-		Data2 json.Number      `json:"data2"`
-	}
-	u := fmt.Sprintf("%s/v1/iam/get-applications?owner=%s&pageSize=%d&p=1",
-		a.cfg.iamInternal, url.QueryEscape(owner), pageSize)
-	if err := httpGetJSON(ctx, u, a.iamHeaders(), &env); err != nil {
-		return nil, 0, err
-	}
-	total := len(env.Data)
-	if n, err := env.Data2.Int64(); err == nil && n > 0 {
-		total = int(n)
-	}
-	return env.Data, total, nil
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-applications?owner=%s&pageSize=%d&p=1",
+		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
 }
 
 // liveRoles fetches IAM roles for an org on demand (not stored — always fresh).
@@ -315,20 +321,8 @@ func (a *aggregator) liveRoles(ctx context.Context, owner string, pageSize int) 
 	if pageSize <= 0 {
 		pageSize = 100
 	}
-	var env struct {
-		Data  []map[string]any `json:"data"`
-		Data2 json.Number      `json:"data2"`
-	}
-	u := fmt.Sprintf("%s/v1/iam/get-roles?owner=%s&pageSize=%d&p=1",
-		a.cfg.iamInternal, url.QueryEscape(owner), pageSize)
-	if err := httpGetJSON(ctx, u, a.iamHeaders(), &env); err != nil {
-		return nil, 0, err
-	}
-	total := len(env.Data)
-	if n, err := env.Data2.Int64(); err == nil && n > 0 {
-		total = int(n)
-	}
-	return env.Data, total, nil
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-roles?owner=%s&pageSize=%d&p=1",
+		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
 }
 
 // ---- http + parsing helpers ----------------------------------------------
