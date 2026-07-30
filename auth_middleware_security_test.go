@@ -125,9 +125,14 @@ func validClaims(issuer, audience string) authz.Claims {
 			IssuedAt:  jwt.NewNumericDate(now.Add(-1 * time.Minute)),
 			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		},
+		// Owner is the APP's org, which is what IAM stamps there. The MEMBERSHIP SET is
+		// the subject's own org and the only thing that confers authority — every user
+		// token IAM signs carries it, home first (store.MemberOrgRefs), so a fixture
+		// without it is a token that cannot exist.
 		Owner: "hanzo",
 		Name:  "Alice",
 		Email: "alice@hanzo.ai",
+		Orgs:  []authz.Membership{{Org: "hanzo", Role: authz.Member}},
 	}
 }
 
@@ -326,7 +331,9 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	})
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
-	claims.Owner = "acme-corp"
+	// The MEMBERSHIP SET is the subject's org. Setting only `owner` would set the org
+	// of the APP the token was minted through, which is not who bob is.
+	claims.Orgs = []authz.Membership{{Org: "acme-corp", Role: authz.Member}}
 	claims.RegisteredClaims.Subject = "bob"
 	claims.Email = "bob@acme-corp.com"
 	token := tj.signToken(t, claims)
@@ -347,7 +354,7 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	}
 	// Headers MUST come from the validated JWT, NOT from the forged request headers
 	if gotOrgID != "acme-corp" {
-		t.Errorf("SECURITY: X-Org-Id = %q, want %q (from JWT owner claim)", gotOrgID, "acme-corp")
+		t.Errorf("SECURITY: X-Org-Id = %q, want %q (from the signed membership set)", gotOrgID, "acme-corp")
 	}
 	if gotUserID != "bob" {
 		t.Errorf("SECURITY: X-User-Id = %q, want %q (from JWT sub claim)", gotUserID, "bob")
@@ -1026,8 +1033,10 @@ func TestAdminOrgMachineMintsNoAuthority(t *testing.T) {
 	if seen[authz.HeaderUserOrgAdmin] != "" {
 		t.Errorf("an admin-org machine was minted %s=%q", authz.HeaderUserOrgAdmin, seen[authz.HeaderUserOrgAdmin])
 	}
-	if seen[authz.HeaderOrg] != authz.AdminOrg {
-		t.Errorf("an admin-org machine masqueraded into %q", seen[authz.HeaderOrg])
+	// NO org: a machine's org lives only in the `owner` claim, which cannot be told
+	// apart from the app a human signed in through.
+	if seen[authz.HeaderOrg] != "" {
+		t.Errorf("an admin-org machine was given org %q, want none", seen[authz.HeaderOrg])
 	}
 	if n, _ := strconv.ParseInt(seen[authz.HeaderUserPermissions], 10, 64); n&permissionBits["admin"] != 0 {
 		t.Errorf("an admin-org machine carries the money bit (%q)", seen[authz.HeaderUserPermissions])
@@ -1364,7 +1373,7 @@ func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	})
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
-	claims.Owner = "legit-org"
+	claims.Orgs = []authz.Membership{{Org: "legit-org", Role: authz.Member}}
 	claims.RegisteredClaims.Subject = "legit-user"
 	token := tj.signToken(t, claims)
 

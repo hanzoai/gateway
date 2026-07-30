@@ -160,7 +160,7 @@ func (r *router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			w.Write([]byte(`{"error":"unauthorized","message":"valid Hanzo IAM token required"}`))
 			return
 		}
-		edge.Inject(req.Header, claims, selectedOrg, nil)
+		edge.Apply(req.Header, claims, selectedOrg, nil)
 		req.Header.Del("Authorization")
 		req.Header.Del("X-Authorization")
 	}
