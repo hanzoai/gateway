@@ -265,7 +265,7 @@ var apiCloudHosts = map[string]bool{
 	// surface to cloud (which owns visor + all control-plane routing), exactly like
 	// api.hanzo.ai. SECURITY unchanged: NewAuthMiddleware runs BEFORE the host
 	// passthrough for ALL hosts — it unconditionally strips client identity headers
-	// and re-mints X-Org-Id from the validated JWT — so this carries a gateway-
+	// and rewrites X-Org-Id from the validated JWT — so this carries a gateway-
 	// sanitized request, never a client-trusted X-Org-Id.
 	"api.cloud.hanzo.ai": true,
 }

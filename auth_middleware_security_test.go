@@ -364,11 +364,11 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	}
 }
 
-// TestValidAuth_MintsProjectFromClaim proves the org SUB-SCOPE X-Project-Id is
-// minted from the validated JWT `project` claim (exactly like X-Org-Id from
+// TestValidAuth_WritesProjectFromClaim proves the org SUB-SCOPE X-Project-Id is
+// written from the validated JWT `project` claim (exactly like X-Org-Id from
 // `owner`) and a forged client X-Project-Id can never survive. With no project
 // claim the header is omitted (default project), preserving single-project behavior.
-func TestValidAuth_MintsProjectFromClaim(t *testing.T) {
+func TestValidAuth_WritesProjectFromClaim(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
 
@@ -378,7 +378,7 @@ func TestValidAuth_MintsProjectFromClaim(t *testing.T) {
 		c.Status(http.StatusOK)
 	})
 
-	// (a) JWT carries a non-default project → minted; forged header dropped.
+	// (a) JWT carries a non-default project → written; forged header dropped.
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "acme-corp"
 	claims.Project = "research"
@@ -854,7 +854,7 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		"X-Tenant-ID",
 		"X-Org",
 		// Org sub-scope selector: a raw client copy is forgeable and MUST be
-		// stripped on ingress; the trusted value is re-minted from the validated
+		// stripped on ingress; the trusted value is rewritten from the validated
 		// JWT `project` claim (InjectIdentity / auth_middleware), never trusted raw.
 		"X-Project-Id",
 		// Vendor-prefixed legacy headers
@@ -882,11 +882,11 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 	}
 }
 
-// --- Test 14: the identity headers a validated token mints, and the two it does not ---
+// --- Test 14: the identity headers a validated token earns, and the two it does not ---
 
-// mintedFor runs one request through the live middleware and reports the identity
+// headersFor runs one request through the live middleware and reports the identity
 // the backend would see.
-func mintedFor(t *testing.T, tj *testJWKS, jwksURL string, claims map[string]any) map[string]string {
+func headersFor(t *testing.T, tj *testJWKS, jwksURL string, claims map[string]any) map[string]string {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	seen := map[string]string{}
@@ -926,20 +926,20 @@ func iamToken(owner string, extra map[string]any) map[string]any {
 }
 
 // An ORG ADMIN gets the org-admin header and NOT the platform one. isAdmin is IAM's
-// org-role bit; minting platform authority from it made every org owner a platform
+// org-role bit; writing platform authority from it made every org owner a platform
 // admin, which is the escalation this whole path was rebuilt to make unrepeatable.
-func TestOrgAdminNeverMintsPlatformAuthority(t *testing.T) {
+func TestOrgAdminGetsNoPlatformAuthority(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	got := mintedFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
+	got := headersFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
 		"isAdmin": true,
 		"orgs":    []map[string]any{{"org": "hanzo", "role": "admin"}},
 	}))
 
 	if got[authz.HeaderUserAdmin] != "" {
-		t.Errorf("%s = %q — an org admin was minted PLATFORM authority",
+		t.Errorf("%s = %q — an org admin was given PLATFORM authority",
 			authz.HeaderUserAdmin, got[authz.HeaderUserAdmin])
 	}
 	if got[authz.HeaderUserOrgAdmin] != "true" {
@@ -960,7 +960,7 @@ func TestOrgAdminNeverMintsPlatformAuthority(t *testing.T) {
 	// semantics, so an org owner holding admin was the free-money hole.
 	bits := got[authz.HeaderUserPermissions]
 	if bits == "" {
-		t.Fatalf("%s was not minted for an org admin", authz.HeaderUserPermissions)
+		t.Fatalf("%s was not written for an org admin", authz.HeaderUserPermissions)
 	}
 	n, err := strconv.ParseInt(bits, 10, 64)
 	if err != nil {
@@ -975,12 +975,12 @@ func TestOrgAdminNeverMintsPlatformAuthority(t *testing.T) {
 }
 
 // A platform operator gets both the platform header and the money bit.
-func TestPlatformOperatorMintsPlatformAuthority(t *testing.T) {
+func TestPlatformOperatorGetsPlatformAuthority(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	got := mintedFor(t, tj, jwksServer.URL, iamToken(authz.AdminOrg, map[string]any{
+	got := headersFor(t, tj, jwksServer.URL, iamToken(authz.AdminOrg, map[string]any{
 		"isAdmin": true,
 		"orgs":    []map[string]any{{"org": authz.AdminOrg, "role": "admin"}},
 	}))
@@ -999,7 +999,7 @@ func TestPlatformOperatorMintsPlatformAuthority(t *testing.T) {
 // IAM's client_credentials grant signs no membership set, which is what marks it a
 // machine; the predicate that used to look for tokenType "application" never fired,
 // because IAM assigns that value nowhere.
-func TestAdminOrgMachineMintsNoAuthority(t *testing.T) {
+func TestAdminOrgMachineGetsNoAuthority(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
@@ -1028,10 +1028,10 @@ func TestAdminOrgMachineMintsNoAuthority(t *testing.T) {
 	r.ServeHTTP(w, req)
 
 	if seen[authz.HeaderUserAdmin] != "" {
-		t.Errorf("an admin-org machine was minted %s=%q", authz.HeaderUserAdmin, seen[authz.HeaderUserAdmin])
+		t.Errorf("an admin-org machine was given %s=%q", authz.HeaderUserAdmin, seen[authz.HeaderUserAdmin])
 	}
 	if seen[authz.HeaderUserOrgAdmin] != "" {
-		t.Errorf("an admin-org machine was minted %s=%q", authz.HeaderUserOrgAdmin, seen[authz.HeaderUserOrgAdmin])
+		t.Errorf("an admin-org machine was given %s=%q", authz.HeaderUserOrgAdmin, seen[authz.HeaderUserOrgAdmin])
 	}
 	// NO org: a machine's org lives only in the `owner` claim, which cannot be told
 	// apart from the app a human signed in through.
@@ -1043,16 +1043,16 @@ func TestAdminOrgMachineMintsNoAuthority(t *testing.T) {
 	}
 }
 
-// X-Roles and X-Phone-Number are RETIRED: no edge mints them, and a token carrying
+// X-Roles and X-Phone-Number are RETIRED: no edge writes them, and a token carrying
 // the claims the old parsers read changes nothing. IAM emits neither `roles` nor
 // `phone` — they are absent from the signed claim set and from claims_supported —
 // so the three-shape parsers were reading a claim that never arrived.
-func TestRetiredHeadersAreNeverMinted(t *testing.T) {
+func TestRetiredHeadersAreNeverWritten(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	got := mintedFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
+	got := headersFor(t, tj, jwksServer.URL, iamToken("hanzo", map[string]any{
 		"orgs":  []map[string]any{{"org": "hanzo", "role": "member"}},
 		"roles": []map[string]string{{"name": "admin"}, {"name": "operator"}},
 		"phone": "+15555550100",
@@ -1060,7 +1060,7 @@ func TestRetiredHeadersAreNeverMinted(t *testing.T) {
 
 	for _, h := range authz.Retired {
 		if got[h] != "" {
-			t.Errorf("retired header %s was minted as %q", h, got[h])
+			t.Errorf("retired header %s was written as %q", h, got[h])
 		}
 	}
 }
@@ -1493,7 +1493,7 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 //
 // Regression for Red P0-1 (2026-04-27): commerce trusts X-User-Permissions
 // as a base-10 bit.Field. Before this fix, gateway neither stripped a
-// client-supplied X-User-Permissions nor minted one from JWT. An attacker
+// client-supplied X-User-Permissions nor wrote one from JWT. An attacker
 // could send `X-User-Permissions: 16` (Admin bit) with any valid token
 // and gain admin in commerce.
 func TestPermissions_ForgedHeaderStripped(t *testing.T) {
@@ -1507,7 +1507,7 @@ func TestPermissions_ForgedHeaderStripped(t *testing.T) {
 	})
 
 	// JWT has no permissions claim and isAdmin=false → no permissions
-	// should be minted. The forged header MUST NOT survive.
+	// should be written. The forged header MUST NOT survive.
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
 
@@ -1533,9 +1533,9 @@ func TestPermissions_ForgedHeaderStripped(t *testing.T) {
 // The free-money regression. An org OWNER (owner="hanzo", isAdmin=true) is an
 // ORG-level admin, not a platform admin. Commerce gates every credit-creating
 // and card-charging billing endpoint on TokenRequired(permission.Admin); before
-// the fix the gateway minted Admin|Live (20) for any isAdmin JWT, so an org owner
+// the fix the gateway wrote Admin|Live (20) for any isAdmin JWT, so an org owner
 // satisfied those gates and minted unlimited free balance (live-proven as
-// Dave/maxpower). The gateway must now mint ONLY Live (4) for an org-level admin.
+// Dave/maxpower). The gateway must now write ONLY Live (4) for an org-level admin.
 func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
@@ -1570,7 +1570,7 @@ func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 		t.Errorf("SECURITY: org-admin X-User-Permissions = %q, want %q (Live only, no Admin money bit)", gotPerms, "4")
 	}
 	// The forged platform-superadmin header must not survive; an org admin is
-	// not a global admin, so the gateway must not mint it either.
+	// not a global admin, so the gateway must not write it either.
 	if gotGlobalAdmin != "" {
 		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty (org admin is not global; forged value must be stripped)", gotGlobalAdmin)
 	}
@@ -1611,9 +1611,9 @@ func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	if gotPerms != "20" {
 		t.Errorf("platform-sudo X-User-Permissions = %q, want %q (Admin|Live)", gotPerms, "20")
 	}
-	// Platform sudo grants the Admin bit (owner=="admin") but mints NO boolean header.
+	// Platform sudo grants the Admin bit (owner=="admin") but writes NO boolean header.
 	if gotGlobalAdmin != "" {
-		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty — the platform-admin boolean is never minted (sudo = org==admin)", gotGlobalAdmin)
+		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty — the platform-admin boolean is never written (sudo = org==admin)", gotGlobalAdmin)
 	}
 }
 
@@ -1671,29 +1671,29 @@ func TestPermissions_ClaimCannotGrantBits(t *testing.T) {
 			t.Fatalf("status = %d, want 200 (body=%s)", w.Code, w.Body.String())
 		}
 		if gotPerms != "" {
-			t.Errorf("SECURITY: a `permissions` claim of %T minted %s=%q — a plain member named its own money authority",
+			t.Errorf("SECURITY: a `permissions` claim of %T wrote %s=%q — a plain member named its own money authority",
 				shape, authz.HeaderUserPermissions, gotPerms)
 		}
 		if gotAdmin != "" {
-			t.Errorf("SECURITY: a plain member was minted %s=%q", authz.HeaderUserAdmin, gotAdmin)
+			t.Errorf("SECURITY: a plain member was given %s=%q", authz.HeaderUserAdmin, gotAdmin)
 		}
 	}
 }
 
-// --- Test 25: a GLOBAL admin's isAdmin auto-mints Admin|Live ---
+// --- Test 25: a GLOBAL admin's isAdmin auto-writes Admin|Live ---
 //
-// The Admin (money) bit is minted from isAdmin ONLY for a platform (global)
+// The Admin (money) bit is written from isAdmin ONLY for a platform (global)
 // admin — here owner=="admin". An org-level admin gets Live only; that half of
 // the contract is TestPermissions_OrgAdminGetsNoAdminBit (the free-money
 // regression). Global-admin tooling keeps its Admin|Live so it still works.
-func TestPermissions_IsAdminMintsAdminLive(t *testing.T) {
+func TestPermissions_IsAdminWritesAdminLive(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
 	now := time.Now()
 	// No "permissions" claim, isAdmin=true, owner=="admin" (global admin org)
-	// → gateway mints Admin|Live.
+	// → gateway writes Admin|Live.
 	claims := map[string]interface{}{
 		"iss":     "https://hanzo.id",
 		"sub":     "z",
@@ -1844,7 +1844,7 @@ func TestPermissions_UnknownNameIgnored(t *testing.T) {
 //
 // Direct unit test on stripIdentityHeaders so a regression in the strip
 // list shows up before any middleware-level test gets a chance to mask
-// it via mint-over.
+// it by overwriting.
 func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-User-Permissions", "20")
@@ -1856,13 +1856,13 @@ func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
 	}
 }
 
-// --- Test 29: strip-list ⊇ mint-list contract test ---
+// --- Test 29: strip-list ⊇ write-list contract test ---
 //
 // Red called this out as a gap (P0-1 audit): every header the gateway
-// mints downstream MUST also appear in the strip list. Otherwise a new
-// mint target added without a strip pair is forgeable. This test is the
+// writes downstream MUST also appear in the strip list. Otherwise a new
+// write target added without a strip pair is forgeable. This test is the
 // canonical link between the two lists.
-func TestStripList_CoversAllMintedHeaders(t *testing.T) {
+func TestStripList_CoversAllWrittenHeaders(t *testing.T) {
 	for _, h := range authz.Headers {
 		t.Run(h, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -1871,7 +1871,7 @@ func TestStripList_CoversAllMintedHeaders(t *testing.T) {
 			stripClaimed(req.Header)
 
 			if v := req.Header.Get(h); v != "" {
-				t.Errorf("SECURITY: gateway mints %q but strip list does NOT cover it (got %q)", h, v)
+				t.Errorf("SECURITY: gateway writes %q but strip list does NOT cover it (got %q)", h, v)
 			}
 		})
 	}
@@ -1924,6 +1924,6 @@ func TestPermissions_UnparseableClaimFailsClosed(t *testing.T) {
 	// Unparseable claim → no bits granted → header omitted (forged value
 	// already stripped on ingress).
 	if sawHeader {
-		t.Error("SECURITY: unparseable permissions claim must NOT mint a header")
+		t.Error("SECURITY: unparseable permissions claim must NOT write a header")
 	}
 }

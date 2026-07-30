@@ -2,7 +2,7 @@
 
 # gateway
 
-HTTP gateway: routing, JWT validation, identity strip + mint, rate limit, circuit break, telemetry.
+HTTP gateway: routing, JWT validation, identity strip + write, rate limit, circuit break, telemetry.
 
 [![Status](https://img.shields.io/badge/status-stable-green)]()
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)]()
@@ -35,7 +35,7 @@ only (HIP-0106 canonical Hanzo Go stack).
 
 ## What this is
 
-`gateway` is the unified API entry point for the Hanzo platform. Behind `hanzoai/ingress` (L7 TLS), in front of every Hanzo backend service. Validates JWTs against Hanzo IAM JWKS, strips every client-supplied identity header (`X-User-*`, `X-Org-Id`, ...), mints the three canonical identity headers from the JWT, then forwards in-process (when co-resident under `hanzoai/cloud`) or over the wire to downstream services.
+`gateway` is the unified API entry point for the Hanzo platform. Behind `hanzoai/ingress` (L7 TLS), in front of every Hanzo backend service. Validates JWTs against Hanzo IAM JWKS, strips every client-supplied identity header (`X-User-*`, `X-Org-Id`, ...), writes the three canonical identity headers from the JWT, then forwards in-process (when co-resident under `hanzoai/cloud`) or over the wire to downstream services.
 
 ## Specs
 
@@ -52,7 +52,7 @@ Implements:
                                                     |
                           strip client X-* identity headers (unconditional)
                                                     |
-                          mint X-User-Id / X-Org-Id / X-Roles from JWT
+                          write X-User-Id / X-Org-Id / X-Roles from JWT
                                                     |
                           rate-limit, circuit-break, telemetry
                                                     |

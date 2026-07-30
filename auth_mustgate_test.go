@@ -144,7 +144,7 @@ func TestValidAuth_StripsForgedXProjectId(t *testing.T) {
 		t.Fatalf("valid JWT should get 200, got %d", w.Code)
 	}
 	if gotProject != "" {
-		t.Errorf("SECURITY: forged X-Project-Id reached backend = %q; the edge mints no project claim, so it must be stripped", gotProject)
+		t.Errorf("SECURITY: forged X-Project-Id reached backend = %q; the edge writes no project header, so it must be stripped", gotProject)
 	}
 }
 
