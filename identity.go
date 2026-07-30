@@ -102,11 +102,25 @@ func moneyBits(claims *authz.Claims) int64 {
 	return bits
 }
 
+// extraIssuers returns the white-label issuers beyond the primary, deduped.
+func extraIssuers(primary string) []string {
+	var out []string
+	for _, iss := range token.IssuersFromEnv() {
+		if iss != primary {
+			out = append(out, iss)
+		}
+	}
+	return out
+}
+
 // validator is the credential check, built once per middleware from AuthConfig.
 func newValidator(cfg AuthConfig) *edge.Verifier {
 	return token.NewValidator(token.Config{
-		JWKSURL:   cfg.JWKSURL,
-		Issuer:    cfg.Issuer,
+		JWKSURL: cfg.JWKSURL,
+		// The AuthConfig carries one issuer (its env var is singular); the verifier takes
+		// the allowlist, widened by WHITELABEL_ISSUERS so a brand this edge fronts is
+		// added by configuration rather than by a code change.
+		Issuers:   append([]string{cfg.Issuer}, extraIssuers(cfg.Issuer)...),
 		Audiences: cfg.Audiences,
 		JWKSTTL:   jwksTTL,
 	})

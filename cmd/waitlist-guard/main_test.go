@@ -38,7 +38,7 @@ func newTestConfig(iamURL string, failOpen bool) *config {
 		cookieName:   "hanzo_waitlist_guard",
 		cookieTTL:    8 * time.Hour,
 		hmacKey:      []byte("0123456789abcdef0123456789abcdef"),
-		validator:    token.NewValidator(token.Config{Issuer: "https://iam.hanzo.ai"}),
+		validator:    token.NewValidator(token.Config{Issuers: []string{"https://iam.hanzo.ai"}}),
 	}
 }
 
@@ -117,7 +117,7 @@ func jwtSignerConfig(t *testing.T, iamURL string, failOpen bool) (*config, strin
 
 	c := newTestConfig(iamURL, failOpen)
 	c.validator = token.NewValidator(token.Config{
-		JWKSURL: jwksSrv.URL, Issuer: iss, Audiences: []string{aud}, JWKSTTL: time.Minute,
+		JWKSURL: jwksSrv.URL, Issuers: []string{iss}, Audiences: []string{aud}, JWKSTTL: time.Minute,
 	})
 	return c, raw
 }

@@ -20,7 +20,11 @@ import (
 // Config is the edge's verification policy.
 type Config struct {
 	JWKSURL string
-	Issuer  string
+
+	// Issuers is the trusted-issuer allowlist. It is a SET because one deployment
+	// fronts several brands, each signing under its own issuer; an empty set refuses
+	// every token rather than silently disabling the check.
+	Issuers []string
 
 	// Audiences is the allowlist of acceptable `aud` values, with OR semantics: a
 	// token passes when its audience matches ANY entry.
@@ -77,10 +81,23 @@ func AudiencesFromEnv() []string {
 func ConfigFromEnv() Config {
 	return Config{
 		JWKSURL:   envOr("AUTH_JWKS_URL", "https://hanzo.id/v1/iam/.well-known/jwks"),
-		Issuer:    envOr("AUTH_ISSUER", "https://hanzo.id"),
+		Issuers:   IssuersFromEnv(),
 		Audiences: AudiencesFromEnv(),
 		JWKSTTL:   15 * time.Minute,
 	}
+}
+
+// IssuersFromEnv resolves the trusted-issuer allowlist: AUTH_ISSUER (the primary),
+// widened by WHITELABEL_ISSUERS (comma-separated) so a brand this edge fronts can be
+// added without a code change. It never returns empty, so the check is always on.
+func IssuersFromEnv() []string {
+	out := []string{envOr("AUTH_ISSUER", "https://hanzo.id")}
+	for _, iss := range split(os.Getenv("WHITELABEL_ISSUERS")) {
+		if !accepts(out, iss) {
+			out = append(out, iss)
+		}
+	}
+	return out
 }
 
 func envOr(key, dflt string) string {
@@ -116,7 +133,7 @@ func accepts(allow []string, want string) bool {
 // hanzoai/authz/edge — this package's whole job is turning THIS deployment's
 // environment into the values it takes, which is the only part that is ours.
 func NewValidator(cfg Config) *edge.Verifier {
-	return edge.NewVerifier(cfg.JWKSURL, cfg.Issuer, cfg.Audiences, cfg.JWKSTTL)
+	return edge.NewVerifier(cfg.JWKSURL, cfg.Issuers, cfg.Audiences, cfg.JWKSTTL)
 }
 
 // ErrNoToken is the edge's sentinel, re-exported so a caller that already imports

@@ -113,7 +113,7 @@ func tenantTestConfig(jwksURL string) *config {
 		hmacKey:        []byte("0123456789abcdef-tenant-test-key"),
 		validator: token.NewValidator(token.Config{
 			JWKSURL:   jwksURL,
-			Issuer:    guardTestIssuer,
+			Issuers:   []string{guardTestIssuer},
 			Audiences: []string{"hanzo-admin-guard"},
 			JWKSTTL:   time.Minute,
 		}),

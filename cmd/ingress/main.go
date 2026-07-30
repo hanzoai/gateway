@@ -125,7 +125,7 @@ func newRouter(cfg *Config) *router {
 		cfg := token.ConfigFromEnv()
 		r.validator = token.NewValidator(cfg)
 		log.Printf("ingress IAM auth enabled for %d host(s): issuer=%s audiences=%v",
-			len(r.authHosts), cfg.Issuer, cfg.Audiences)
+			len(r.authHosts), cfg.Issuers, cfg.Audiences)
 	}
 
 	return r
