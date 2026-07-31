@@ -468,7 +468,11 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 	// pin the reserved admin org, preserving the global-admin login there. This
 	// only steers the login; handleCallback re-runs authorize() before minting a
 	// session, so an unexpected resolved org is denied, never trusted.
-	q.Set("organization", c.loginOrg(requestHost(r)))
+	// ?sudo=1 asks for the reserved-admin login instead of this host's tenant org
+	// (see loginOrg). Client-supplied on purpose and safe: it only chooses which
+	// identity the browser is OFFERED — handleCallback still re-runs authorize(),
+	// so a caller who is not in the reserved org is denied exactly as before.
+	q.Set("organization", c.loginOrg(requestHost(r), sudoRequested(r.URL.RawQuery)))
 	q.Set("response_type", "code")
 	q.Set("scope", "openid profile email")
 	q.Set("redirect_uri", c.callbackURI(r))
