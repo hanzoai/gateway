@@ -1,0 +1,56 @@
+name: CI/CD
+
+# The gate for hanzoai/gateway, on the native runners (git.hanzo.ai → git-runner).
+# The ~7-line caller shape every hanzo/lux/zoo repo carries: triggers plus the
+# import. All real config is the repo-root hanzo.yml, which platform.hanzo.ai
+# reads too, so no build logic lives here and none moved.
+#
+# This replaces .github/workflows/cicd.yml, which is the same pipeline. Two
+# things changed and both are load-bearing.
+#
+# 1. THE DIRECTORY. Gitea collects workflows from the FIRST of WORKFLOW_DIRS
+#    that exists in the pushed commit and ignores the rest
+#    (modules/actions/workflows.go, listWorkflowsInDirs — it breaks on the first
+#    hit). Once WORKFLOW_DIRS is narrowed to .hanzo/workflows alone, a pipeline
+#    left under .github/workflows is not collected at all: no run, no queued
+#    job, no error. A pipeline that stops silently is the failure this repo can
+#    least afford, so it moves here ahead of that change rather than after it.
+#
+# 2. THE `uses:` PATH. Not cosmetic, and not optional. The reusable is resolved
+#    through services/actions.ResolveUses, which enforces the SAME directory
+#    allowlist on the referenced path:
+#      "uses:" path %q must be under a configured workflow directory
+#    So `hanzoai/ci/.github/workflows/build.yml@v1` stops resolving the moment
+#    .github/workflows leaves WORKFLOW_DIRS — the caller would move and the
+#    callee would break. hanzoai/ci carries build.yml at BOTH paths from the
+#    same tag, byte-identical apart from its header (GitHub resolves only
+#    .github/workflows, git.hanzo.ai only .hanzo/workflows), so pointing at the
+#    .hanzo path resolves the identical pipeline today and survives the change.
+#    The tag is still @v1 — the version did not move, only the path.
+#
+# The runner label is unchanged because it was already right: hanzoai/ci
+# defaults `runner` to ["hanzo-build-linux-amd64"], which the git-runners
+# actually advertise. A label nothing advertises does not fail a job, it queues
+# it until the 24h timeout — silence, not an error.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+# Per-REF, so this can only ever cancel a superseded run of the same branch or
+# the same tag. A `v*` tag has a ref of its own and cannot be cancelled by a
+# push to main. Cancelling is right here because hanzo.yml is a test-only
+# caller — it declares no `images:` and no `deploy:`, and hanzoai/ci skips both
+# for such a caller — so a superseded run has nothing to leave half-done. If
+# this repo ever gains a deploy: block, this flips to false in the same commit.
+concurrency:
+  group: cicd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cicd:
+    uses: hanzoai/ci/.hanzo/workflows/build.yml@v1
+    secrets: inherit

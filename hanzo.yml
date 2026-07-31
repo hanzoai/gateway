@@ -1,5 +1,5 @@
 # Canonical CI/CD config for hanzoai/gateway — read by the hanzoai/ci reusable
-# workflow (.github/workflows/cicd.yml) and by platform.hanzo.ai.
+# workflow (.hanzo/workflows/cicd.yml) and by platform.hanzo.ai.
 #
 # TEST ONLY, deliberately. This repo had NO workflow at all, so `make test` was
 # never a gate anywhere: it went years reporting `build constraints exclude all
