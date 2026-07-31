@@ -233,40 +233,12 @@ func tenantOrgForHost(host string) (string, bool) {
 // global/DO-infra surfaces (platform.hanzo.ai, …) and any unrecognized host pin
 // the reserved global-admin org, preserving today's global-admin login there.
 //
-// `wantSudo` asks for the reserved admin org INSTEAD of the host's tenant org.
-// It exists because the host-derived default made platform sudo UNREACHABLE on a
-// tenant admin surface: authorize() admits an `admin` principal on EVERY host
-// (isPlatformSudo short-circuits before the tenant check), but admin.hanzo.ai
-// pinned `organization=hanzo`, so the browser was only ever offered the `hanzo/z`
-// login — and a person who is BOTH admin/z and hanzo/z could never obtain the
-// identity the gate would have accepted. The guard would take the session it
-// never let you ask for.
-//
 // This only steers WHICH login the browser is offered; it grants nothing.
 // handleCallback re-runs authorize() before minting a session, so a login that
-// resolves an unexpected owner is denied (fail closed), never trusted. That is
-// why honoring a CLIENT-supplied hint is safe: asking to sign in as platform
-// sudo is not the same as being it, and only membership in the reserved org can
-// satisfy authorize().
-func (c *config) loginOrg(host string, wantSudo bool) string {
-	if wantSudo {
-		return c.adminOrg
-	}
+// resolves an unexpected owner is denied (fail closed), never trusted.
+func (c *config) loginOrg(host string) string {
 	if org, ok := tenantOrgForHost(host); ok {
 		return org
 	}
 	return c.adminOrg
-}
-
-// sudoRequested reports whether a request's RAW query asks for the reserved-admin
-// login (`?sudo=1`). Pure over the query string so the trigger is testable without
-// a Request, and deliberately EXACT-match: a stray `sudo=0`/`sudo=` must not
-// silently steer someone to a login their host did not intend.
-func sudoRequested(rawQuery string) bool {
-	for _, part := range strings.Split(rawQuery, "&") {
-		if part == "sudo=1" {
-			return true
-		}
-	}
-	return false
 }
