@@ -108,10 +108,26 @@ type config struct {
 }
 
 // guardVersion is the admin-guard's own semantic version — the ONE canonical
-// place it is declared. It is surfaced in the startup log and on the health
-// endpoint so operators can confirm which guard build made an authorization
-// decision. Bump the PATCH on every behavior change (never a lazy major).
-const guardVersion = "v0.1.9"
+// place it is declared. It is surfaced in the STARTUP LOG so operators can
+// confirm which guard build made an authorization decision. Bump the PATCH on
+// every behavior change (never a lazy major).
+//
+// It is deliberately NOT on the health endpoint. /__guard/healthz is
+// unauthenticated and reachable on every guarded host, so answering "ok v0.1.9"
+// let anyone enumerate which surfaces run which build — the operator question
+// ("which guard decided this?") is answered by the log and by the deployment,
+// both of which already require access to ask.
+const guardVersion = "v0.1.10"
+
+// healthHandler answers the liveness probe and nothing else. The body is a
+// constant: a probe reports reachability, and every additional fact on an
+// unauthenticated endpoint is a fact an attacker did not have to work for.
+func healthHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, "ok")
+	}
+}
 
 const (
 	verifyPath = "/__guard/verify"
@@ -156,11 +172,10 @@ const (
 func main() {
 	cfg := loadConfig()
 
+	log.Printf("admin-guard: starting %s", guardVersion)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc(healthPath, func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = io.WriteString(w, "ok "+guardVersion)
-	})
+	mux.HandleFunc(healthPath, healthHandler())
 	mux.HandleFunc(verifyPath, cfg.verifyHandler(adminPolicy))
 	mux.HandleFunc(verifyAuthnPath, cfg.verifyHandler(authnPolicy))
 	mux.HandleFunc(callbackPath, cfg.handleCallback)
@@ -409,6 +424,47 @@ func (c *config) clearSession(w http.ResponseWriter, r *http.Request) {
 // Identity source (3): IAM session cookie → get-account
 // ----------------------------------------------------------------------------
 
+const (
+	// iamLookupTimeout caps one pre-auth IAM get-account. It is an in-cluster
+	// call; 2s is already far beyond its normal latency, and the number that
+	// matters is how long an ANONYMOUS request can hold a guard goroutine.
+	iamLookupTimeout = 2 * time.Second
+
+	// maxIAMLookupTimeout is the ceiling the test holds this to, so raising the
+	// timeout is a deliberate act with a reason next to it rather than a drift.
+	maxIAMLookupTimeout = 3 * time.Second
+
+	// iamLookupInFlight bounds concurrent pre-auth IAM round-trips. Sized well
+	// above real login concurrency for a guarded admin surface and far below what
+	// it takes to exhaust the guard or to matter to IAM.
+	iamLookupInFlight = 32
+)
+
+// iamGate bounds the pre-auth IAM round-trips in flight across the process.
+var iamGate = newInFlightGate(iamLookupInFlight)
+
+// inFlightGate admits up to n concurrent holders and refuses the rest. A
+// buffered channel is the whole implementation: enter takes a slot or reports
+// that there is none, and never blocks — a pre-auth path that QUEUED would trade
+// a bounded goroutine count for an unbounded wait, which is the same denial
+// wearing a different number.
+type inFlightGate struct{ slots chan struct{} }
+
+func newInFlightGate(n int) *inFlightGate {
+	return &inFlightGate{slots: make(chan struct{}, n)}
+}
+
+func (g *inFlightGate) enter() bool {
+	select {
+	case g.slots <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (g *inFlightGate) leave() { <-g.slots }
+
 // iamSessionPrincipal forwards the inbound cookies to IAM get-account and reads
 // the authenticated user's principal (owner + isAdmin). This covers a browser
 // that holds an IAM SSO session but has not yet been issued a guard cookie. The
@@ -418,7 +474,26 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	if cookie == "" {
 		return principal{}, false
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+
+	// THIS IS THE PRE-AUTH PATH, so the work an anonymous caller can compel here
+	// is the guard's exposure. Any non-empty Cookie reaches it — the guard cannot
+	// tell IAM's session cookie from a random one without knowing IAM's cookie
+	// name, and hardcoding that name would break the SSO fast path the day IAM
+	// renamed it. So bound the COST rather than guess at the input: at most
+	// iamLookupInFlight of these run at once, and each is capped at
+	// iamLookupTimeout. Beyond the bound the guard declines to make the call and
+	// falls through to interactive login, which is where an anonymous browser was
+	// going anyway.
+	//
+	// It used to be an 8s timeout with no bound, so a volume of anonymous requests
+	// carrying any cookie could hold a goroutine and an IAM connection each, for
+	// eight seconds each, and load IAM's get-account 1:1 while doing it.
+	if !iamGate.enter() {
+		return principal{}, false
+	}
+	defer iamGate.leave()
+
+	ctx, cancel := context.WithTimeout(r.Context(), iamLookupTimeout)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
@@ -584,10 +659,39 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.setSession(w, r, p)
-	if returnTo == "" || !strings.HasPrefix(returnTo, "https://") {
+	if !c.returnToAllowed(r, returnTo) {
 		returnTo = c.consoleFor(requestHost(r))
 	}
 	http.Redirect(w, r, returnTo, http.StatusFound)
+}
+
+// returnToAllowed reports whether the post-login destination is a place this
+// guard is willing to send a browser: an absolute https URL on the HOST BEING
+// GUARDED, and nowhere else.
+//
+// The old test was HasPrefix(returnTo, "https://"), which constrains the SCHEME
+// and says nothing about the destination. It held only because returnTo is built
+// from X-Forwarded-Host and travels inside the HMAC-signed state — so the guard
+// was trusting a header to decide where a freshly authenticated browser lands.
+// That is one misconfigured hop (a route that forwards a client's own
+// X-Forwarded-Host) away from handing a logged-in user to another origin, and
+// the guard can settle it locally instead: it already knows which host it is
+// guarding, because that is what it just authenticated FOR.
+//
+// url.Parse rather than string surgery, because every classic bypass of this
+// check is a string that a prefix test reads differently from a URL parser —
+// https://guarded.example.evil/, https://evil/@guarded.example/, a
+// scheme-relative //evil/, a backslash where a parser expects a slash. Comparing
+// the parsed Host to the guarded host answers all of them the same way.
+func (c *config) returnToAllowed(r *http.Request, returnTo string) bool {
+	if returnTo == "" {
+		return false
+	}
+	u, err := url.Parse(returnTo)
+	if err != nil || u.Scheme != "https" {
+		return false
+	}
+	return hostOnly(u.Host) == requestHost(r)
 }
 
 // exchange swaps the auth code for tokens and resolves the principal from the ID
