@@ -15,7 +15,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -42,11 +41,12 @@ func testConfig() *config {
 	}
 }
 
-// guardCookie returns a valid, unexpired guard session cookie for a principal
-// (owner + org-admin bit), in the canonical owner|isAdmin|exp form.
+// guardCookie returns a valid, unexpired guard session cookie for a principal,
+// rendered by the SAME sessionPayload the server writes — so a field added to
+// the cookie cannot pass the tests while breaking every real browser.
 func (c *config) guardCookie(owner string, isAdmin bool) *http.Cookie {
-	payload := fmt.Sprintf("%s|%s|%d", owner, sessionBit(isAdmin), time.Now().Add(time.Hour).Unix())
-	return &http.Cookie{Name: c.cookieName, Value: c.sign(payload)}
+	p := principal{owner: owner, isAdmin: isAdmin, uid: owner + "-uid", email: owner + "@example.test"}
+	return &http.Cookie{Name: c.cookieName, Value: c.sign(sessionPayload(p, time.Now().Add(time.Hour)))}
 }
 
 // TestVerifyContentNegotiation is the admin-guard forward-auth contract on a
@@ -176,7 +176,7 @@ func TestVerifyRejectsTamperedCookie(t *testing.T) {
 // cookie is rejected — time-bounded sessions, no replay past expiry.
 func TestVerifyRejectsExpiredCookie(t *testing.T) {
 	cfg := testConfig()
-	expired := &http.Cookie{Name: cfg.cookieName, Value: cfg.sign(fmt.Sprintf("admin|1|%d", time.Now().Add(-time.Hour).Unix()))}
+	expired := &http.Cookie{Name: cfg.cookieName, Value: cfg.sign(sessionPayload(principal{owner: "admin", isAdmin: true}, time.Now().Add(-time.Hour)))}
 
 	r := httptest.NewRequest(http.MethodGet, "/__guard/verify", nil)
 	r.Header.Set("Accept", "application/json")

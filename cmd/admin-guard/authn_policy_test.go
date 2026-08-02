@@ -17,8 +17,10 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // authn_policy_test.go covers the AUTHENTICATED surface class (/__guard/verify-authn),
@@ -161,5 +163,107 @@ func TestPlatformSudoStillReachesAuthnSurface(t *testing.T) {
 	}
 	if got := w.Header().Get("X-Org-Id"); got != "admin" {
 		t.Errorf("X-Org-Id=%q want admin", got)
+	}
+}
+
+// TestAuthnAllowWritesIdentityTriple pins the header contract a gated surface
+// resolves a PERSON from. X-Org-Id alone names the tenant, which every member of
+// an org shares — a surface handed only that cannot tell two people apart and so
+// cannot have users. o11y's iamidentn refuses outright when the subject is
+// missing, so an org without a subject is not a partial assertion, it is an
+// unusable one. All three headers, or the surface is still locked.
+func TestAuthnAllowWritesIdentityTriple(t *testing.T) {
+	cfg := testConfig()
+	w := httptest.NewRecorder()
+
+	cfg.handleVerify(w, ciRequest("application/json", cfg.guardCookie("lux", false)), authnPolicy)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("status=%d want 204; body=%s", w.Code, w.Body.String())
+	}
+	for header, want := range map[string]string{
+		"X-Org-Id":     "lux",
+		"X-User-Id":    "lux-uid",
+		"X-User-Email": "lux@example.test",
+	} {
+		if got := w.Header().Get(header); got != want {
+			t.Errorf("%s=%q want %q", header, got, want)
+		}
+	}
+}
+
+// TestSessionCookieCarriesTheWholePrincipal is the round-trip the browser
+// actually takes: every request after the login reads the cookie, not the token.
+// A cookie that carried only the tenant made the login the ONLY request that
+// knew who you were, and the surface saw a bare org forever after.
+func TestSessionCookieCarriesTheWholePrincipal(t *testing.T) {
+	cfg := testConfig()
+	want := principal{owner: "lux", isAdmin: false, uid: "0198f3c2-1111-7000-8000-000000000001", email: "z@lux.network"}
+
+	w := httptest.NewRecorder()
+	cfg.setSession(w, httptest.NewRequest(http.MethodGet, "https://ci.hanzo.ai/", nil), want)
+
+	r := httptest.NewRequest(http.MethodGet, "/__guard/verify-authn", nil)
+	for _, ck := range w.Result().Cookies() {
+		r.AddCookie(ck)
+	}
+	got, ok := cfg.sessionPrincipal(r)
+	if !ok {
+		t.Fatal("the cookie the guard just set did not parse back")
+	}
+	if got.owner != want.owner || got.uid != want.uid || got.email != want.email || got.isAdmin != want.isAdmin {
+		t.Fatalf("round-trip lost fields: got %+v want %+v", got, want)
+	}
+}
+
+// TestLegacySessionCookieRejected: the pre-v0.1.9 three-field payload is not a
+// principal this build can render, so it fails closed and the holder logs in
+// again. Accepting it would resurrect the exact half-identity the triple fixes.
+func TestLegacySessionCookieRejected(t *testing.T) {
+	cfg := testConfig()
+	legacy := &http.Cookie{Name: cfg.cookieName, Value: cfg.sign("lux|0|" + strconv.FormatInt(time.Now().Add(time.Hour).Unix(), 10))}
+
+	r := httptest.NewRequest(http.MethodGet, "/__guard/verify-authn", nil)
+	r.AddCookie(legacy)
+	if _, ok := cfg.sessionPrincipal(r); ok {
+		t.Fatal("a three-field legacy cookie authenticated; it must fail closed")
+	}
+}
+
+// TestCallbackPolicyRidesTheState is the lockout this release fixes. The OAuth
+// callback is ONE path shared by every guarded surface, so it used to re-run the
+// ADMIN predicate for all of them: a plain org user on an authn surface passed
+// IAM, returned here, failed a test their surface never asked for, and was sent
+// to the console with no session — so the next request restarted the same loop.
+// The policy now rides the signed state, under the HMAC, where the browser
+// cannot reach it; an unknown name still falls back to the stricter policy.
+func TestCallbackPolicyRidesTheState(t *testing.T) {
+	cfg := testConfig()
+
+	w := httptest.NewRecorder()
+	cfg.startLogin(w, ciRequest("text/html"), "https://ci.hanzo.ai/", authnPolicy)
+
+	var state *http.Cookie
+	for _, ck := range w.Result().Cookies() {
+		if ck.Name == stateCookie {
+			state = ck
+		}
+	}
+	if state == nil {
+		t.Fatal("startLogin set no state cookie")
+	}
+	payload, ok := cfg.verifySigned(state.Value)
+	if !ok {
+		t.Fatal("state cookie failed its own signature check")
+	}
+	parts := strings.SplitN(payload, "\x1f", stateFields)
+	if len(parts) != stateFields {
+		t.Fatalf("state payload has %d fields, want %d", len(parts), stateFields)
+	}
+	if got := policyByName(parts[3]); got.name != authnPolicy.name {
+		t.Fatalf("state carried policy %q, want %q — the callback would apply the wrong gate", got.name, authnPolicy.name)
+	}
+	if got := policyByName("something-this-build-never-wrote"); got.name != adminPolicy.name {
+		t.Fatalf("unknown policy name resolved to %q, want the stricter %q", got.name, adminPolicy.name)
 	}
 }
