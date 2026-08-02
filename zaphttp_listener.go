@@ -21,6 +21,7 @@
 package gateway
 
 import (
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -34,11 +35,15 @@ import (
 
 const (
 	// envZapHTTPListen is the env var that sets the ZAP-HTTP bind address.
-	// Empty string or "off" disables the listener entirely.
+	// Empty string or "off" disables the listener entirely. An explicit address
+	// must be LOOPBACK — see zapHTTPListenAddr.
 	envZapHTTPListen = "GATEWAY_ZAP_LISTEN"
 
 	// defaultZapHTTPAddr is the bind address used when the env var is unset.
-	defaultZapHTTPAddr = ":9999"
+	// It is zapInternalAddr, not a second opinion about it: this server is the
+	// inward half of the pair described in zaplisten.go, and it serves
+	// PLAINTEXT ZAP.
+	defaultZapHTTPAddr = zapInternalAddr
 )
 
 // zapHTTPState tracks the once-only listener boot.
@@ -93,6 +98,13 @@ func startZapHTTPListenerOnce(logger logging.Logger, handler http.Handler) {
 // zapHTTPListenAddr returns the configured bind address, or the empty
 // string if the listener should be disabled. "off" (case-insensitive)
 // is the documented kill switch.
+//
+// A non-loopback override is REFUSED, not honored. This server speaks plaintext
+// ZAP (no session crypto exists — see zaplisten.go), so binding it to a routable
+// interface publishes cleartext; the previous contract accepted ":12345" and
+// therefore let one env var turn the edge into a cleartext listener. Refusing
+// fails CLOSED: ZAP stops being served, which is recoverable, instead of being
+// served in the clear, which is not.
 func zapHTTPListenAddr() string {
 	v, ok := os.LookupEnv(envZapHTTPListen)
 	if !ok {
@@ -101,9 +113,12 @@ func zapHTTPListenAddr() string {
 	switch v {
 	case "", "off", "OFF", "Off", "false", "0":
 		return ""
-	default:
-		return v
 	}
+	host, _, err := net.SplitHostPort(v)
+	if err != nil || !isLoopbackHost(host) {
+		return ""
+	}
+	return v
 }
 
 // stopZapHTTPListener closes the ZAP-HTTP listener if it was started.
