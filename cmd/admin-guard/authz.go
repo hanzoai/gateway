@@ -40,17 +40,28 @@ import (
 //     the JWT path (the token carries it); nil on the cookie / get-account paths,
 //     which therefore authorize a HOME-org admin only. Fail-closed: a nil set
 //     never widens access, it only ever fails to recognize a non-home admin.
+//   - uid     : WHO, as opposed to WHICH TENANT — the IAM subject (`sub`). It
+//     authorizes nothing; it is what a gated surface keys the PERSON on. owner
+//     alone cannot: every member of an org shares it, so a surface given only
+//     X-Org-Id can tell tenants apart and not people. A surface that stores
+//     per-user rows (a dashboard's author, a saved view, a preference) needs
+//     this or it cannot have users at all.
+//   - email   : the person's address, for attribution and display. Descriptive,
+//     never load-bearing for a decision here.
 type principal struct {
 	owner   string
 	isAdmin bool
 	orgs    []authz.Membership
+	uid     string
+	email   string
 }
 
 // principalFromClaims lifts a validated JWT into a principal. The claims are
 // IAM-signed (issuer + audience + expiry enforced by the edge), so owner,
-// isAdmin, and the membership set are trusted, not client-forgeable.
+// isAdmin, the membership set, the subject and the email are trusted, not
+// client-forgeable.
 func principalFromClaims(c *authz.Claims) principal {
-	return principal{owner: c.Owner, isAdmin: c.IsAdmin, orgs: c.Orgs}
+	return principal{owner: c.Owner, isAdmin: c.IsAdmin, orgs: c.Orgs, uid: c.UserID(), email: c.Email}
 }
 
 // adminOf reports whether the principal holds an owner/admin role in org. Two
@@ -176,6 +187,24 @@ var authnPolicy = policy{
 	allow: func(_ *config, p principal, _ string) bool {
 		return strings.TrimSpace(p.owner) != ""
 	},
+}
+
+// stateFields is the arity of the login state cookie payload:
+// nonce|verifier|returnTo|policy. The policy is the fourth because the OAuth
+// callback is one path shared by every guarded surface and cannot otherwise know
+// which question the surface that started the login was asking.
+const stateFields = 4
+
+// policyByName recovers a policy from its name as carried in the signed login
+// state. It FAILS CLOSED to the admin policy: an unknown or absent name is a
+// state this build did not write, and the safe reading of "I don't know which
+// gate this is" is the stricter one. Nothing here trusts the browser — the name
+// comes out from under the HMAC or the callback has already been refused.
+func policyByName(name string) policy {
+	if name == authnPolicy.name {
+		return authnPolicy
+	}
+	return adminPolicy
 }
 
 // adminSubdomain is the leftmost label that marks a host as a TENANT admin

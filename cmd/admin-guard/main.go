@@ -111,7 +111,7 @@ type config struct {
 // place it is declared. It is surfaced in the startup log and on the health
 // endpoint so operators can confirm which guard build made an authorization
 // decision. Bump the PATCH on every behavior change (never a lazy major).
-const guardVersion = "v0.1.8"
+const guardVersion = "v0.1.9"
 
 const (
 	verifyPath = "/__guard/verify"
@@ -262,8 +262,8 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request, pol policy
 		http.Error(w, "authentication required", http.StatusUnauthorized)
 		return
 	}
-	// Browser → start interactive IAM PKCE login.
-	c.startLogin(w, r, orig)
+	// Browser → start interactive IAM PKCE login, under THIS surface's policy.
+	c.startLogin(w, r, orig, pol)
 }
 
 // decide renders the allow/redirect verdict for a resolved principal against the
@@ -281,6 +281,26 @@ func (c *config) decide(w http.ResponseWriter, r *http.Request, p principal, ori
 		// the request. Traefik overwrites any client-sent X-Org-Id with this one
 		// via the middleware's authResponseHeaders.
 		w.Header().Set("X-Org-Id", p.owner)
+		// WHO, beside WHICH TENANT. X-Org-Id names the tenant; every member of an
+		// org carries the same one, so a surface handed only that header can scope
+		// data per tenant and cannot tell two people apart — it has no users. The
+		// subject and the address complete the assertion the Hanzo identity-header
+		// contract (HIP-0026) already specifies and every in-cluster subsystem
+		// already reads, so a gated surface resolves a PERSON without minting a
+		// second identity of its own. o11y's iamidentn refuses a request that
+		// carries an org and no subject: emitting one without the other is not a
+		// partial grant, it is an unusable one.
+		//
+		// Both are set unconditionally when non-empty and OMITTED at their zero
+		// value, mirroring the edge injector: an empty header is indistinguishable
+		// from an absent one downstream, and writing "" would only teach Traefik to
+		// forward a blank that overwrites nothing.
+		if p.uid != "" {
+			w.Header().Set("X-User-Id", p.uid)
+		}
+		if p.email != "" {
+			w.Header().Set("X-User-Email", p.email)
+		}
 		w.Header().Set("X-Admin-Guard", "allow-"+pol.name)
 		w.WriteHeader(http.StatusNoContent)
 		return
@@ -298,11 +318,21 @@ func (c *config) decide(w http.ResponseWriter, r *http.Request, p principal, ori
 // Identity source (1): the guard's own signed session cookie
 // ----------------------------------------------------------------------------
 
+// sessionFields is the EXACT arity of the session cookie payload:
+// owner|isAdmin|expiryUnix|uid|email. The cookie is the browser fast path, and
+// it must reproduce the whole principal the login resolved — a cookie that
+// carried only the tenant made every request after the first one anonymous as to
+// WHO, so a gated surface saw a person on the login round-trip and a bare org
+// forever after. Nothing here is optional: email may be empty, but its FIELD is
+// always present, because a variable-arity payload cannot be parsed unambiguously
+// once a value may itself be empty.
+const sessionFields = 5
+
 // sessionPrincipal returns the principal from a valid, unexpired guard session
-// cookie. Cookie value: base64(owner|isAdmin|expiryUnix) "." base64(HMAC), where
-// isAdmin is the bit "1"/"0". Tamper-evident (HMAC) and time-bounded; no
-// server-side store. A cookie that is not EXACTLY the three-field canonical form
-// (e.g. a legacy two-field cookie, or a truncated/garbage one) is rejected —
+// cookie. Cookie value: base64(owner|isAdmin|expiryUnix|uid|email) "." base64(HMAC),
+// where isAdmin is the bit "1"/"0". Tamper-evident (HMAC) and time-bounded; no
+// server-side store. A cookie that is not EXACTLY the canonical five-field form
+// (e.g. a pre-v0.1.9 three-field cookie, or a truncated/garbage one) is rejected —
 // fail closed, the holder re-authenticates. The membership set is not carried in
 // the cookie, so the cookie path authorizes a HOME-org admin only.
 func (c *config) sessionPrincipal(r *http.Request) (principal, bool) {
@@ -315,7 +345,7 @@ func (c *config) sessionPrincipal(r *http.Request) (principal, bool) {
 		return principal{}, false
 	}
 	parts := strings.Split(payload, "|")
-	if len(parts) != 3 {
+	if len(parts) != sessionFields {
 		return principal{}, false
 	}
 	owner := parts[0]
@@ -326,7 +356,7 @@ func (c *config) sessionPrincipal(r *http.Request) (principal, bool) {
 	if err != nil || time.Now().Unix() > expUnix {
 		return principal{}, false
 	}
-	return principal{owner: owner, isAdmin: parts[1] == "1"}, true
+	return principal{owner: owner, isAdmin: parts[1] == "1", uid: parts[3], email: parts[4]}, true
 }
 
 // sessionBit renders the isAdmin flag for the session cookie payload.
@@ -337,9 +367,18 @@ func sessionBit(b bool) string {
 	return "0"
 }
 
+// sessionPayload renders a principal into the canonical session-cookie payload
+// sessionPrincipal parses. ONE renderer facing ONE parser: the format was
+// written in setSession and read in sessionPrincipal, and every caller that
+// needed a cookie (tests included) hand-rolled the format a third time — which
+// is how a field can be added to the writer and silently not to the readers.
+func sessionPayload(p principal, exp time.Time) string {
+	return fmt.Sprintf("%s|%s|%d|%s|%s", p.owner, sessionBit(p.isAdmin), exp.Unix(), p.uid, p.email)
+}
+
 func (c *config) setSession(w http.ResponseWriter, r *http.Request, p principal) {
 	exp := time.Now().Add(c.cookieTTL)
-	payload := fmt.Sprintf("%s|%s|%d", p.owner, sessionBit(p.isAdmin), exp.Unix())
+	payload := sessionPayload(p, exp)
 	http.SetCookie(w, &http.Cookie{
 		Name:     c.cookieName,
 		Value:    c.sign(payload),
@@ -411,14 +450,19 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 // the org-admin flag is `isAdmin`. An error/unsigned response has status:"error"
 // and no owner → not a principal (fail closed).
 func principalFromAccount(body []byte) (principal, bool) {
-	var top struct {
-		Status  string `json:"status"`
+	// account is the User shape at either position; declared once so the two
+	// positions cannot drift apart as fields are added.
+	type account struct {
 		Owner   string `json:"owner"`
 		IsAdmin bool   `json:"isAdmin"`
-		Data    struct {
-			Owner   string `json:"owner"`
-			IsAdmin bool   `json:"isAdmin"`
-		} `json:"data"`
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Email   string `json:"email"`
+	}
+	var top struct {
+		Status string `json:"status"`
+		account
+		Data account `json:"data"`
 	}
 	if err := json.Unmarshal(body, &top); err != nil {
 		return principal{}, false
@@ -426,13 +470,17 @@ func principalFromAccount(body []byte) (principal, bool) {
 	if top.Status == "error" {
 		return principal{}, false
 	}
-	if top.Owner != "" {
-		return principal{owner: top.Owner, isAdmin: top.IsAdmin}, true
+	a := top.account
+	if a.Owner == "" {
+		a = top.Data
 	}
-	if top.Data.Owner != "" {
-		return principal{owner: top.Data.Owner, isAdmin: top.Data.IsAdmin}, true
+	if a.Owner == "" {
+		return principal{}, false
 	}
-	return principal{}, false
+	// `id` is IAM's own subject; `name` is the username IAM mints `sub` from when
+	// the account response predates ids. Same precedence as the JWT path's
+	// UserID(), so all three sources name the same person the same way.
+	return principal{owner: a.Owner, isAdmin: a.IsAdmin, uid: firstNonEmpty(a.ID, a.Name), email: a.Email}, true
 }
 
 // ----------------------------------------------------------------------------
@@ -440,15 +488,19 @@ func principalFromAccount(body []byte) (principal, bool) {
 // ----------------------------------------------------------------------------
 
 // startLogin redirects the browser to IAM's authorize endpoint with a PKCE
-// challenge, stashing the verifier + the post-login return URL in a short-lived
-// signed state cookie.
-func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo string) {
+// challenge, stashing the verifier, the post-login return URL and the POLICY of
+// the surface that started the login in a short-lived signed state cookie.
+func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo string, pol policy) {
 	verifier := randString(48)
 	challenge := pkceChallenge(verifier)
 	nonce := randString(16)
 
-	// state cookie payload: nonce|verifier|returnTo (signed, 10-minute life).
-	statePayload := strings.Join([]string{nonce, verifier, returnTo}, "\x1f")
+	// state cookie payload: nonce|verifier|returnTo|policy (signed, 10-minute life).
+	// The POLICY rides here because the callback is ONE path shared by every
+	// guarded surface — the ingress picks the policy by choosing a verify endpoint,
+	// and /__guard/callback has no such choice to read. It is inside the HMAC, so
+	// it is a fact the guard told itself, not a parameter the browser can set.
+	statePayload := strings.Join([]string{nonce, verifier, returnTo, pol.name}, "\x1f")
 	http.SetCookie(w, &http.Cookie{
 		Name:     stateCookie,
 		Value:    c.sign(statePayload),
@@ -499,12 +551,12 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid state", http.StatusBadRequest)
 		return
 	}
-	parts := strings.SplitN(payload, "\x1f", 3)
-	if len(parts) != 3 || subtleNE(parts[0], gotState) {
+	parts := strings.SplitN(payload, "\x1f", stateFields)
+	if len(parts) != stateFields || subtleNE(parts[0], gotState) {
 		http.Error(w, "state mismatch", http.StatusBadRequest)
 		return
 	}
-	verifier, returnTo := parts[1], parts[2]
+	verifier, returnTo, pol := parts[1], parts[2], policyByName(parts[3])
 	// Clear the state cookie (same registrable domain it was set on).
 	http.SetCookie(w, &http.Cookie{Name: stateCookie, Value: "", Path: "/", Domain: registrableDomain(requestHost(r)), MaxAge: -1, Secure: true, HttpOnly: true})
 
@@ -515,12 +567,19 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Re-run the SAME authorization predicate the forward-auth path uses: only a
-	// principal authorized for THIS surface (global sudo, or a tenant admin of
-	// this host's org) gets a session cookie. An authenticated-but-unauthorized
-	// login (wrong tenant, non-admin member) is bounced to the brand console with
-	// NO session minted — fail closed, no wrongful grant.
-	if !c.authorize(p, requestHost(r)) {
+	// Re-run the SAME predicate the forward-auth path will apply — THIS surface's
+	// policy, recovered from the signed state, not the admin policy for everyone.
+	// Only a principal that policy admits gets a session cookie; an
+	// authenticated-but-unauthorized login is bounced to the brand console with NO
+	// session minted — fail closed, no wrongful grant.
+	//
+	// It used to be authorize() unconditionally, which is the ADMIN policy. That
+	// made an authn surface unreachable for exactly the people it exists for: a
+	// non-admin passed IAM, came back here, failed the admin test, and was
+	// redirected to the console with no session — so the next request started the
+	// same loop. The gate said "anyone authenticated" and the login said "admins
+	// only"; two predicates for one decision is the shape of a lockout.
+	if !pol.allow(c, p, requestHost(r)) {
 		http.Redirect(w, r, c.consoleFor(requestHost(r)), http.StatusFound)
 		return
 	}
@@ -607,13 +666,18 @@ func (c *config) userinfoPrincipal(ctx context.Context, accessToken string) (pri
 	}
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	var ui struct {
-		Owner   string `json:"owner"`
-		IsAdmin bool   `json:"isAdmin"`
+		Owner             string `json:"owner"`
+		IsAdmin           bool   `json:"isAdmin"`
+		Sub               string `json:"sub"`
+		PreferredUsername string `json:"preferred_username"`
+		Email             string `json:"email"`
 	}
 	if err := json.Unmarshal(body, &ui); err != nil {
 		return principal{}, false
 	}
-	return principal{owner: ui.Owner, isAdmin: ui.IsAdmin}, ui.Owner != ""
+	// OIDC userinfo names the subject `sub`. Same precedence as the JWT and
+	// get-account paths, so all three sources resolve one person to one uid.
+	return principal{owner: ui.Owner, isAdmin: ui.IsAdmin, uid: firstNonEmpty(ui.Sub, ui.PreferredUsername), email: ui.Email}, ui.Owner != ""
 }
 
 func (c *config) handleLogout(w http.ResponseWriter, r *http.Request) {
