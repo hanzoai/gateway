@@ -42,6 +42,25 @@ spec:
             - name: AUTH_REQUIRE
               value: "false"
             # -- ZAP native binary listener (TLS 1.3+PQ) --
+            #
+            # TWO listeners, and they are not peers. ZAP_LISTENER_PORT is the
+            # PUBLIC one: the TLS terminator, which is what zap-ingress
+            # (zap.hanzo.ai) forwards to and the only ZAP thing on an interface
+            # this pod shares with anyone. ZAP_INTERNAL_ADDR is where it forwards
+            # AFTER decrypting — the plaintext ZAP server, on LOOPBACK, on a
+            # DIFFERENT port.
+            #
+            # These both said 9999. Same process, same port, so one of two things
+            # happened on every boot depending on which bound first: the
+            # terminator proxied every accepted connection back into itself
+            # (unbounded accept loop off one unauthenticated SYN), or it failed
+            # with "address already in use" — logged, never fatal — and PLAINTEXT
+            # ZAP served the public LoadBalancer. ZAP has no session crypto in any
+            # language, so that second one is bearer tokens and prompts in
+            # cleartext. The pod reports Ready either way.
+            #
+            # The binary now refuses both shapes at startup rather than picking
+            # one, so this file and zaplisten.go have to agree; they do.
             - name: ZAP_LISTENER_ENABLED
               value: "true"
             - name: ZAP_LISTENER_PORT
@@ -51,7 +70,7 @@ spec:
             - name: ZAP_TLS_KEY
               value: "/etc/tls/tls.key"
             - name: ZAP_INTERNAL_ADDR
-              value: "127.0.0.1:9999"
+              value: "127.0.0.1:9998"
             # -- Billing enforcement via Commerce API --
             - name: AUTH_BILLING_URL
               value: "http://commerce.hanzo.svc.cluster.local:8001"
