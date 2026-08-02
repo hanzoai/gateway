@@ -3,11 +3,10 @@ package gateway
 import (
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/zap-proto/zip"
 )
 
 func TestIsWidgetKey(t *testing.T) {
@@ -147,172 +146,95 @@ func TestWidgetRateLimiterWindowExpiry(t *testing.T) {
 	}
 }
 
-func TestWidgetSecurityMiddlewareOriginRequired(t *testing.T) {
-	gin.SetMode(gin.TestMode)
+// --- The gate on the wire ---
+//
+// These drive the NATIVE zip transport (zipWidget), which is the edge the
+// unified cloud binary runs and, until the policy became a value, the edge that
+// enforced none of this. The gin transport is driven over the same cases in
+// transport_parity_test.go, which additionally asserts the two agree.
 
-	cfg := DefaultWidgetSecurityConfig()
-	middleware := NewWidgetSecurityMiddleware(cfg)
+// widgetRequest runs one request through zipWidget and reports the status.
+func widgetRequest(t *testing.T, h zip.Handler, hdr map[string]string) int {
+	t.Helper()
+	return zipEdge(t, h, http.MethodPost, "/v1/chat/completions", "api.hanzo.ai", hdr).status
+}
 
-	w := httptest.NewRecorder()
-	_, r := gin.CreateTestContext(w)
-
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	// Widget key without Origin header should be rejected
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer hz_widget_public")
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusForbidden {
-		t.Errorf("widget key without Origin should get 403, got %d", w.Code)
+// A widget key is a PUBLIC credential embedded in client-side JS. Without an
+// Origin (or Referer) it is a credential in a script, not in a browser, and the
+// gate refuses it — the caller is told which credential to use instead.
+func TestWidgetGate_OriginRequired(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	if code := widgetRequest(t, gate, map[string]string{
+		"Authorization": "Bearer hz_widget_public",
+	}); code != http.StatusForbidden {
+		t.Errorf("widget key without Origin should get 403, got %d", code)
 	}
 }
 
-func TestWidgetSecurityMiddlewareOriginAllowed(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	cfg := DefaultWidgetSecurityConfig()
-	middleware := NewWidgetSecurityMiddleware(cfg)
-
-	w := httptest.NewRecorder()
-	_, r := gin.CreateTestContext(w)
-
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	// Widget key with valid Origin should pass
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer hz_widget_public")
-	req.Header.Set("Origin", "https://docs.hanzo.ai")
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("widget key with valid Origin should pass, got %d", w.Code)
+// A brand subdomain is allowed with no per-origin configuration — the suffix
+// match in isAllowedOrigin is what lets a new Hanzo property embed the widget
+// without a deploy.
+func TestWidgetGate_OriginAllowed(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	if code := widgetRequest(t, gate, map[string]string{
+		"Authorization": "Bearer hz_widget_public",
+		"Origin":        "https://docs.hanzo.ai",
+	}); code != http.StatusOK {
+		t.Errorf("widget key with valid Origin should pass, got %d", code)
 	}
 }
 
-func TestWidgetSecurityMiddlewareOriginRejected(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	cfg := DefaultWidgetSecurityConfig()
-	middleware := NewWidgetSecurityMiddleware(cfg)
-
-	w := httptest.NewRecorder()
-	_, r := gin.CreateTestContext(w)
-
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	// Widget key with unknown Origin should be rejected
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer hz_widget_public")
-	req.Header.Set("Origin", "https://evil.com")
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusForbidden {
-		t.Errorf("widget key from evil.com should get 403, got %d", w.Code)
+func TestWidgetGate_OriginRejected(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	if code := widgetRequest(t, gate, map[string]string{
+		"Authorization": "Bearer hz_widget_public",
+		"Origin":        "https://evil.com",
+	}); code != http.StatusForbidden {
+		t.Errorf("widget key from evil.com should get 403, got %d", code)
 	}
 }
 
-func TestWidgetSecurityMiddlewareRateLimit(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
+// The per-IP window, on the wire: the cap is what stops one page draining the
+// model budget with a key anyone can read out of its source.
+func TestWidgetGate_RateLimit(t *testing.T) {
 	cfg := DefaultWidgetSecurityConfig()
 	cfg.MaxRequestsPerIP = 2
 	cfg.Window = 1 * time.Second
-	middleware := NewWidgetSecurityMiddleware(cfg)
+	gate := zipWidget(cfg)
 
-	r := gin.New()
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	makeReq := func() int {
-		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-		req.Host = "api.hanzo.ai"
-		req.Header.Set("Authorization", "Bearer hz_widget_public")
-		req.Header.Set("Origin", "https://docs.hanzo.ai")
-		r.ServeHTTP(w, req)
-		return w.Code
+	hdr := map[string]string{
+		"Authorization": "Bearer hz_widget_public",
+		"Origin":        "https://docs.hanzo.ai",
 	}
-
-	// First 2 should succeed
 	for i := 0; i < 2; i++ {
-		if code := makeReq(); code != http.StatusOK {
+		if code := widgetRequest(t, gate, hdr); code != http.StatusOK {
 			t.Errorf("request %d should succeed, got %d", i+1, code)
 		}
 	}
-
-	// 3rd should be rate limited
-	if code := makeReq(); code != http.StatusTooManyRequests {
+	if code := widgetRequest(t, gate, hdr); code != http.StatusTooManyRequests {
 		t.Errorf("request 3 should get 429, got %d", code)
 	}
 }
 
-func TestWidgetSecurityMiddlewareNonWidgetPassthrough(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	cfg := DefaultWidgetSecurityConfig()
-	middleware := NewWidgetSecurityMiddleware(cfg)
-
-	w := httptest.NewRecorder()
-	_, r := gin.CreateTestContext(w)
-
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	// Non-widget key should pass through without Origin check
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer hk-some-api-key")
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("non-widget key should pass through, got %d", w.Code)
+// Everything that is not a widget key passes through untouched — the gate acts
+// on hz_ bearers and on nothing else.
+func TestWidgetGate_NonWidgetPassthrough(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	if code := widgetRequest(t, gate, map[string]string{
+		"Authorization": "Bearer hk-some-api-key",
+	}); code != http.StatusOK {
+		t.Errorf("non-widget key should pass through, got %d", code)
 	}
 }
 
-func TestWidgetSecurityMiddlewareRefererFallback(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	cfg := DefaultWidgetSecurityConfig()
-	middleware := NewWidgetSecurityMiddleware(cfg)
-
-	w := httptest.NewRecorder()
-	_, r := gin.CreateTestContext(w)
-
-	r.Use(middleware)
-	r.POST("/v1/chat/completions", func(c *gin.Context) {
-		c.Status(http.StatusOK)
-	})
-
-	// Widget key with Referer (no Origin) should use Referer for validation
-	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
-	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer hz_widget_public")
-	req.Header.Set("Referer", "https://hanzo.ai/pricing")
-
-	r.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("widget key with valid Referer should pass, got %d", w.Code)
+// Referer stands in for Origin: a top-level navigation sends one and not the
+// other, and a widget on a real page must still work.
+func TestWidgetGate_RefererFallback(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	if code := widgetRequest(t, gate, map[string]string{
+		"Authorization": "Bearer hz_widget_public",
+		"Referer":       "https://hanzo.ai/pricing",
+	}); code != http.StatusOK {
+		t.Errorf("widget key with valid Referer should pass, got %d", code)
 	}
 }

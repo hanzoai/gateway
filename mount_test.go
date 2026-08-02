@@ -10,7 +10,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/cloud"
 	luxlog "github.com/luxfi/log"
@@ -151,7 +150,7 @@ func TestZipAuth_WritesValidatedIdentityDownstream(t *testing.T) {
 	defer jwks.Close()
 
 	app := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
-	app.Use(zipAuth(zipTestAuthConfig(jwks.URL)))
+	app.Use(zipAuth(edgeAuthConfig(jwks.URL)))
 
 	var org, user, email string
 	app.Get("/x", func(c *zip.Ctx) error {
@@ -210,102 +209,80 @@ func TestZipAuth_DoesNotReflectRequestHeadersOntoResponse(t *testing.T) {
 	}
 }
 
-// TestBothTransportsAdmitAlike is why the policy is a value.
+// TestMount_GatesAreOnTheChainMountInstalls is the anti-DARK-EDGE assertion, and
+// it is the one this repo needed: a gate can exist, be tested, and pass every
+// test that drives it DIRECTLY, while the mount that production runs never
+// installs it. That is exactly the state the widget gate and the CORS policy
+// were in — both fully tested through gin, neither reachable on the zip edge.
 //
-// The gateway has two HTTP edges — the legacy Lura engine on gin (the shipping
-// image) and the native zip mount (the unified cloud binary) — and for as long
-// as the ALLOW/DENY ladder was written out inside a gin closure, the second one
-// could only reach it through an adapter. Two edges that answer differently
-// about one request is the whole failure mode. They now share [authGate.admit],
-// and this asserts it on the cases that distinguish the classes: refuse,
-// tokenless, public path, public host, ingest, API key, valid token.
-func TestBothTransportsAdmitAlike(t *testing.T) {
-	tj := newTestJWKS(t)
-	jwks := tj.serveJWKS(t)
-	defer jwks.Close()
-	cfg := zipTestAuthConfig(jwks.URL)
-	valid := "Bearer " + tj.signToken(t, memberToken())
+// So this drives the app gateway.Mount BUILT. If a future edit drops a Use, the
+// gate stops answering here and this fails; a test that assembled its own
+// zip.App would keep passing while the boundary went dark.
+func TestMount_GatesAreOnTheChainMountInstalls(t *testing.T) {
+	// Auth is off in mountApp (the co-resident dev topology), which is the
+	// harder case on purpose: these two gates must hold even when nothing is
+	// validating tokens, because neither of them is an authn gate.
+	app := mountApp(t)
+	app.Get("/v1/chat/completions", func(c *zip.Ctx) error { return c.String(http.StatusOK, "ok") })
 
-	cases := []struct {
-		name   string
-		method string
-		host   string
-		path   string
-		auth   string
-		want   int
-	}{
-		{"tokenless_refused", "GET", "api.hanzo.ai", "/v1/chat/completions", "", 401},
-		{"garbage_token_refused", "GET", "api.hanzo.ai", "/v1/chat/completions", "Bearer not-a-jwt", 401},
-		{"public_path", "GET", "api.hanzo.ai", "/healthz", "", 200},
-		{"public_host", "GET", "hanzo.id", "/v1/anything", "", 200},
-		{"ingest_class", "POST", "api.hanzo.ai", "/v1/sentry/proj/envelope/", "", 200},
-		{"ingest_read_is_gated", "GET", "api.hanzo.ai", "/v1/sentry/proj/issues", "", 401},
-		{"api_key", "GET", "api.hanzo.ai", "/v1/chat/completions", "Bearer sk-live-abcdef", 200},
-		{"valid_jwt", "GET", "api.hanzo.ai", "/v1/chat/completions", valid, 200},
-	}
+	t.Run("cors_preflight_is_answered", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodOptions, "/v1/chat/completions", nil)
+		req.Host = "api.hanzo.ai"
+		req.Header.Set("Origin", "https://hanzo.ai")
+		resp, err := app.Fiber().Test(req)
+		if err != nil {
+			t.Fatalf("Fiber Test: %v", err)
+		}
+		if resp.StatusCode != http.StatusNoContent {
+			t.Errorf("preflight: got %d want 204 — the mount installs no CORS", resp.StatusCode)
+		}
+		if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "https://hanzo.ai" {
+			t.Errorf("Access-Control-Allow-Origin: got %q want the reflected origin", got)
+		}
+		if resp.Header.Get("Vary") != "Origin" {
+			t.Error("a reflected origin without Vary: Origin lets a shared cache cross tenants")
+		}
+	})
 
-	gin.SetMode(gin.TestMode)
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := gin.New()
-			g.Use(NewAuthMiddleware(cfg))
-			g.Handle(tc.method, tc.path, func(c *gin.Context) { c.Status(200) })
-			gr := httptest.NewRequest(tc.method, tc.path, nil)
-			gr.Host = tc.host
-			if tc.auth != "" {
-				gr.Header.Set("Authorization", tc.auth)
-			}
-			w := httptest.NewRecorder()
-			g.ServeHTTP(w, gr)
+	t.Run("foreign_origin_earns_no_cors", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodOptions, "/v1/chat/completions", nil)
+		req.Host = "api.hanzo.ai"
+		req.Header.Set("Origin", "https://evil.example")
+		resp, err := app.Fiber().Test(req)
+		if err != nil {
+			t.Fatalf("Fiber Test: %v", err)
+		}
+		if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "" {
+			t.Errorf("a non-allowlisted origin was reflected: %q", got)
+		}
+	})
 
-			z := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
-			z.Use(zipAuth(cfg))
-			z.All(tc.path, func(c *zip.Ctx) error { return c.String(200, "") })
-			zr := httptest.NewRequest(tc.method, tc.path, nil)
-			zr.Host = tc.host
-			if tc.auth != "" {
-				zr.Header.Set("Authorization", tc.auth)
-			}
-			zresp, err := z.Fiber().Test(zr)
-			if err != nil {
-				t.Fatalf("zip: %v", err)
-			}
+	t.Run("widget_key_needs_an_allowlisted_origin", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil)
+		req.Host = "api.hanzo.ai"
+		req.Header.Set("Authorization", "Bearer hz_widget_public")
+		req.Header.Set("Origin", "https://evil.example")
+		resp, err := app.Fiber().Test(req)
+		if err != nil {
+			t.Fatalf("Fiber Test: %v", err)
+		}
+		if resp.StatusCode != http.StatusForbidden {
+			t.Errorf("widget key from a foreign origin: got %d want 403 — the mount installs no widget gate",
+				resp.StatusCode)
+		}
+	})
 
-			if w.Code != tc.want {
-				t.Errorf("gin: got %d want %d (%s)", w.Code, tc.want, w.Body.String())
-			}
-			if zresp.StatusCode != tc.want {
-				body, _ := io.ReadAll(zresp.Body)
-				t.Errorf("zip: got %d want %d (%s)", zresp.StatusCode, tc.want, body)
-			}
-			if w.Code != zresp.StatusCode {
-				t.Errorf("TRANSPORTS DISAGREE: gin=%d zip=%d", w.Code, zresp.StatusCode)
-			}
-		})
-	}
-}
-
-// zipTestAuthConfig is the auth config both transports are driven with above:
-// one JWKS, one issuer, one audience allowlist, no billing, auth REQUIRED (so a
-// tokenless request is a refusal rather than an anonymous pass-through).
-func zipTestAuthConfig(jwksURL string) AuthConfig {
-	return AuthConfig{
-		Enabled:        true,
-		JWKSURL:        jwksURL,
-		Issuer:         "https://hanzo.id",
-		Audiences:      []string{"https://api.hanzo.ai"},
-		BillingEnabled: false,
-		PublicPaths:    []string{"/healthz"},
-		PublicHosts:    []string{"hanzo.id"},
-		RequireAuth:    true,
-	}
-}
-
-// memberToken is the shape every user token IAM signs has: an owner AND the
-// signed membership set, which is the only thing that confers an org. A fixture
-// without `orgs` is a token that cannot exist (see validClaims).
-func memberToken() map[string]any {
-	return iamToken("hanzo", map[string]any{
-		"orgs": []map[string]any{{"org": "hanzo", "role": "member"}},
+	t.Run("server_to_server_key_is_untouched", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil)
+		req.Host = "api.hanzo.ai"
+		req.Header.Set("Authorization", "Bearer hk-server-side")
+		resp, err := app.Fiber().Test(req)
+		if err != nil {
+			t.Fatalf("Fiber Test: %v", err)
+		}
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("non-widget credential: got %d want 200 — the widget gate acts on hz_ only",
+				resp.StatusCode)
+		}
 	})
 }
