@@ -1,3 +1,13 @@
+// Copyright © 2026 Hanzo AI. MIT License.
+
+//go:build legacy
+// +build legacy
+
+// gin-driven: this suite drives the LEGACY Lura edge's transports
+// (legacy_transports.go), which exist only under this tag. The policies it
+// exercises are framework-free values shared with the zip edge, and
+// transport_parity_test.go asserts the two edges answer alike.
+
 package gateway
 
 // Security regression tests for auth middleware.
@@ -11,10 +21,8 @@ package gateway
 import (
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -27,114 +35,6 @@ import (
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/gateway/v2/token"
 )
-
-// testJWKS holds a test RSA key pair and provides helpers for creating
-// signed JWTs and serving a JWKS endpoint.
-// testJWKS is a throwaway signing identity plus the key set that publishes it.
-// It signs with golang-jwt, the SAME library IAM signs with and the one
-// hanzoai/authz verifies with — a test that mints with a different library is
-// testing a signer the estate does not run.
-type testJWKS struct {
-	key   *rsa.PrivateKey
-	keyID string
-}
-
-func newTestJWKS(t *testing.T) *testJWKS {
-	t.Helper()
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("failed to generate RSA key: %v", err)
-	}
-	return &testJWKS{key: key, keyID: "test-key-1"}
-}
-
-// publicJWKS renders a key set the edge's reader accepts: kty/kid/use plus the
-// modulus and exponent as base64url unsigned integers.
-func publicJWKS(kid string, pub *rsa.PublicKey) []byte {
-	data, _ := json.Marshal(map[string]any{"keys": []map[string]any{{
-		"kty": "RSA", "kid": kid, "use": "sig", "alg": "RS256",
-		"n": base64.RawURLEncoding.EncodeToString(pub.N.Bytes()),
-		"e": base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes()),
-	}}})
-	return data
-}
-
-// jwksJSON returns the JWKS as JSON bytes (public key only).
-func (tj *testJWKS) jwksJSON(t *testing.T) []byte {
-	t.Helper()
-	return publicJWKS(tj.keyID, &tj.key.PublicKey)
-}
-
-// serveJWKS starts an httptest.Server that serves the JWKS endpoint.
-// The caller must defer server.Close().
-func (tj *testJWKS) serveJWKS(t *testing.T) *httptest.Server {
-	t.Helper()
-	data := tj.jwksJSON(t)
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(data)
-	}))
-}
-
-// signToken signs claims under this identity's key, naming the key in the header.
-// The kid is not optional: authz.Verify refuses a token that names no key rather
-// than trying every key in a set, which is how a reader ends up accepting a
-// signature from a key the token never claimed.
-// signToken signs either a typed claim set or a bare claim MAP. The map form
-// exists so a test can mint a shape no struct would produce — a missing issuer,
-// an unexpected claim, a wrong type — which is what a hostile token looks like.
-func (tj *testJWKS) signToken(t *testing.T, claims any) string {
-	t.Helper()
-	return signAs(t, tj.key, tj.keyID, claimsOf(t, claims))
-}
-
-func claimsOf(t *testing.T, c any) jwt.Claims {
-	t.Helper()
-	switch v := c.(type) {
-	case jwt.Claims:
-		return v
-	case map[string]any:
-		return jwt.MapClaims(v)
-	}
-	t.Fatalf("cannot sign claims of type %T", c)
-	return nil
-}
-
-// signAs signs claims under an arbitrary key and kid — the shape an attacker's
-// token takes when it names a real key it does not hold.
-func signAs(t *testing.T, key *rsa.PrivateKey, kid string, claims any) string {
-	t.Helper()
-	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claimsOf(t, claims))
-	tok.Header["kid"] = kid
-	raw, err := tok.SignedString(key)
-	if err != nil {
-		t.Fatalf("failed to sign token: %v", err)
-	}
-	return raw
-}
-
-// validClaims returns authz.Claims with valid issuer, audience, subject,
-// owner, and expiry for use in tests.
-func validClaims(issuer, audience string) authz.Claims {
-	now := time.Now()
-	return authz.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    issuer,
-			Subject:   "alice",
-			Audience:  jwt.ClaimStrings{audience},
-			IssuedAt:  jwt.NewNumericDate(now.Add(-1 * time.Minute)),
-			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
-		},
-		// Owner is the APP's org, which is what IAM stamps there. The MEMBERSHIP SET is
-		// the subject's own org and the only thing that confers authority — every user
-		// token IAM signs carries it, home first (store.MemberOrgRefs), so a fixture
-		// without it is a token that cannot exist.
-		Owner: "hanzo",
-		Name:  "Alice",
-		Email: "alice@hanzo.ai",
-		Orgs:  []authz.Membership{{Org: "hanzo", Role: authz.Member}},
-	}
-}
 
 // setupMiddlewareWithJWKS creates a gin engine with the auth middleware
 // wired to a test JWKS server. Returns the engine and test JWKS helper.
@@ -909,20 +809,6 @@ func headersFor(t *testing.T, tj *testJWKS, jwksURL string, claims map[string]an
 		t.Fatalf("request was refused with %d: %s", w.Code, w.Body.String())
 	}
 	return seen
-}
-
-func iamToken(owner string, extra map[string]any) map[string]any {
-	now := time.Now()
-	c := map[string]any{
-		"iss": "https://hanzo.id", "sub": "uuid-alice",
-		"aud": []string{"https://api.hanzo.ai"},
-		"iat": now.Add(-time.Minute).Unix(), "exp": now.Add(10 * time.Minute).Unix(),
-		"owner": owner, "email": "alice@hanzo.ai", "preferred_username": "alice",
-	}
-	for k, v := range extra {
-		c[k] = v
-	}
-	return c
 }
 
 // An ORG ADMIN gets the org-admin header and NOT the platform one. isAdmin is IAM's

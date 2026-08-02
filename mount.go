@@ -16,9 +16,11 @@ package gateway
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"strings"
 
+	"github.com/hanzoai/authz/edge"
 	"github.com/hanzoai/cloud"
 	"github.com/hanzoai/gateway/v2/token"
 	"github.com/zap-proto/zip"
@@ -27,14 +29,17 @@ import (
 // Mount registers the gateway subsystem on app per HIP-0106. The mount
 // does three things:
 //
-//  1. Installs the canonical zip middleware chain (strip client-supplied
-//     identity headers, validate JWT, write X-* headers) so every
-//     downstream subsystem on the same zip.App sees a clean trust
-//     boundary.
+//  1. Installs the canonical zip gate chain — CORS, then the trust
+//     boundary (strip client-supplied identity headers, validate JWT,
+//     write X-* headers), then the widget-key gate — so every downstream
+//     subsystem on the same zip.App sees one clean boundary, and the same
+//     one the legacy edge applies.
 //
-//  2. Loads the gateway routes table (KMS or local file) so any path
-//     not handled by a co-resident subsystem is proxied to the
-//     configured backend.
+//  2. Parses the gateway routes table (KMS or local file) when one is
+//     configured. Its reader is the standalone edge's transport, NOT this
+//     mount: co-resident, the routing source of truth is cloud's own mount
+//     table (routes.go states why in full). Loading it here is a Phase-C
+//     hook and a config validation, not a routing decision.
 //
 //  3. Exposes /_/gateway/healthz on the native zip surface so liveness
 //     probes work even with auth fully enabled.
@@ -60,9 +65,19 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 		return fmt.Errorf("gateway.Mount: %w", err)
 	}
 
-	// The trust boundary, NATIVE. It is the same policy the legacy edge runs
-	// (authpolicy.go), reached without a framework in between.
-	app.Use(zipAuth(authCfg))
+	// The gates, NATIVE, in the order the legacy engine runs them
+	// (legacy_engine.go): CORS before routing, then the trust boundary, then the
+	// widget-key gate — which is documented as running after auth and does.
+	//
+	// They are the SAME policy values the legacy edge runs, reached without a
+	// framework in between. Two of the three had no zip transport at all, so the
+	// HIP-0106 boundary answered no preflight and enforced no widget-key origin
+	// or rate limit; transport_parity_test.go is what stops them drifting again.
+	app.Use(
+		zipCORS(newCORSPolicy()),
+		zipAuth(authCfg),
+		zipWidget(DefaultWidgetSecurityConfig()),
+	)
 
 	// The probes, as TYPED ops, under this subsystem's own reserved prefix —
 	// the same two ops the standalone binary serves at its root (probes.go).
@@ -112,6 +127,48 @@ func zipAuth(cfg AuthConfig) zip.Handler {
 		req := c.Fiber().Request()
 		if r := gate.admit(c.Method(), c.Host(), c.Path(), newFastHeaders(&req.Header)); r != nil {
 			return c.JSON(r.Status, r.Body)
+		}
+		return c.Continue()
+	}
+}
+
+// zipWidget is the widget-key gate ([widgetGate.admit]) as a NATIVE zip handler.
+// It reads; it never writes identity, so it cannot affect the trust boundary
+// above it — the only thing it can do is refuse.
+//
+// The gate is built ONCE, out here: newWidgetGate starts the limiter's eviction
+// goroutine, and a gate per request would also mean a rate-limit window per
+// request, which is no rate limit at all.
+func zipWidget(cfg WidgetSecurityConfig) zip.Handler {
+	gate := newWidgetGate(cfg)
+	return func(c *zip.Ctx) error {
+		req := c.Fiber().Request()
+		if r := gate.admit(edge.Of(&req.Header), c.Fiber().IP()); r != nil {
+			return c.JSON(r.Status, r.Body)
+		}
+		return c.Continue()
+	}
+}
+
+// zipCORS is the CORS policy ([corsPolicy]) as a NATIVE zip handler: reflect an
+// allowlisted Origin with credentials, answer a preflight 204, and give a
+// non-allowlisted Origin nothing at all.
+//
+// It runs FIRST so a preflight is answered before the trust boundary can refuse
+// it: a browser sends OPTIONS without the Authorization header, so an
+// auth-gated preflight 401s and the real request is never sent — which reads as
+// a CORS failure and is really an ordering bug. The legacy engine orders it the
+// same way, for the same reason.
+func zipCORS(policy corsPolicy) zip.Handler {
+	return func(c *zip.Ctx) error {
+		a := policy.admit(c.Header("Origin"))
+		if a == nil {
+			return c.Continue()
+		}
+		a.credentials(c.SetHeader)
+		a.negotiation(c.SetHeader)
+		if c.Method() == http.MethodOptions {
+			return c.NoContent(http.StatusNoContent)
 		}
 		return c.Continue()
 	}
