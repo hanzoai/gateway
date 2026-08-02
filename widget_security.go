@@ -1,3 +1,17 @@
+// Copyright © 2026 Hanzo AI. MIT License.
+
+// widget_security.go is the widget-key gate: what a PUBLIC credential embedded
+// in client-side JavaScript is allowed to do.
+//
+// The gate is a value ([widgetGate]) for the same reason [authGate] is: the
+// decision is about the request — its bearer token, its Origin, its client IP —
+// and the gateway has two HTTP edges. While it was written inside a gin closure
+// the zip edge could not run it, so the HIP-0106 mount enforced neither the
+// origin allowlist nor the rate limit: an hz_ key stolen out of any page's
+// source worked from anywhere, at any rate, against the model budget.
+//
+//	legacy_transports.go   gin, for the Lura edge (the shipping image)
+//	mount.go               native zip, for the HIP-0106 unified cloud binary
 package gateway
 
 import (
@@ -8,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/hanzoai/authz/edge"
 )
 
@@ -225,76 +238,90 @@ func extractOriginHost(origin string) string {
 	return host
 }
 
-// NewWidgetSecurityMiddleware creates a gin middleware that enforces:
-//
-//  1. Per-IP rate limiting for widget keys (hz_*): prevents any single IP
-//     from abusing the free widget endpoint.
-//
-//  2. Global rate limiting across all widget requests: prevents distributed
-//     attacks from exhausting model API budget.
-//
-//  3. Origin validation: widget keys are only accepted from approved Hanzo
-//     domains (Origin or Referer header). Non-browser clients (curl, scripts)
-//     that omit Origin headers are rejected for widget keys.
-//
-// This middleware MUST run after NewAuthMiddleware. It only acts on requests
-// with hz_ bearer tokens; all other requests pass through untouched.
-func NewWidgetSecurityMiddleware(cfg WidgetSecurityConfig) gin.HandlerFunc {
-	limiter := newWidgetRateLimiter(cfg)
-	allowedOrigins := widgetAllowedOrigins(cfg.AllowedOrigins)
+// widgetGate is the compiled widget-key policy: the origin allowlist and the
+// sliding-window limiter, built once from a [WidgetSecurityConfig] and asked per
+// request. Build it with [newWidgetGate].
+type widgetGate struct {
+	limiter *widgetRateLimiter
+	allowed map[string]bool
+}
 
-	return func(c *gin.Context) {
-		token := edge.Bearer(c.Request.Header)
-		if !isWidgetKey(token) {
-			c.Next()
-			return
-		}
-
-		// --- Origin validation ---
-		// Widget keys are public credentials embedded in client-side JS.
-		// We restrict them to approved origins to limit abuse surface.
-		origin := c.Request.Header.Get("Origin")
-		if origin == "" {
-			origin = c.Request.Header.Get("Referer")
-		}
-		originHost := extractOriginHost(origin)
-
-		if len(allowedOrigins) > 0 {
-			if originHost == "" {
-				// No Origin/Referer: only allow if it looks like a health
-				// check or internal request (User-Agent heuristic)
-				ua := c.Request.Header.Get("User-Agent")
-				isInternal := strings.Contains(ua, "kube-probe") ||
-					strings.Contains(ua, "Wget") ||
-					strings.Contains(ua, "curl") && c.ClientIP() == "127.0.0.1"
-				if !isInternal {
-					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-						"error":   "forbidden",
-						"message": "Widget keys require an Origin header. Use a Hanzo API key (hk-*) for server-to-server requests.",
-					})
-					return
-				}
-			} else if !isAllowedOrigin(originHost, allowedOrigins) {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-					"error":   "forbidden",
-					"message": "Widget key not authorized for origin: " + originHost,
-				})
-				return
-			}
-		}
-
-		// --- Per-IP rate limiting ---
-		clientIP := c.ClientIP()
-		if !limiter.allow(clientIP) {
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error":   "rate_limited",
-				"message": "Widget rate limit exceeded. Try again shortly, or use a Hanzo API key (hk-*) for higher limits.",
-			})
-			return
-		}
-
-		c.Next()
+// newWidgetGate compiles cfg. The limiter's background eviction goroutine starts
+// here, so build one gate per transport and reuse it — not one per request.
+func newWidgetGate(cfg WidgetSecurityConfig) *widgetGate {
+	return &widgetGate{
+		limiter: newWidgetRateLimiter(cfg),
+		allowed: widgetAllowedOrigins(cfg.AllowedOrigins),
 	}
+}
+
+// admit enforces, for hz_ widget keys only:
+//
+//  1. Origin validation: a widget key is accepted only from an approved domain
+//     (Origin, else Referer). Non-browser clients that send neither are refused,
+//     because a public credential outside a browser is a credential in a script.
+//
+//  2. Per-IP rate limiting: no single IP may drain the free widget endpoint.
+//
+//  3. Global rate limiting: no distributed set of IPs may drain the model budget.
+//
+// It runs AFTER [authGate.admit] on both edges, and it only ever REFUSES —
+// it writes no identity and mints nothing, so the trust boundary is unaffected
+// by where it sits. Every request that is not carrying a widget key passes
+// through untouched.
+//
+// h is read-only here; clientIP is whatever the transport calls the peer (gin's
+// ClientIP, fiber's IP), which is the same value both derive from the proxy
+// headers.
+//
+// Returns nil to allow. A non-nil *refusal is the status and JSON body to answer
+// with — the same currency [authGate.admit] deals in, so a transport handles one
+// refusal shape and not two.
+func (g *widgetGate) admit(h edge.Headers, clientIP string) *refusal {
+	if !isWidgetKey(edge.Bearer(h)) {
+		return nil
+	}
+
+	// --- Origin validation ---
+	// Widget keys are public credentials embedded in client-side JS.
+	// We restrict them to approved origins to limit abuse surface.
+	origin := h.Get("Origin")
+	if origin == "" {
+		origin = h.Get("Referer")
+	}
+	originHost := extractOriginHost(origin)
+
+	if len(g.allowed) > 0 {
+		if originHost == "" {
+			// No Origin/Referer: only allow if it looks like a health
+			// check or internal request (User-Agent heuristic)
+			ua := h.Get("User-Agent")
+			isInternal := strings.Contains(ua, "kube-probe") ||
+				strings.Contains(ua, "Wget") ||
+				strings.Contains(ua, "curl") && clientIP == "127.0.0.1"
+			if !isInternal {
+				return &refusal{Status: http.StatusForbidden, Body: map[string]string{
+					"error":   "forbidden",
+					"message": "Widget keys require an Origin header. Use a Hanzo API key (hk-*) for server-to-server requests.",
+				}}
+			}
+		} else if !isAllowedOrigin(originHost, g.allowed) {
+			return &refusal{Status: http.StatusForbidden, Body: map[string]string{
+				"error":   "forbidden",
+				"message": "Widget key not authorized for origin: " + originHost,
+			}}
+		}
+	}
+
+	// --- Per-IP rate limiting ---
+	if !g.limiter.allow(clientIP) {
+		return &refusal{Status: http.StatusTooManyRequests, Body: map[string]string{
+			"error":   "rate_limited",
+			"message": "Widget rate limit exceeded. Try again shortly, or use a Hanzo API key (hk-*) for higher limits.",
+		}}
+	}
+
+	return nil
 }
 
 // isAllowedOrigin checks if the origin host matches any allowed origin,

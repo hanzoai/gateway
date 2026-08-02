@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -454,29 +452,12 @@ func isIngestPath(method, path string) bool {
 	return isErrorIngestPath(method, path) || isSentryIngestPath(method, path)
 }
 
-// Public endpoints (configurable allowlist) bypass all auth checks.
+// The ALLOW/DENY ladder itself — strip, route class, public allowlists, token
+// extraction, JWT validation, the identity write, the balance gate — is
+// [authGate.admit] in authpolicy.go, which knows about no framework. Its
+// transports are a few lines each: native zip for the HIP-0106 unified binary
+// (mount.go) and gin for the legacy Lura edge (legacy_transports.go).
 //
-// This is the gin TRANSPORT of the policy, and only the transport: the whole
-// ALLOW/DENY ladder — strip, route class, public allowlists, token extraction,
-// JWT validation, the identity write, the balance gate — is [authGate.admit] in
-// authpolicy.go, which knows nothing about gin. The legacy Lura edge
-// (legacy_engine.go, the shipping image) runs the policy through here; the
-// HIP-0106 unified binary runs the SAME gate natively on zip (mount.go). Two
-// transports, one decision — which is what stops the two edges from admitting
-// different requests, as they did while this ladder was written out inside a
-// gin closure the zip edge could not call.
-func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
-	gate := newAuthGate(cfg)
-	return func(c *gin.Context) {
-		if r := gate.admit(c.Request.Method, c.Request.Host, c.Request.URL.Path,
-			httpHeaders{c.Request.Header}); r != nil {
-			c.AbortWithStatusJSON(r.Status, r.Body)
-			return
-		}
-		c.Next()
-	}
-}
-
 // validateToken, the JWKS cache, the identity-header trust boundary,
 // the API-key test, and the token extractors live in hanzoai/authz/edge — the one
 // edge-auth implementation shared with cmd/ingress. The thin shims that keep

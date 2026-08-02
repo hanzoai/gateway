@@ -1,3 +1,13 @@
+// Copyright © 2026 Hanzo AI. MIT License.
+
+//go:build legacy
+// +build legacy
+
+// gin-driven: this suite drives the LEGACY Lura edge's transports
+// (legacy_transports.go), which exist only under this tag. The policies it
+// exercises are framework-free values shared with the zip edge, and
+// transport_parity_test.go asserts the two edges answer alike.
+
 package gateway
 
 // Must-gate hardening regression tests (PR #34 follow-up).

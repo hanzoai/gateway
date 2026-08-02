@@ -13,19 +13,32 @@
 // It carries NO build tag — it compiles in the default build. Consequently
 // github.com/hanzoai/cloud is an unconditional dependency of this package
 // and of the standalone cmd/gateway binary. Mount installs the native zip
-// trust boundary (zipAuth), serves the typed probe pair under /_/gateway,
-// and best-effort loads the routes table; it is called explicitly by cloud's
-// composition root (cloud/apps.Wire), not by an init() and not via a global
-// registry.
+// gate chain (zipCORS, zipAuth, zipWidget), serves the typed probe pair
+// under /_/gateway, and best-effort loads the routes table; it is called
+// explicitly by cloud's composition root (cloud/apps.Wire), not by an init()
+// and not via a global registry.
 //
-// # One policy, two HTTP transports
+// # One policy per gate, two HTTP transports
 //
-// The ALLOW/DENY ladder — strip, route class, public allowlists, token
-// extraction, JWT validation, the identity write, the balance gate — is
-// authGate.admit in authpolicy.go, and it knows about no framework. The gin
-// middleware (auth_middleware.go, for the legacy Lura edge) and the native
-// zip handler (zipAuth, for the unified binary) are each a dozen lines over
-// it, so the two edges cannot admit different requests.
+// Every gate this edge applies is a framework-free VALUE, and each of the
+// gateway's two HTTP edges is a few lines of adapter over it:
+//
+//	authGate.admit    authpolicy.go       strip, route class, public
+//	                                      allowlists, token extraction, JWT
+//	                                      validation, identity write, balance
+//	widgetGate.admit  widget_security.go  hz_ origin allowlist + rate limits
+//	corsPolicy.admit  cors.go             credentialed-origin allowlist
+//
+//	native zip   mount.go              zipAuth, zipWidget, zipCORS
+//	gin          legacy_transports.go  the same three, for the Lura edge
+//
+// Mount installs all three in the order the legacy engine runs them, so the
+// two edges cannot admit different requests. transport_parity_test.go drives
+// one request through both and asserts they agree.
+//
+// The routing TABLE (routes.go) is the one thing with no zip twin: its
+// compiled proxies are net/http, and reaching them from fasthttp would drop
+// WebSocket upgrade and streaming. That file's header states it.
 //
 // # The HTTP surface
 //
@@ -56,8 +69,14 @@
 // legacy set, rather than being converted.
 //
 // Forwards-only: never add a lura import to a non-`legacy` file, and never
-// add gin to one — the default build imports gin only through the three
-// files that still carry the legacy edge's transports (auth_middleware.go,
-// routes.go, widget_security.go), each consumed solely by legacy_engine.go.
-// No default-build code path constructs a gin engine.
+// add gin to one. The default build imports gin NOWHERE — assert it, do not
+// assume it:
+//
+//	go list -deps ./cmd/gateway | grep gin-gonic    # empty
+//
+// Every gin transport lives in legacy_transports.go behind the tag, and gin
+// remains in go.mod solely for the vendored KrakenD/Lura tree (internal/lura,
+// internal/plugin) that the shipping image runs. It leaves go.mod when that
+// tree is deleted at Phase C, and not before: `go list -deps -tags legacy`
+// still reports it, because the shipped binary IS the legacy build.
 package gateway

@@ -1,17 +1,29 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
-// routes.go is the gateway's pure host/path reverse-proxy routing table and
-// CORS preflight — stdlib + gin + yaml, with ZERO dependency on the upstream
-// Lura SDK. It is the default-build routing surface: the HIP-0110
-// trust-boundary mount (mount.go) loads this table via LoadRoutesFromFile so
-// any path not owned by a co-resident subsystem is proxied to its configured
-// backend, and the standalone binary shares the same table.
+// routes.go is the gateway's host/path reverse-proxy routing TABLE — stdlib +
+// yaml, with ZERO dependency on the upstream Lura SDK and, now, on any HTTP
+// framework. It parses the config, compiles one httputil.ReverseProxy per
+// prefix, and holds them behind a hot-reloadable lock. Nothing here answers a
+// request.
 //
-// The legacy Lura gin-engine builder (NewEngine) that also consumed
-// this table used to live alongside it in router_engine.go; it now sits behind
-// the `legacy` build tag in legacy_engine.go so the upstream Lura graph
-// stays out of the default build and the shipping image (see that file's
-// header for the full rationale).
+// The table's reader is [hostProxyMiddleware] in legacy_transports.go, the
+// standalone edge's transport. It stays gin-side deliberately, and this is the
+// one gate in this repo that does NOT have a zip twin:
+//
+//   - a compiled httputil.ReverseProxy is net/http, and reaching it from a zip
+//     handler means the net/http↔fasthttp adaptor, which cannot hijack a
+//     connection. WebSocket upgrade and streamed responses — which this proxy
+//     serves today — would silently stop working. Carrying it means a NATIVE
+//     fasthttp proxy, which is its own reviewable change.
+//   - the api-host passthrough below rests on a premise that is FALSE
+//     co-resident: it forwards a whole host to the cloud service because cloud
+//     is another process. Inside the unified binary that address is the binary
+//     itself, and the same rule proxies the process to itself. In cloud-mode the
+//     routing source of truth is cloud's own mount table — stated below, in
+//     capitals, and true.
+//
+// The CORS policy that used to live here moved to cors.go, which is what it is;
+// this file is the routing table and nothing else.
 package gateway
 
 import (
@@ -24,7 +36,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
 )
 
@@ -268,160 +279,4 @@ var apiCloudHosts = map[string]bool{
 	// and rewrites X-Org-Id from the validated JWT — so this carries a gateway-
 	// sanitized request, never a client-trusted X-Org-Id.
 	"api.cloud.hanzo.ai": true,
-}
-
-// hostProxyMiddleware intercepts requests and routes them to the correct
-// backend based on hostname and path prefix. Supports WebSocket upgrades
-// natively via httputil.ReverseProxy.
-func hostProxyMiddleware() gin.HandlerFunc {
-	// api.hanzo.ai routes /v1/* and /zap directly to cloud as-is.
-	// Cloud-api speaks /v1/* natively (no /api/ prefix), so no path rewrite.
-	// The target is overridable via GATEWAY_CLOUD_API_URL (operator/test) and
-	// defaults to the in-cluster cloud service. This is the HTTP relay to
-	// the real model backend (HIP-0106 cloud binary at :8000) — the proven
-	// completions path; the ZAP relay (build_app.go) is optional and is only
-	// needed when ingress speaks ZAP, never for HTTP serving.
-	cloudAPITarget := cloudAPIURL()
-	apiPassthroughProxy := newPassthroughProxy(cloudAPITarget)
-
-	return func(c *gin.Context) {
-		host := strings.Split(c.Request.Host, ":")[0]
-		path := c.Request.URL.Path
-
-		// CORS headers are set by corsPreflightMiddleware (runs before this).
-		// No CORS handling needed here.
-
-		routes.mu.RLock()
-		redirects := routes.redirects
-		exactRoutes := routes.exactRoutes
-		subProxies := routes.subProxies
-		routes.mu.RUnlock()
-
-		// Host redirects (301 permanent).
-		if target, ok := redirects[host]; ok {
-			c.Redirect(301, target+path)
-			c.Abort()
-			return
-		}
-
-		// Unified cloud API hosts: forward EVERY path to cloud, unchanged
-		// (cloud speaks /v1/* natively — no rewrite). Stateless passthrough; cloud
-		// owns all routing.
-		if apiCloudHosts[host] {
-			apiPassthroughProxy.ServeHTTP(c.Writer, c.Request)
-			c.Abort()
-			return
-		}
-
-		// Exact host match.
-		if compiled, ok := exactRoutes[host]; ok {
-			for _, r := range compiled {
-				if strings.HasPrefix(path, r.prefix) {
-					r.proxy.ServeHTTP(c.Writer, c.Request)
-					c.Abort()
-					return
-				}
-			}
-		}
-
-		// Subdomain pattern match.
-		for _, sp := range subProxies {
-			if strings.Contains(host, sp.pattern) {
-				sp.proxy.ServeHTTP(c.Writer, c.Request)
-				c.Abort()
-				return
-			}
-		}
-
-		c.Next()
-	}
-}
-
-// newCORSOriginAllower builds the gateway's single credentialed-CORS origin
-// predicate. An origin may be reflected into Access-Control-Allow-Origin
-// alongside Access-Control-Allow-Credentials:true iff it EITHER exact-matches a
-// dev/env origin (the baked-in localhost defaults plus any fully-qualified
-// scheme+host[:port] supplied via GATEWAY_CORS_ORIGINS, comma-separated) OR its
-// hostname suffix-matches a baked-in brand domain (defaultAllowedOrigins — the
-// SAME set the widget security middleware uses — including subdomains, so a
-// browser SPA like https://cowork.hanzo.ai is allowed with no per-origin env).
-//
-// This is the ONE definition of the credentialed-CORS allowlist (DRY). Every
-// site that reflects an Origin with credentials MUST gate on this predicate:
-// the preflight middleware (corsPreflightMiddleware) AND the legacy engine's
-// panic-recovery handler (corsRecoveryHandler in legacy_engine.go). That
-// invariant is what stops a 5xx error path from widening the policy into a
-// wildcard-reflect-with-credentials primitive (Great-Audit F3). The predicate
-// reads the environment once at construction, mirroring the middleware.
-func newCORSOriginAllower() func(origin string) bool {
-	origins := map[string]bool{
-		"http://localhost:3000": true, "http://localhost:3001": true, "http://localhost:3100": true,
-		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
-	}
-	if extra := os.Getenv("GATEWAY_CORS_ORIGINS"); extra != "" {
-		for _, o := range strings.Split(extra, ",") {
-			if o = strings.TrimSpace(o); o != "" {
-				origins[o] = true
-			}
-		}
-	}
-	brandOrigins := widgetAllowedOrigins(defaultAllowedOrigins())
-	return func(origin string) bool {
-		if origins[origin] {
-			return true
-		}
-		return isAllowedOrigin(extractOriginHost(origin), brandOrigins)
-	}
-}
-
-// corsRecoveryHandler is the gateway's panic-recovery CORS shaper: a downstream
-// panic returns a 500 (never a dropped connection / 502 at ingress) and — on
-// the SAME allowlist as the happy path (originAllowed, from
-// newCORSOriginAllower) — reflects the request Origin with
-// Access-Control-Allow-Credentials ONLY for an allowlisted Origin. A
-// non-allowlisted or absent Origin gets NO CORS headers, so a 5xx can never
-// become a wildcard-reflect-with-credentials primitive that would let any site
-// make credentialed cross-origin reads against a session on the error path
-// (Great-Audit F3). Vary:Origin is set whenever the response is
-// origin-dependent so shared caches never serve one origin's ACAO to another.
-//
-// It lives here beside corsPreflightMiddleware — routes.go owns the ONE CORS
-// policy (default build) — and is wired by the legacy engine via
-// gin.CustomRecovery (legacy_engine.go), the same way that engine consumes
-// corsPreflightMiddleware / hostProxyMiddleware from this file.
-func corsRecoveryHandler(originAllowed func(string) bool) gin.RecoveryFunc {
-	return func(c *gin.Context, _ any) {
-		if origin := c.GetHeader("Origin"); origin != "" && originAllowed(origin) {
-			c.Header("Access-Control-Allow-Origin", origin)
-			c.Header("Access-Control-Allow-Credentials", "true")
-			c.Header("Vary", "Origin")
-		}
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": "internal server error",
-		})
-	}
-}
-
-// corsPreflightMiddleware handles OPTIONS preflight requests globally.
-// Must run before any gateway routing to prevent 405/503 on preflight.
-func corsPreflightMiddleware() gin.HandlerFunc {
-	originAllowed := newCORSOriginAllower()
-	return func(c *gin.Context) {
-		origin := c.GetHeader("Origin")
-		if origin == "" || !originAllowed(origin) {
-			c.Next()
-			return
-		}
-		c.Writer.Header().Set("Access-Control-Allow-Origin", origin)
-		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Project-Id, X-Environment, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, Accept-Language")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Max-Age", "86400")
-		c.Writer.Header().Set("Vary", "Origin")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	}
 }

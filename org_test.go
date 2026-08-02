@@ -1,8 +1,8 @@
 package gateway
 
 // The org a request ACTS IN and the org that PAYS — the edge half of the org
-// switcher, end to end on both transports that carry client traffic: the gin
-// middleware (HTTP) and the ZAP relay gate.
+// switcher, end to end on both transports that carry client traffic: the native
+// zip HTTP edge (gateway.Mount) and the ZAP relay gate.
 //
 // A person belongs to several orgs, picks one, and that org must be the one whose
 // data they see AND the one whose ledger is charged. The selection rides in
@@ -16,14 +16,16 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
-	"github.com/gin-gonic/gin"
-
 	"github.com/hanzoai/authz"
+	luxlog "github.com/luxfi/log"
+
+	"github.com/zap-proto/zip"
 )
 
 // commerceStub stands in for commerce's GET /v1/billing/balance. It records the
@@ -47,17 +49,21 @@ func orgRequest(t *testing.T, claims authz.Claims, selected string) (org, home, 
 	commerce := commerceStub(t, &billed)
 	defer commerce.Close()
 
-	r, tj, jwksServer := setupMiddlewareWithJWKS(t, func(cfg *AuthConfig) {
-		cfg.BillingEnabled = true
-		cfg.BillingURL = commerce.URL
-		cfg.BillingToken = "s2s"
-	})
+	tj := newTestJWKS(t)
+	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
-	r.GET("/v1/cloud/thing", func(c *gin.Context) {
-		org = c.Request.Header.Get("X-Org-Id")
-		home = c.Request.Header.Get("X-User-Owner")
-		c.Status(http.StatusOK)
+	cfg := edgeAuthConfig(jwksServer.URL)
+	cfg.BillingEnabled = true
+	cfg.BillingURL = commerce.URL
+	cfg.BillingToken = "s2s"
+
+	app := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
+	app.Use(zipAuth(cfg))
+	app.Get("/v1/cloud/thing", func(c *zip.Ctx) error {
+		org = c.Header("X-Org-Id")
+		home = c.Header("X-User-Owner")
+		return c.String(http.StatusOK, "")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/cloud/thing", nil)
@@ -67,10 +73,13 @@ func orgRequest(t *testing.T, claims authz.Claims, selected string) (org, home, 
 		req.Header.Set("X-Org-Id", selected)
 	}
 
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("request denied with %d: %s", w.Code, w.Body.String())
+	resp, err := app.Fiber().Test(req)
+	if err != nil {
+		t.Fatalf("zip: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("request denied with %d: %s", resp.StatusCode, body)
 	}
 	return org, home, billed
 }
