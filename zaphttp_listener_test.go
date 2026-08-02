@@ -50,6 +50,14 @@ func waitForTCP(t *testing.T, addr string, timeout time.Duration) {
 
 // TestZapHTTPListenAddr verifies the env-knob parsing contract. This is
 // the single source of truth for how operators turn the listener on/off.
+//
+// An explicit address must be LOOPBACK, and anything else DISABLES the listener
+// rather than being honored — this server speaks plaintext ZAP, so a routable
+// bind is cleartext on the wire. Failing closed loses ZAP, which is recoverable;
+// failing open publishes bearer tokens, which is not. The two rows that used to
+// assert ":12345" and "127.0.0.1:9999" round-trip are the old contract: the
+// first is a wildcard bind (every interface) and the second is the PUBLIC port,
+// which belongs to the TLS terminator alone.
 func TestZapHTTPListenAddr(t *testing.T) {
 	t.Setenv(envZapHTTPListen, "")
 	tests := []struct {
@@ -64,8 +72,13 @@ func TestZapHTTPListenAddr(t *testing.T) {
 		{"OFF → disabled", true, "OFF", ""},
 		{"false → disabled", true, "false", ""},
 		{"0 → disabled", true, "0", ""},
-		{"explicit addr", true, ":12345", ":12345"},
-		{"hostport", true, "127.0.0.1:9999", "127.0.0.1:9999"},
+		{"loopback ip → honored", true, "127.0.0.1:9998", "127.0.0.1:9998"},
+		{"localhost → honored", true, "localhost:9998", "localhost:9998"},
+		{"ipv6 loopback → honored", true, "[::1]:9998", "[::1]:9998"},
+		{"wildcard → refused", true, ":12345", ""},
+		{"routable host → refused", true, "10.0.0.5:9998", ""},
+		{"public port on loopback → honored", true, "127.0.0.1:9999", "127.0.0.1:9999"},
+		{"not host:port → refused", true, "9998", ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
