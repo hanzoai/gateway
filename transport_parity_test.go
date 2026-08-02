@@ -98,8 +98,15 @@ func TestBothTransportsGateWidgetKeysAlike(t *testing.T) {
 			"Authorization": "Bearer hz_public"}, 403},
 		{"widget_key_referer_fallback", map[string]string{
 			"Authorization": "Bearer hz_public", "Referer": "https://hanzo.ai/app"}, 200},
-		{"widget_key_kube_probe_allowed", map[string]string{
-			"Authorization": "Bearer hz_public", "User-Agent": "kube-probe/1.31"}, 200},
+		// This case used to assert 200 — it ENCODED a bypass. A User-Agent is
+		// written by the caller, so "kube-probe" admitted anyone who typed it,
+		// and the test's name made it read like a feature. Nothing legitimate
+		// regressed by removing it: a kubelet probe carries no Authorization
+		// header, so it is already past this gate at the isWidgetKey check.
+		{"widget_key_kube_probe_ua_is_not_a_credential", map[string]string{
+			"Authorization": "Bearer hz_public", "User-Agent": "kube-probe/1.31"}, 403},
+		{"widget_key_wget_ua_is_not_a_credential", map[string]string{
+			"Authorization": "Bearer hz_public", "User-Agent": "Wget/1.21"}, 403},
 	}
 
 	for _, tc := range cases {
@@ -131,6 +138,46 @@ func TestBothTransportsRateLimitWidgetKeysAlike(t *testing.T) {
 		g := ginEdge(t, ginMW, "GET", "/v1/chat/completions", "api.hanzo.ai", hdr)
 		z := zipEdge(t, zipMW, "GET", "/v1/chat/completions", "api.hanzo.ai", hdr)
 		t.Run(fmt.Sprintf("request_%d", i+1), func(t *testing.T) { assertAlike(t, want, g, z) })
+	}
+}
+
+// TestBothTransportsIgnoreForgedForwardedFor pins the rate limit's KEY, which is
+// the half of the widget gate that actually binds a scripted attacker. (Origin is
+// written by the caller: it constrains a browser, and constrains a script not at
+// all. So if the bucket is forgeable, a public hz_ key has no limit.)
+//
+// This is the case the parity harness could not previously see. Neither edge test
+// ever set a forwarded header, so both answered about the same nothing and agreed
+// — while in production they disagreed completely:
+//
+//	gin  ClientIP() trusts X-Forwarded-For from every peer (defaultTrustedCIDRs
+//	     is 0.0.0.0/0) and returns the leftmost entry, so a rotating header is a
+//	     fresh bucket every request and the cap never trips. Measured on the live
+//	     lux-ns edge: 20/20 admitted against a cap of 10.
+//	zip  IP() reads no forwarded header at all, so behind ingress every caller
+//	     shares the ingress pod's bucket and the cap trips for everyone at once.
+//
+// Three requests, a cap of two, a DIFFERENT forged X-Forwarded-For on each: the
+// third must be refused on both edges, because the forgery buys nothing on either.
+func TestBothTransportsIgnoreForgedForwardedFor(t *testing.T) {
+	cfg := WidgetSecurityConfig{
+		MaxRequestsPerIP:  2,
+		GlobalMaxRequests: 1000,
+		Window:            time.Minute,
+		CleanupInterval:   time.Minute,
+		AllowedOrigins:    []string{"hanzo.ai"},
+	}
+
+	ginMW, zipMW := NewWidgetSecurityMiddleware(cfg), zipWidget(cfg)
+	for i, want := range []int{200, 200, 429} {
+		hdr := map[string]string{
+			"Authorization":   "Bearer hz_public",
+			"Origin":          "https://hanzo.ai",
+			"X-Forwarded-For": fmt.Sprintf("198.51.100.%d", i+1),
+		}
+		g := ginEdge(t, ginMW, "GET", "/v1/chat/completions", "api.hanzo.ai", hdr)
+		z := zipEdge(t, zipMW, "GET", "/v1/chat/completions", "api.hanzo.ai", hdr)
+		t.Run(fmt.Sprintf("forged_hop_%d", i+1), func(t *testing.T) { assertAlike(t, want, g, z) })
 	}
 }
 

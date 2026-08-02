@@ -139,6 +139,12 @@ func zipAuth(cfg AuthConfig) zip.Handler {
 // The gate is built ONCE, out here: newWidgetGate starts the limiter's eviction
 // goroutine, and a gate per request would also mean a rate-limit window per
 // request, which is no rate limit at all.
+//
+// Fiber's IP() is the SOCKET peer here — zip's fiber.Config sets no ProxyHeader,
+// so it returns fasthttp's RemoteIP and reads no forwarded header. That is
+// exactly what the gate wants: behind hanzoai/ingress the peer alone would bucket
+// every request in the cluster together, so clientip.go walks the forwarded chain
+// from it under one trusted-proxy policy — the same one the gin transport gets.
 func zipWidget(cfg WidgetSecurityConfig) zip.Handler {
 	gate := newWidgetGate(cfg)
 	return func(c *zip.Ctx) error {

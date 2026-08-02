@@ -238,3 +238,29 @@ func TestWidgetGate_RefererFallback(t *testing.T) {
 		t.Errorf("widget key with valid Referer should pass, got %d", code)
 	}
 }
+
+// A widget key with no Origin is refused, and NO client-supplied header may talk
+// the gate out of that.
+//
+// The gate used to consult the User-Agent — "kube-probe", "Wget", or "curl" from
+// loopback were treated as internal and skipped the origin allowlist entirely.
+// A User-Agent is written by whoever makes the request, so that was a bypass with
+// a published recipe, and it was measured live on the lux-ns edge: a widget key
+// with no Origin and `User-Agent: Wget/1.21` was ADMITTED (it reached the
+// upstream proxy and came back 502) where the same request with a browser
+// User-Agent got the 403.
+//
+// Nothing legitimate needed it: a kubelet probe sends no Authorization header at
+// all, so it never reaches this branch — every httpGet probe in k8s/ is a bare
+// path with no httpHeaders.
+func TestWidgetGate_UserAgentCannotBypassOriginAllowlist(t *testing.T) {
+	gate := zipWidget(DefaultWidgetSecurityConfig())
+	for _, ua := range []string{"Wget/1.21", "kube-probe/1.31", "curl/8.5.0", ""} {
+		if code := widgetRequest(t, gate, map[string]string{
+			"Authorization": "Bearer hz_widget_public",
+			"User-Agent":    ua,
+		}); code != http.StatusForbidden {
+			t.Errorf("User-Agent %q bypassed the origin allowlist: got %d, want 403", ua, code)
+		}
+	}
+}
