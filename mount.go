@@ -16,11 +16,8 @@ package gateway
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/hanzoai/cloud"
 	"github.com/hanzoai/gateway/v2/token"
@@ -62,23 +59,19 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 	if err := authCfg.Validate(); err != nil {
 		return fmt.Errorf("gateway.Mount: %w", err)
 	}
-	authGin := NewAuthMiddleware(authCfg)
 
-	// Bridge gin.HandlerFunc → zip.Handler. We never .Next() at the gin
-	// layer: zip's c.Continue() drives the downstream chain after the
-	// auth handler decides to allow or 401. We let the gin handler
-	// mutate the http.Request (it sets identity headers), then copy the
-	// mutated headers back onto fiber.
-	app.Use(zipFromGin(authGin))
+	// The trust boundary, NATIVE. It is the same policy the legacy edge runs
+	// (authpolicy.go), reached without a framework in between.
+	app.Use(zipAuth(authCfg))
 
-	// Native zip health route. Independent of the gin-wrapped middleware
-	// so a misconfigured JWKS does not 503 the probe.
-	app.Get("/_/gateway/healthz", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusOK, map[string]any{
-			"status":  "ok",
-			"service": "gateway",
-		})
-	})
+	// The probes, as TYPED ops, under this subsystem's own reserved prefix —
+	// the same two ops the standalone binary serves at its root (probes.go).
+	//
+	// They sit BEHIND the boundary, as the single healthz here always has: the
+	// gate admits a tokenless request unless AUTH_REQUIRE=true, and it never
+	// reaches JWKS for a request carrying no credential, so a misconfigured
+	// signing-key URL cannot fail a liveness answer.
+	MountProbes(app)
 
 	// Routes table — best-effort load. A missing routes file is not
 	// fatal in cloud-mode: every other subsystem is in-process and the
@@ -100,31 +93,28 @@ func Mount(app *zip.App, deps cloud.Deps) error {
 	return nil
 }
 
-// zipFromGin wraps a gin.HandlerFunc as a zip.Handler. The gin handler
-// runs against an ad-hoc *gin.Context built from the underlying
-// *fasthttp.RequestCtx via fiber's net/http adapter. We pay the ~5%
-// adapter cost in exchange for sharing one trust-boundary implementation
-// with the standalone gateway binary — see HIP-0106 rationale.
-func zipFromGin(h gin.HandlerFunc) zip.Handler {
-	mw := func(next http.Handler) http.Handler {
-		engine := gin.New()
-		engine.Use(h)
-		engine.NoRoute(func(c *gin.Context) {
-			// Delegate straight to next: c.Request already carries the
-			// headers the gin handler wrote (X-Org-Id / X-User-Id / …),
-			// because the middleware mutates c.Request.Header in place.
-			//
-			// Do NOT copy request headers onto c.Writer.Header(). That
-			// writes them to the RESPONSE, reflecting Authorization,
-			// Cookie and the written identity set straight back to the
-			// caller — a credential leak to anything that observes or
-			// caches response headers. It also never served the stated
-			// purpose, since the downstream reads c.Request.
-			next.ServeHTTP(c.Writer, c.Request)
-		})
-		return engine
+// zipAuth is the trust boundary as a NATIVE zip handler: it reads the request's
+// own fasthttp headers, hands them to the one policy (authpolicy.go), and
+// either answers the refusal or continues.
+//
+// It replaces zipFromGin, which stood up a whole gin engine per request and
+// bridged through fiber's net/http adapter to reach a decision that never
+// needed gin. That bridge was not merely slow — it was WRONG, and silently:
+// fiber's adaptor copies the middleware's headers back onto the fasthttp
+// request with Set and never Del, so every header the strip DELETED came back.
+// A client-supplied X-User-IsAdmin, X-Org-Id or X-User-Permissions survived
+// this trust boundary intact, on the exact path whose entire job is to remove
+// it. Reading and writing the request's own headers in place is both the fix
+// and the reason there is nothing left to get wrong: there is no copy.
+func zipAuth(cfg AuthConfig) zip.Handler {
+	gate := newAuthGate(cfg)
+	return func(c *zip.Ctx) error {
+		req := c.Fiber().Request()
+		if r := gate.admit(c.Method(), c.Host(), c.Path(), newFastHeaders(&req.Header)); r != nil {
+			return c.JSON(r.Status, r.Body)
+		}
+		return c.Continue()
 	}
-	return zip.AdaptNetHTTPMiddleware(mw)
 }
 
 // authConfigFromEnv builds the gateway AuthConfig from env, applying

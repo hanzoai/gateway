@@ -1,0 +1,286 @@
+// Copyright © 2026 Hanzo AI. Apache-2.0 License.
+
+// authpolicy.go is the gateway's HTTP authn policy, stated ONCE.
+//
+// The policy is a decision about a request — its method, its host, its path and
+// its headers — and it is the same decision whichever HTTP framework carries
+// the request. It used to be written inside a gin closure, which braided the
+// decision together with the framework that happened to be running it, and the
+// cost of that braiding was a second copy: the HIP-0106 mount could not run the
+// gin middleware natively, so it bridged through a whole gin engine per request
+// to reach a rule that never needed gin at all.
+//
+// Now the rule is a value — [authGate] — and each transport is a dozen lines of
+// adapter over it:
+//
+//	auth_middleware.go   gin, for the legacy Lura edge (the shipping image)
+//	mount.go             native zip, for the HIP-0106 unified cloud binary
+//
+// (The ZAP relay's envelope gate in gate.go states the same ALLOW/DENY ladder
+// against forward.Forward, which carries identity as fields rather than as
+// headers and is billed by cloud rather than here. It is listed as the third
+// transport in that file's header; folding it in here would require a header
+// view over the envelope and would give the relay a per-request Commerce
+// round-trip it deliberately does not have — see HIP-0110.)
+//
+// What "one place" buys, concretely: the identity strip is now the FIRST thing
+// every HTTP transport does, and it now actually survives. Through the old gin
+// bridge it did not — the net/http→fasthttp adapter copies the middleware's
+// headers back onto the request with Set and never Del, so a header the strip
+// DELETED stayed on the request the downstream read. A client-supplied
+// X-User-IsAdmin survived the trust boundary. See TestMountAuth_StripSurvives.
+package gateway
+
+import (
+	"log"
+	"net/http"
+	"strings"
+
+	"github.com/hanzoai/authz"
+	"github.com/hanzoai/authz/edge"
+)
+
+// refusal is a gate decision to STOP the request: the status to answer with and
+// the JSON body to answer it with. nil means allow.
+//
+// It is data rather than a write to a ResponseWriter because the gate does not
+// know what it is writing to — gin aborts with its own JSON, zip answers with
+// c.JSON, and a third transport would do a third thing. Deciding and answering
+// are separate concerns, and only the answering part is framework-shaped.
+type refusal struct {
+	Status int
+	Body   map[string]string
+}
+
+// authGate is the compiled policy: the config plus the things built once from
+// it (the JWKS-backed verifier, the Commerce balance client, the public-host
+// set). Build it once per transport with [newAuthGate] and call [authGate.admit]
+// per request.
+type authGate struct {
+	cfg           AuthConfig
+	validator     *edge.Verifier
+	billing       *billingChecker
+	publicHosts   map[string]bool
+	misconfigured bool
+}
+
+// newAuthGate compiles cfg into the gate. The verifier's JWKS cache is
+// constructed here and reused for every request the returned gate admits, so
+// signing keys are fetched once per gate and TTL-refreshed thereafter.
+func newAuthGate(cfg AuthConfig) *authGate {
+	g := &authGate{cfg: cfg}
+	if !cfg.Enabled {
+		return g
+	}
+	g.validator = newValidator(cfg)
+	g.billing = newBillingChecker(cfg.BillingURL, cfg.BillingToken)
+
+	// Fail-secure: billing enabled but its Commerce dependency is not fully
+	// configured. gateway.Mount refuses to start in this state (cfg.Validate);
+	// this covers the standalone path, which has no error return — the balance
+	// gate denies the metered surface (503) instead of failing open. The funding
+	// surface stays reachable (billingPathMatch excludes /v1/commerce).
+	g.misconfigured = cfg.BillingEnabled && (cfg.BillingURL == "" || cfg.BillingToken == "")
+	if g.misconfigured {
+		log.Printf("gateway auth: BILLING_ENABLED=true but AUTH_BILLING_URL or COMMERCE_SERVICE_TOKEN is empty; metered surface fails closed (503) until both are set from KMS")
+	}
+
+	g.publicHosts = make(map[string]bool, len(cfg.PublicHosts))
+	for _, h := range cfg.PublicHosts {
+		g.publicHosts[h] = true
+	}
+	return g
+}
+
+// admit runs the whole policy against one request and reports whether to carry
+// it. h is the request's MUTABLE header set: admit deletes through it what the
+// client claimed and writes through it what the token proved, so the caller has
+// nothing to copy back and no ordering to remember.
+//
+// host may carry a port; admit strips it, so every transport hands over
+// whatever its framework calls the host and they agree.
+//
+// Returns nil to allow. A non-nil *refusal is a policy rejection with the
+// status and body to answer — never an error, because a rejected request is a
+// normal HTTP outcome and not a failure of the gate.
+func (g *authGate) admit(method, host, path string, h Headers) *refusal {
+	// SECURITY: unconditionally strip client-supplied identity headers. Only the
+	// gateway is authorized to set these, and only after JWT validation. This
+	// MUST be the first action, before any route-class dispatch.
+	//
+	// GLOBAL IDENTITY INVARIANT — applies to EVERY class, unconditionally:
+	// identity headers are gateway-WRITTEN, never client-accepted. Load-bearing,
+	// NOT a bypass-afterthought:
+	//   • Authed class writes X-User-Id / X-Org-Id / X-User-Email unconditionally,
+	//     but X-Project-Id, X-Billing-Account-Id, X-Roles, X-Phone-Number,
+	//     X-User-IsAdmin, X-User-Permissions are written ONLY when the validated
+	//     JWT asserts them — a forged copy of any of THOSE would otherwise survive
+	//     un-overwritten below → privilege / tenant spoof. (Legacy
+	//     X-User-IsGlobalAdmin is NEVER written now — platform sudo is
+	//     org=="admin" — but stays in the strip set so a forged copy is dropped.)
+	//   • Ingest class (class 1) writes NOTHING, so this guarantees no client
+	//     identity ever reaches cloud, which resolves the org solely from the DSN.
+	// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
+	//
+	// The strip RETURNS the org the client selected (the inbound X-Org-Id) as it
+	// deletes it — the one identity value that survives, and only as an INTENT. It
+	// is used solely below, after JWT validation, where EffectiveOrg checks it
+	// against the token's signed membership set before any of it is rewritten. On
+	// every class that writes nothing (ingest, public host, public path, tokenless,
+	// API key) it is simply discarded, so those paths are untouched.
+	selectedOrg := stripClaimed(h)
+
+	// When auth is disabled (AUTH_ENABLED=false) the strip above still ran:
+	// even in dev/test a downstream must not trust client-supplied identity.
+	// Nothing else applies — no token validation, no balance gate.
+	if !g.cfg.Enabled {
+		return nil
+	}
+
+	host = hostOnly(host)
+
+	// ── ROUTE CLASS 1 — tokenless DSN ingest (orthogonal to the authed API) ──
+	// POST /v1/sentry/<project>/{envelope,store}[/] and the o11y errortracking
+	// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
+	// decision, NOT a hole punched in the authed gate: this class has its own
+	// (empty) auth — forward to cloud with NO IAM-JWT gate and NO written
+	// identity; cloud DSN-authenticates and derives the org FROM the DSN.
+	// isIngestPath is POST-only + suffix-anchored, so every Sentry/o11y READ falls
+	// through to the authed class below and stays JWT-gated.
+	if isIngestPath(method, path) {
+		return nil
+	}
+
+	// ── ROUTE CLASS 2 — authed API (every other /v1/*) ──────────────────────
+	// Its own auth chain, below: no-auth allowlist (public IAM/login hosts +
+	// public paths) → IAM-JWT validate (401 if absent-and-required, or invalid) →
+	// WRITE the canonical identity headers FROM the validated JWT (overwriting the
+	// stripped slate) → balance gate. On this class the gateway is the SOLE source
+	// of identity; a client-supplied value can never reach a backend.
+
+	// Skip auth for public hosts (IAM/login domains).
+	if g.publicHosts[host] {
+		return nil
+	}
+
+	// Skip auth for public paths.
+	for _, pp := range g.cfg.PublicPaths {
+		if strings.HasPrefix(path, pp) {
+			return nil
+		}
+	}
+
+	// Extract the credential from the Authorization header or the session cookie.
+	tok := edge.Bearer(h)
+	if tok == "" {
+		tok = edge.Cookie(h)
+	}
+
+	if tok == "" {
+		if g.cfg.RequireAuth {
+			return &refusal{Status: http.StatusUnauthorized, Body: map[string]string{
+				"error":   "unauthorized",
+				"message": "Authentication required",
+			}}
+		}
+		// No token: pass through with no identity headers.
+		return nil
+	}
+
+	// API keys (hk-*, sk-*, fw_*, hz_*, pk-*) are validated by the backend
+	// services directly (cloud, commerce, …), not by the gateway. Pass them
+	// through without JWT validation.
+	if authz.IsAPIKey(tok) {
+		return nil
+	}
+
+	claims, err := g.validator.VerifyRaw(tok)
+	if err != nil {
+		return &refusal{Status: http.StatusUnauthorized, Body: map[string]string{
+			"error":   "unauthorized",
+			"message": "Invalid token",
+			"detail":  err.Error(),
+		}}
+	}
+
+	// The org that PAYS. It is a SEPARATE question from the org the request ACTS
+	// in (which writeIdentity resolves and writes): an operator viewing a customer
+	// reads the customer's data and spends the ADMIN ledger, never the customer's.
+	ledgerOrg := claims.LedgerOrg(selectedOrg)
+	userID := claims.UserID()
+
+	// ONE write, from the one place that decides it (identity.go → hanzoai/authz/edge).
+	writeIdentity(h, claims, selectedOrg)
+
+	return g.balance(path, ledgerOrg, userID)
+}
+
+// balance is the path-scoped, fail-closed balance gate — the last step of the
+// authed class, split out because it is the only step that talks to another
+// service and the only one a transport may want to reason about on its own.
+//
+// Scope: cfg.BillingPaths (the metered must-gate surface — cloud, tasks,
+// insights, o11y, mpc, evals, licensing, product, provisioning, …). The
+// /v1/commerce funding surface is hard-excluded (billingPathMatch) so a
+// zero-balance user can always reach it to add funds. The AI routes bill
+// per-token downstream and the validated/public routes are never balance-gated,
+// so they are NOT in BillingPaths and skip this gate. Empty BillingPaths
+// enforces on every non-funding, non-public route.
+//
+// Key: the IAM "org/sub" composite — org from claims.LedgerOrg (the org that
+// PAYS, not necessarily the one the request acts in), sub from the user.
+// Commerce's /v1/billing/balance is user-scoped under an org (the verified
+// contract); per-org billing would require a commerce-side balance-model change
+// first, so the org is carried in the key rather than used alone.
+func (g *authGate) balance(path, ledgerOrg, userID string) *refusal {
+	if !g.cfg.BillingEnabled || userID == "" || !billingPathMatch(path, g.cfg.BillingPaths) {
+		return nil
+	}
+	// Fail closed when billing is enabled but misconfigured (no URL or token) —
+	// never serve metered product we cannot bill for.
+	if g.misconfigured {
+		return unavailable()
+	}
+
+	// Construct the Commerce user identifier: org/username.
+	billingUser := userID
+	if ledgerOrg != "" && !strings.Contains(userID, "/") {
+		billingUser = ledgerOrg + "/" + userID
+	}
+
+	hasBalance, err := g.billing.checkBalance(billingUser)
+	switch {
+	case hasBalance:
+		return nil
+	case err != nil:
+		// Could not verify balance. Deny (no free), but signal an outage rather
+		// than wrongly telling a paying user they are out of funds.
+		return unavailable()
+	default:
+		return &refusal{Status: http.StatusPaymentRequired, Body: map[string]string{
+			"error":   "insufficient_balance",
+			"message": "Your account has insufficient balance. Please add funds at the platform billing page",
+			"user":    billingUser,
+		}}
+	}
+}
+
+// unavailable is the balance gate's outage answer, written once because it is
+// returned from two places that must not drift into two different messages.
+func unavailable() *refusal {
+	return &refusal{Status: http.StatusServiceUnavailable, Body: map[string]string{
+		"error":   "billing_unavailable",
+		"message": "Billing is temporarily unavailable. Please retry shortly.",
+	}}
+}
+
+// hostOnly drops the port from a Host header value. Every transport spells the
+// host differently (gin hands over r.Host, fasthttp its own), so the trimming
+// happens once here rather than at each call site — where one of them would
+// eventually forget and a public host would stop matching on a non-default port.
+func hostOnly(host string) string {
+	if i := strings.IndexByte(host, ':'); i >= 0 {
+		return host[:i]
+	}
+	return host
+}

@@ -229,20 +229,12 @@ func buildHealthApp() *zip.App {
 		AppName:               "gateway-health",
 	})
 	app.Use(middleware.Recover())
-	app.Get("/healthz", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
-	app.Get("/readyz", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
-	})
-	app.Get("/metrics", func(c *zip.Ctx) error {
-		// gateway.BuildApp installs the real Prometheus collector via
-		// its telemetry middleware when GATEWAY_METRICS_ENABLED=true.
-		// This stub keeps the path live for scrapers when telemetry
-		// is off (dev/local).
-		c.SetHeader("Content-Type", "text/plain; version=0.0.4")
-		return c.String(http.StatusOK, "# gateway up\n")
-	})
+	// The SAME two typed probe ops the public app serves (gateway/probes.go),
+	// so the two listeners cannot answer differently about one process, plus
+	// the /metrics hatch — the one route that is deliberately not typed,
+	// because Prometheus exposition is text and a typed op answers JSON.
+	gateway.Probes(app)
+	gateway.MountMetrics(app)
 	return app
 }
 

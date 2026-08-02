@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,8 +13,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/hanzoai/authz"
-	"github.com/hanzoai/authz/edge"
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -458,219 +455,24 @@ func isIngestPath(method, path string) bool {
 }
 
 // Public endpoints (configurable allowlist) bypass all auth checks.
+//
+// This is the gin TRANSPORT of the policy, and only the transport: the whole
+// ALLOW/DENY ladder — strip, route class, public allowlists, token extraction,
+// JWT validation, the identity write, the balance gate — is [authGate.admit] in
+// authpolicy.go, which knows nothing about gin. The legacy Lura edge
+// (legacy_engine.go, the shipping image) runs the policy through here; the
+// HIP-0106 unified binary runs the SAME gate natively on zip (mount.go). Two
+// transports, one decision — which is what stops the two edges from admitting
+// different requests, as they did while this ladder was written out inside a
+// gin closure the zip edge could not call.
 func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
-	// When auth is disabled (AUTH_ENABLED=false), pass all requests through
-	// without any token validation or billing checks. Still strip identity
-	// headers — even in dev/test, downstream services must not trust
-	// client-supplied identity.
-	if !cfg.Enabled {
-		return func(c *gin.Context) {
-			stripClaimed(c.Request.Header)
-			c.Next()
-		}
-	}
-
-	validator := newValidator(cfg)
-	billing := newBillingChecker(cfg.BillingURL, cfg.BillingToken)
-
-	// Fail-secure: billing enabled but its Commerce dependency is not fully
-	// configured. gateway.Mount refuses to start in this state (cfg.Validate);
-	// this covers the standalone path, which has no error return — the balance
-	// gate denies the metered surface (503) instead of failing open. The
-	// funding surface stays reachable (billingPathMatch excludes /v1/commerce).
-	billingMisconfigured := cfg.BillingEnabled && (cfg.BillingURL == "" || cfg.BillingToken == "")
-	if billingMisconfigured {
-		log.Printf("gateway auth: BILLING_ENABLED=true but AUTH_BILLING_URL or COMMERCE_SERVICE_TOKEN is empty; metered surface fails closed (503) until both are set from KMS")
-	}
-
-	// Pre-build public host set for O(1) lookup
-	publicHostSet := make(map[string]bool, len(cfg.PublicHosts))
-	for _, h := range cfg.PublicHosts {
-		publicHostSet[h] = true
-	}
-
+	gate := newAuthGate(cfg)
 	return func(c *gin.Context) {
-		// SECURITY: Unconditionally strip client-supplied identity headers.
-		// Only the gateway is authorized to set these after JWT validation.
-		// This MUST be the first action, before any route-class dispatch.
-		//
-		// GLOBAL IDENTITY INVARIANT — applies to EVERY class, unconditionally:
-		// identity headers are gateway-WRITTEN, never client-accepted. Load-bearing,
-		// NOT a bypass-afterthought:
-		//   • Authed class writes X-User-Id / X-Org-Id / X-User-Email unconditionally,
-		//     but X-Project-Id, X-Billing-Account-Id, X-Roles, X-Phone-Number,
-		//     X-User-IsAdmin, X-User-Permissions are written ONLY when the validated JWT
-		//     asserts them — a forged copy of any of THOSE would otherwise survive
-		//     un-overwritten below → privilege / tenant spoof. (Legacy X-User-IsGlobalAdmin
-		//     is NEVER written now — platform sudo is org=="admin" — but stays in the
-		//     strip set so a forged copy is still dropped.)
-		//   • Ingest class (class 1) writes NOTHING, so this guarantees no client
-		//     identity ever reaches cloud, which resolves the org solely from the DSN.
-		// ONE strip at ingress (never scattered per-header Dels) IS the whole invariant.
-		//
-		// The strip RETURNS the org the client selected (the inbound X-Org-Id) as it
-		// deletes it — the one identity value that survives, and only as an INTENT.
-		// It is used solely below, after JWT validation, where EffectiveOrg checks it
-		// against the token's signed membership set before any of it is rewritten. On
-		// every class that writes nothing (ingest, public host, public path, tokenless,
-		// API key) it is simply discarded, so those paths are untouched.
-		selectedOrg := stripClaimed(c.Request.Header)
-
-		host := strings.Split(c.Request.Host, ":")[0]
-		path := c.Request.URL.Path
-
-		// ── ROUTE CLASS 1 — tokenless DSN ingest (orthogonal to the authed API) ──
-		// POST /v1/sentry/<project>/{envelope,store}[/] and the o11y errortracking
-		// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
-		// decision, NOT a hole punched in the authed gate: this class has its own
-		// (empty) auth — forward to cloud with NO IAM-JWT gate and NO written identity;
-		// cloud DSN-authenticates and derives the org FROM the DSN. isIngestPath is
-		// POST-only + suffix-anchored, so every Sentry/o11y READ falls through to the
-		// authed class below and stays JWT-gated.
-		if isIngestPath(c.Request.Method, path) {
-			c.Next()
+		if r := gate.admit(c.Request.Method, c.Request.Host, c.Request.URL.Path,
+			httpHeaders{c.Request.Header}); r != nil {
+			c.AbortWithStatusJSON(r.Status, r.Body)
 			return
 		}
-
-		// ── ROUTE CLASS 2 — authed API (every other /v1/*) ──────────────────────
-		// Its own auth chain, below: no-auth allowlist (public IAM/login hosts +
-		// public paths) → IAM-JWT validate (401 if absent-and-required, or invalid) →
-		// WRITE the canonical identity headers FROM the validated JWT (overwriting the
-		// stripped slate) → balance gate. On this class the gateway is the SOLE source
-		// of identity; a client-supplied value can never reach a backend.
-
-		// Skip auth for public hosts (IAM/login domains)
-		if publicHostSet[host] {
-			c.Next()
-			return
-		}
-
-		// Skip auth for public paths
-		for _, pp := range cfg.PublicPaths {
-			if strings.HasPrefix(path, pp) {
-				c.Next()
-				return
-			}
-		}
-
-		// Extract token from Authorization header or cookie
-		token := edge.Bearer(c.Request.Header)
-		if token == "" {
-			token = edge.Cookie(c.Request.Header)
-		}
-
-		if token == "" {
-			if cfg.RequireAuth {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-					"error":   "unauthorized",
-					"message": "Authentication required",
-				})
-				return
-			}
-			// No token, pass through without identity headers
-			c.Next()
-			return
-		}
-
-		// API keys (hk-*, sk-*, fw_*, hz_*, pk-*) are validated by the
-		// backend services directly (cloud, commerce, etc.), not by
-		// the gateway. Pass them through without JWT validation.
-		if authz.IsAPIKey(token) {
-			c.Next()
-			return
-		}
-
-		// Parse and validate JWT
-		claims, err := validator.VerifyRaw(token)
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error":   "unauthorized",
-				"message": "Invalid token",
-				"detail":  err.Error(),
-			})
-			return
-		}
-
-		// The org that PAYS. It is a SEPARATE question from the org the request ACTS
-		// in (which writeIdentity resolves and writes): an operator viewing a customer
-		// reads the customer's data and spends the ADMIN ledger, never the customer's.
-		ledgerOrg := claims.LedgerOrg(selectedOrg)
-		userID := claims.UserID()
-
-		// ONE write, from the one place that decides it. This block used to compute
-		// every header inline — the two orgs, the sub-scopes, the two admin scopes,
-		// the permission bits — and that copy is where the escalation lived: the
-		// PLATFORM header X-User-IsAdmin was set from claims.IsAdmin, IAM's ORG-role
-		// bit, so every org owner reached the fleet as a platform admin. The zip edge
-		// had already been corrected; this one had not, because the rule was stated
-		// twice. It is now stated once, in hanzoai/authz/edge.
-		//
-		// Three headers the old block wrote are gone because IAM never emitted the
-		// claims they read. `roles`, `permissions` and `phone` are absent from the
-		// signed claim set (internal/oidc/jwt.go) and from claims_supported, so
-		// X-Roles and X-Phone-Number were always empty and the permission bit-field
-		// only ever carried what the two predicates put there — which is what
-		// writeIdentity computes. They stay in the STRIP set, so a forged copy of any
-		// of them still never survives.
-		writeIdentity(c.Request.Header, claims, selectedOrg)
-
-		// Balance gate — path-scoped + fail-closed (see checkBalance).
-		//
-		// Scope: cfg.BillingPaths (the metered must-gate surface — cloud,
-		// tasks, insights, o11y, mpc, evals, licensing, product,
-		// provisioning, …). The /v1/commerce funding surface is hard-excluded
-		// (billingPathMatch) so a zero-balance user can always reach it to add
-		// funds. The AI routes bill per-token downstream and the
-		// validated/public routes are never balance-gated, so they are NOT in
-		// BillingPaths and skip this gate. Empty BillingPaths enforces on every
-		// non-funding, non-public route.
-		//
-		// Key: the IAM "org/sub" composite — org from claims.LedgerOrg (the org
-		// that PAYS, not necessarily the one the request acts in), sub from the
-		// user. Commerce's /v1/billing/balance is user-scoped under an org (the
-		// verified contract); per-org billing would require a commerce-side
-		// balance-model change first, so the org is carried in the key rather
-		// than used alone.
-		if cfg.BillingEnabled && userID != "" && billingPathMatch(path, cfg.BillingPaths) {
-			// Fail closed when billing is enabled but misconfigured (no URL or
-			// token) — never serve metered product we cannot bill for.
-			if billingMisconfigured {
-				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
-					"error":   "billing_unavailable",
-					"message": "Billing is temporarily unavailable. Please retry shortly.",
-				})
-				return
-			}
-
-			// Construct the Commerce user identifier: org/username
-			billingUser := userID
-			if ledgerOrg != "" && !strings.Contains(userID, "/") {
-				billingUser = ledgerOrg + "/" + userID
-			}
-
-			hasBalance, balErr := billing.checkBalance(billingUser)
-			switch {
-			case hasBalance:
-				// allowed
-			case balErr != nil:
-				// Could not verify balance. Deny (no free), but signal an
-				// outage rather than wrongly telling a paying user they are
-				// out of funds.
-				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{
-					"error":   "billing_unavailable",
-					"message": "Billing is temporarily unavailable. Please retry shortly.",
-				})
-				return
-			default:
-				c.AbortWithStatusJSON(http.StatusPaymentRequired, gin.H{
-					"error":   "insufficient_balance",
-					"message": "Your account has insufficient balance. Please add funds at the platform billing page",
-					"user":    billingUser,
-				})
-				return
-			}
-		}
-
 		c.Next()
 	}
 }

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/valyala/fasthttp"
+
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/authz/edge"
 	"github.com/hanzoai/gateway/v2/token"
@@ -32,6 +34,59 @@ import (
 // requires — so it stays correct on every deployment this edge fronts.
 var vendorPrefixes = []string{"X-IAM-", "X-HANZO-"}
 
+// Headers is a header set this edge can strip, write and ENUMERATE.
+//
+// edge.Headers is the estate's minimum — Get/Set/Del — and it is deliberately
+// that small, so a transport qualifies by shape rather than by being named.
+// The vendor-prefix backstop below needs one thing more: the NAMES present,
+// which cannot be expressed in Get/Set/Del and is spelled differently by every
+// transport (a Go map ranges, fasthttp visits). So the enumeration is added
+// here, in the one package that needs it, and each transport supplies it in a
+// line or two.
+type Headers interface {
+	edge.Headers
+	// Names calls fn once per header name on the request. Implementations must
+	// tolerate fn deleting the name it was handed.
+	Names(fn func(name string))
+}
+
+// httpHeaders adapts net/http's header map — the shape the gin transport and
+// every test carry. http.Header already satisfies edge.Headers with no adapter
+// at all, so this adds only the enumeration.
+type httpHeaders struct{ http.Header }
+
+func (h httpHeaders) Names(fn func(string)) {
+	for name := range h.Header {
+		fn(name)
+	}
+}
+
+// fastHeaders adapts a zip request's headers — fasthttp's, where reading
+// returns bytes. The Get/Set/Del third is edge.Of, the estate's OWN adapter for
+// exactly this shape (documented on edge.Peeker as the way to reach a zip
+// request's headers), so this type states only the enumeration.
+type fastHeaders struct {
+	edge.Headers
+	raw *fasthttp.RequestHeader
+}
+
+// newFastHeaders wraps a fasthttp request header set as [Headers].
+func newFastHeaders(h *fasthttp.RequestHeader) fastHeaders {
+	return fastHeaders{Headers: edge.Of(h), raw: h}
+}
+
+// Names visits the request's header names. The names are COLLECTED before fn
+// runs: fasthttp's VisitAll walks the live slice, and deleting during that walk
+// skips the element after the deleted one — which would leave a forgeable
+// header on the request precisely when two of them were adjacent.
+func (f fastHeaders) Names(fn func(string)) {
+	names := make([]string, 0, f.raw.Len())
+	f.raw.VisitAll(func(k, _ []byte) { names = append(names, string(k)) })
+	for _, n := range names {
+		fn(n)
+	}
+}
+
 // stripClaimed deletes every identity header a client supplied and returns the org
 // it CLAIMED. Two strips, one call: the estate's exact-name contract (edge.Strip)
 // and this transport's vendor-prefix backstop.
@@ -41,17 +96,17 @@ var vendorPrefixes = []string{"X-IAM-", "X-HANZO-"}
 // request, and nothing would fail. The prefix sweep cannot live in the estate's
 // edge: it must ENUMERATE header names, which is transport-specific, while
 // edge.Headers is deliberately just Get/Set/Del.
-func stripClaimed(h http.Header) string {
+func stripClaimed(h Headers) string {
 	claimed := edge.Strip(h)
-	for name := range h {
+	h.Names(func(name string) {
 		upper := strings.ToUpper(name)
 		for _, p := range vendorPrefixes {
 			if strings.HasPrefix(upper, p) {
 				h.Del(name)
-				break
+				return
 			}
 		}
-	}
+	})
 	return claimed
 }
 
