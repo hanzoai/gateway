@@ -791,7 +791,7 @@ func TestStripIdentityHeaders_CaseInsensitive(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(header, "forged-value")
 
-			stripClaimed(req.Header)
+			stripClaimed(httpHeaders{req.Header})
 
 			if v := req.Header.Get(header); v != "" {
 				t.Errorf("SECURITY: header %q was NOT stripped (got %q)", header, v)
@@ -811,7 +811,7 @@ func TestStripIdentityHeaders_PreservesOtherHeaders(t *testing.T) {
 	// This one should be stripped
 	req.Header.Set("X-Org-Id", "forged")
 
-	stripClaimed(req.Header)
+	stripClaimed(httpHeaders{req.Header})
 
 	preserved := map[string]string{
 		"Content-Type":    "application/json",
@@ -873,7 +873,7 @@ func TestStripIdentityHeaders_AllVariants(t *testing.T) {
 		req.Header.Set(h, "forged")
 	}
 
-	stripClaimed(req.Header)
+	stripClaimed(httpHeaders{req.Header})
 
 	for _, h := range attackerHeaders {
 		if v := req.Header.Get(h); v != "" {
@@ -1349,7 +1349,7 @@ func TestStripIdentityHeaders_MultiValueAttack(t *testing.T) {
 	req.Header.Add("X-User-Id", "admin")
 	req.Header.Add("X-User-Id", "root")
 
-	stripClaimed(req.Header)
+	stripClaimed(httpHeaders{req.Header})
 
 	if vals := req.Header.Values("X-Org-Id"); len(vals) != 0 {
 		t.Errorf("SECURITY: X-Org-Id had %d values after stripping: %v", len(vals), vals)
@@ -1849,7 +1849,7 @@ func TestStripIdentityHeaders_StripsPermissions(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.Header.Set("X-User-Permissions", "20")
 
-	stripClaimed(req.Header)
+	stripClaimed(httpHeaders{req.Header})
 
 	if v := req.Header.Get("X-User-Permissions"); v != "" {
 		t.Errorf("SECURITY: X-User-Permissions was NOT stripped (got %q)", v)
@@ -1868,7 +1868,7 @@ func TestStripList_CoversAllWrittenHeaders(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set(h, "forged-"+h)
 
-			stripClaimed(req.Header)
+			stripClaimed(httpHeaders{req.Header})
 
 			if v := req.Header.Get(h); v != "" {
 				t.Errorf("SECURITY: gateway writes %q but strip list does NOT cover it (got %q)", h, v)

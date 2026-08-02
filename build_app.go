@@ -16,7 +16,6 @@ package gateway
 
 import (
 	"errors"
-	"net/http"
 	"time"
 
 	luxlog "github.com/luxfi/log"
@@ -127,12 +126,10 @@ func BuildApp(deps RouterDeps) (*zip.App, error) {
 		middleware.RequestID(),
 		middleware.Logger(deps.Logger),
 	)
-	app.Get("/healthz", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
-	})
-	app.Get("/readyz", func(c *zip.Ctx) error {
-		return c.JSON(http.StatusOK, map[string]string{"status": "ready"})
-	})
+	// The one probe declaration (probes.go), shared with the k8s health
+	// listener and with the HIP-0106 mount. This app carries no other route:
+	// the relay is on the ZAP node, not here.
+	Probes(app)
 	deps.Logger.Info("gateway.BuildApp ready (relay on ZAP node; HTTP is liveness-only)",
 		"cloud_zap", deps.CloudAddr, "base_zap", deps.BaseAddr)
 	return app, nil
