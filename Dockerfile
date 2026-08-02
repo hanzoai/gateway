@@ -43,11 +43,27 @@ ENV GOPRIVATE=github.com/zap-proto/* \
     GONOSUMDB=github.com/zap-proto/*,github.com/hanzoai/*,github.com/lux-private/* \
     GOPROXY=https://proxy.golang.org,direct
 
+# GIT_AUTH_TOKEN, not gh_token. That is the secret id the fabric actually
+# supplies: platform.hanzo.ai's runner emits
+#
+#     --secret id=GIT_AUTH_TOKEN,env=GIT_AUTH_TOKEN
+#
+# (cloud/apps/platform/k8s.go, buildFrontendCmd) with the value wired from the
+# `console-git-token` Secret. It is also BuildKit's own gitsource credential, so
+# ONE name covers both the git CONTEXT fetch and the module fetches below.
+#
+# `gh_token` was a name nothing on this lane supplied, and the failure was
+# silent-by-design: `[ -s ]` on an absent mount is simply false, so no rewrite was
+# installed, every private-module fetch went out anonymous, and the build died at
+# the first one — github.com/hanzoai/log, which 404s to an unauthenticated
+# client. The context clone had already succeeded from the same private org,
+# which is what makes the shape confusing to read: the token was present in the
+# job all along under the other name.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    --mount=type=secret,id=gh_token \
-    if [ -s /run/secrets/gh_token ]; then \
-      git config --global url."https://x-access-token:$(cat /run/secrets/gh_token)@github.com/".insteadOf "https://github.com/"; \
+    --mount=type=secret,id=GIT_AUTH_TOKEN \
+    if [ -s /run/secrets/GIT_AUTH_TOKEN ]; then \
+      git config --global url."https://x-access-token:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/".insteadOf "https://github.com/"; \
     fi && \
     CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
     CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
