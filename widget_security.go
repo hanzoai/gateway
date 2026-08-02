@@ -244,6 +244,7 @@ func extractOriginHost(origin string) string {
 type widgetGate struct {
 	limiter *widgetRateLimiter
 	allowed map[string]bool
+	peers   peerPolicy
 }
 
 // newWidgetGate compiles cfg. The limiter's background eviction goroutine starts
@@ -252,39 +253,48 @@ func newWidgetGate(cfg WidgetSecurityConfig) *widgetGate {
 	return &widgetGate{
 		limiter: newWidgetRateLimiter(cfg),
 		allowed: widgetAllowedOrigins(cfg.AllowedOrigins),
+		peers:   newPeerPolicy(),
 	}
 }
 
 // admit enforces, for hz_ widget keys only:
 //
 //  1. Origin validation: a widget key is accepted only from an approved domain
-//     (Origin, else Referer). Non-browser clients that send neither are refused,
-//     because a public credential outside a browser is a credential in a script.
+//     (Origin, else Referer). Clients that send neither are refused, because a
+//     public credential outside a browser is a credential in a script.
 //
-//  2. Per-IP rate limiting: no single IP may drain the free widget endpoint.
+//  2. Per-IP rate limiting: no single client may drain the free widget endpoint.
 //
-//  3. Global rate limiting: no distributed set of IPs may drain the model budget.
+//  3. Global rate limiting: no distributed set of clients may drain the model
+//     budget.
 //
-// It runs AFTER [authGate.admit] on both edges, and it only ever REFUSES —
-// it writes no identity and mints nothing, so the trust boundary is unaffected
-// by where it sits. Every request that is not carrying a widget key passes
-// through untouched.
+// WHAT EACH ONE IS WORTH, stated because the order matters. Origin is written by
+// whoever makes the request: against a BROWSER it is trustworthy — the browser
+// sets it and a page cannot lie about its own origin — and that is the abuse this
+// list is for. Against a script it is not a control at all, and no allowlist can
+// make it one. So (2) and (3) are the only limits that bind a scripted attacker
+// holding a key lifted from a page's source, which is why the key they bucket on
+// is a policy decision (peerPolicy) and not a framework helper.
 //
-// h is read-only here; clientIP is whatever the transport calls the peer (gin's
-// ClientIP, fiber's IP), which is the same value both derive from the proxy
-// headers.
+// It runs AFTER [authGate.admit] on both edges, and it only ever REFUSES — it
+// writes no identity and mints nothing, so the trust boundary is unaffected by
+// where it sits. Every request not carrying a widget key passes through untouched.
+//
+// h is read-only. peer is the transport's view of the SOCKET peer; the address
+// actually bucketed is [peerPolicy.clientIP] of it and the forwarded chain, so
+// both edges bucket one request one way.
 //
 // Returns nil to allow. A non-nil *refusal is the status and JSON body to answer
 // with — the same currency [authGate.admit] deals in, so a transport handles one
 // refusal shape and not two.
-func (g *widgetGate) admit(h edge.Headers, clientIP string) *refusal {
+func (g *widgetGate) admit(h edge.Headers, peer string) *refusal {
 	if !isWidgetKey(edge.Bearer(h)) {
 		return nil
 	}
 
 	// --- Origin validation ---
 	// Widget keys are public credentials embedded in client-side JS.
-	// We restrict them to approved origins to limit abuse surface.
+	// We restrict them to approved origins to limit browser-driven abuse.
 	origin := h.Get("Origin")
 	if origin == "" {
 		origin = h.Get("Referer")
@@ -293,18 +303,16 @@ func (g *widgetGate) admit(h edge.Headers, clientIP string) *refusal {
 
 	if len(g.allowed) > 0 {
 		if originHost == "" {
-			// No Origin/Referer: only allow if it looks like a health
-			// check or internal request (User-Agent heuristic)
-			ua := h.Get("User-Agent")
-			isInternal := strings.Contains(ua, "kube-probe") ||
-				strings.Contains(ua, "Wget") ||
-				strings.Contains(ua, "curl") && clientIP == "127.0.0.1"
-			if !isInternal {
-				return &refusal{Status: http.StatusForbidden, Body: map[string]string{
-					"error":   "forbidden",
-					"message": "Widget keys require an Origin header. Use a Hanzo API key (hk-*) for server-to-server requests.",
-				}}
-			}
+			// No Origin and no Referer. There is no exception here: the gate
+			// used to admit anything whose User-Agent said "kube-probe" or
+			// "Wget", which is a bypass with a published recipe — a User-Agent
+			// is written by the caller. Nothing legitimate needed it either, as
+			// a kubelet probe sends no Authorization header and so never reaches
+			// this branch at all.
+			return &refusal{Status: http.StatusForbidden, Body: map[string]string{
+				"error":   "forbidden",
+				"message": "Widget keys require an Origin header. Use a Hanzo API key (hk-*) for server-to-server requests.",
+			}}
 		} else if !isAllowedOrigin(originHost, g.allowed) {
 			return &refusal{Status: http.StatusForbidden, Body: map[string]string{
 				"error":   "forbidden",
@@ -314,7 +322,7 @@ func (g *widgetGate) admit(h edge.Headers, clientIP string) *refusal {
 	}
 
 	// --- Per-IP rate limiting ---
-	if !g.limiter.allow(clientIP) {
+	if !g.limiter.allow(g.peers.clientIP(peer, h.Get("X-Forwarded-For"))) {
 		return &refusal{Status: http.StatusTooManyRequests, Body: map[string]string{
 			"error":   "rate_limited",
 			"message": "Widget rate limit exceeded. Try again shortly, or use a Hanzo API key (hk-*) for higher limits.",

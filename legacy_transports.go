@@ -58,10 +58,18 @@ func NewAuthMiddleware(cfg AuthConfig) gin.HandlerFunc {
 // ([widgetGate.admit]): origin allowlist + per-IP and global rate limits for
 // hz_ keys. It MUST run after NewAuthMiddleware; every non-widget request passes
 // through untouched.
+//
+// It hands the gate RemoteIP — the socket peer — and NOT ClientIP. ClientIP
+// applies gin's own forwarded-header policy, and gin's default trusted set is
+// 0.0.0.0/0 (defaultTrustedCIDRs; this repo never calls SetTrustedProxies), so it
+// returns the leftmost X-Forwarded-For entry: the value the client wrote. Bucketing
+// a rate limit on that is not a rate limit. The gate applies clientip.go's policy
+// to the peer and the chain instead, which is also what makes this transport and
+// the zip one answer alike.
 func NewWidgetSecurityMiddleware(cfg WidgetSecurityConfig) gin.HandlerFunc {
 	gate := newWidgetGate(cfg)
 	return func(c *gin.Context) {
-		if r := gate.admit(c.Request.Header, c.ClientIP()); r != nil {
+		if r := gate.admit(c.Request.Header, c.RemoteIP()); r != nil {
 			c.AbortWithStatusJSON(r.Status, r.Body)
 			return
 		}
