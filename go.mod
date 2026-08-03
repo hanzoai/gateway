@@ -2,15 +2,15 @@ module github.com/hanzoai/gateway/v2
 
 go 1.26.5
 
-require github.com/hanzoai/cloud v1.801.218
+require github.com/hanzoai/cloud v1.801.388
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hanzoai/authz v1.10.29
 	github.com/hanzoai/log v0.1.0
-	github.com/luxfi/log v1.5.0
-	github.com/luxfi/zap v1.2.6
+	github.com/luxfi/log v1.6.0
+	github.com/luxfi/zap v1.2.7
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sony/gobreaker/v2 v2.4.0
 	github.com/spf13/cobra v1.10.2
@@ -65,7 +65,7 @@ require (
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/crate-crypto/go-eth-kzg v1.5.0 // indirect
-	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.7.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.9.0 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
@@ -123,28 +123,32 @@ require (
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/hanzo-ds/native v0.72.0 // indirect
-	github.com/hanzoai/account v0.2.0 // indirect
-	github.com/hanzoai/ai v1.831.6 // indirect
+	github.com/hanzoai/account v0.2.1 // indirect
+	github.com/hanzoai/ai v1.832.16 // indirect
 	github.com/hanzoai/builder v0.3.13 // indirect
+	github.com/hanzoai/cek v0.2.3 // indirect
+	github.com/hanzoai/commerce v1.49.53 // indirect
 	github.com/hanzoai/csqlite v0.1.0 // indirect
 	github.com/hanzoai/dashscopego v0.6.0 // indirect
 	github.com/hanzoai/dbx v1.17.2 // indirect
-	github.com/hanzoai/decimal v0.1.1 // indirect
+	github.com/hanzoai/decimal v0.1.2 // indirect
 	github.com/hanzoai/go-cosyvoice v1.0.0 // indirect
 	github.com/hanzoai/go-openai v1.41.0 // indirect
 	github.com/hanzoai/go-openai-realtime v1.0.0 // indirect
 	github.com/hanzoai/go-openai-realtime/contrib/ws-gorilla v1.0.0 // indirect
 	github.com/hanzoai/go-openrouter v1.0.0 // indirect
 	github.com/hanzoai/ha v0.1.1 // indirect
-	github.com/hanzoai/iam v1.33.8 // indirect
-	github.com/hanzoai/money v0.2.1 // indirect
-	github.com/hanzoai/orm v0.6.16 // indirect
+	github.com/hanzoai/iam v1.34.5 // indirect
+	github.com/hanzoai/metrics v1.110.2 // indirect
+	github.com/hanzoai/money v0.2.5 // indirect
+	github.com/hanzoai/namespace v1.2.0 // indirect
+	github.com/hanzoai/orm v0.6.18 // indirect
 	github.com/hanzoai/pdf v1.2.0 // indirect
 	github.com/hanzoai/s3-go v1.0.0 // indirect
 	github.com/hanzoai/search-go v0.36.0 // indirect
-	github.com/hanzoai/sqlcipher v0.1.0 // indirect
-	github.com/hanzoai/sqlite v0.3.2 // indirect
-	github.com/hanzoai/tasks v1.51.4 // indirect
+	github.com/hanzoai/sqlcipher v0.1.1 // indirect
+	github.com/hanzoai/sqlite v0.5.0 // indirect
+	github.com/hanzoai/tasks v1.52.9 // indirect
 	github.com/hanzoai/vfs v0.6.6 // indirect
 	github.com/hanzoai/xorm v1.4.4 // indirect
 	github.com/hanzokv/go/v9 v9.22.0 // indirect
@@ -167,7 +171,7 @@ require (
 	github.com/luxfi/cache v1.3.1 // indirect
 	github.com/luxfi/compress v0.1.1 // indirect
 	github.com/luxfi/concurrent v0.1.1 // indirect
-	github.com/luxfi/consensus v1.36.9 // indirect
+	github.com/luxfi/consensus v1.36.11 // indirect
 	github.com/luxfi/constants v1.6.2 // indirect
 	github.com/luxfi/container v0.2.1 // indirect
 	github.com/luxfi/crypto v1.20.2 // indirect
@@ -181,6 +185,7 @@ require (
 	github.com/luxfi/p2p v1.22.1 // indirect
 	github.com/luxfi/pq v1.1.0 // indirect
 	github.com/luxfi/sampler v1.1.0 // indirect
+	github.com/luxfi/trace v1.4.0 // indirect
 	github.com/luxfi/validators v1.3.1 // indirect
 	github.com/luxfi/version v1.0.1 // indirect
 	github.com/luxfi/warp v1.24.1 // indirect
@@ -206,6 +211,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkoukk/tiktoken-go v0.1.7 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rs/xid v1.6.0 // indirect
@@ -248,7 +254,10 @@ require (
 	go.mongodb.org/mongo-driver v1.17.9 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.43.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.43.0 // indirect
+	go.opentelemetry.io/otel/exporters/prometheus v0.65.0 // indirect
+	go.opentelemetry.io/otel/log v0.20.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk/log v0.20.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
@@ -261,16 +270,20 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	k8s.io/api v0.35.3 // indirect
-	k8s.io/apimachinery v0.35.3 // indirect
-	k8s.io/client-go v0.35.3 // indirect
+	k8s.io/api v0.36.2 // indirect
+	k8s.io/apimachinery v0.36.2 // indirect
+	k8s.io/client-go v0.36.2 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20260330154417-16be699c7b31 // indirect
-	k8s.io/metrics v0.35.3 // indirect
+	k8s.io/metrics v0.36.1 // indirect
 	k8s.io/utils v0.0.0-20260319190234-28399d86e0b5 // indirect
+	modernc.org/libc v1.72.3 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.11.0 // indirect
+	modernc.org/sqlite v1.51.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
-	sigs.k8s.io/kustomize/api v0.20.1 // indirect
-	sigs.k8s.io/kustomize/kyaml v0.20.1 // indirect
+	sigs.k8s.io/kustomize/api v0.21.1 // indirect
+	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
@@ -304,7 +317,7 @@ require (
 	github.com/IBM/sarama v1.46.3 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.5.0 // indirect
-	github.com/Masterminds/sprig/v3 v3.2.3
+	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/PuerkitoBio/goquery v1.8.1 // indirect
 	github.com/alecthomas/chroma v0.10.0
@@ -406,7 +419,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
-	github.com/luxfi/metric v1.8.1
+	github.com/luxfi/metric v1.9.0
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22
 	github.com/miekg/dns v1.1.72 // indirect
@@ -458,7 +471,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.18.22
+	github.com/zap-proto/zip v1.18.23
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
