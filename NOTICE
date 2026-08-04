@@ -20,12 +20,86 @@ This product is built on the Lura framework
 
     Copyright (c) 2021 Lura Project, a Series of LF Projects, LLC
 
-Lura (github.com/luraproject/lura/v2) and the KrakenD plugin ecosystem
-(github.com/krakend/krakend-*) are imported as standard Go modules; their
-upstream copyright and license notices are retained within those modules.
-
 Upstream KrakenD-CE and Lura ship no NOTICE file; there are no Apache-2.0
-§4(d) attributions to propagate.
+§4(d) attributions to propagate from them.
+
+VENDORED UPSTREAM SOURCE
+
+Lura and the KrakenD component set are NOT imported as external Go modules.
+Commit e329c72b (2026-07-25) folded 34 github.com/luraproject and
+github.com/krakend modules into this repository under internal/ and rewrote
+their import paths onto github.com/hanzoai/gateway/v2. `go list -m all` and
+go.sum contain no krakend or lura entry; the source is shipped here instead.
+That makes this repository a redistributor of that source, so each vendored
+component's upstream LICENSE travels with it in its own directory (31 LICENSE
+files) and the components are enumerated below.
+
+Layout mirrors provenance: luraproject/lura/v2 -> internal/lura,
+krakend/krakend-<x> -> internal/plugin/<x>, krakend/<x> -> internal/pkg/<x>.
+Versions are those pinned in go.mod immediately before the fold (e329c72b^).
+
+  Apache-2.0, Copyright (c) 2021 Lura Project, a Series of LF Projects, LLC
+
+    internal/lura                       luraproject/lura/v2 v2.14.1
+
+  Apache-2.0, Copyright (c) KrakenD (krakend.io)
+
+    internal/plugin/amqp                krakend/krakend-amqp/v2 v2.3.0
+    internal/plugin/audit               krakend/krakend-audit v0.9.3
+    internal/plugin/botdetector         krakend/krakend-botdetector/v2 v2.3.1
+    internal/plugin/cel                 krakend/krakend-cel/v2 v2.4.1
+    internal/plugin/circuitbreaker      krakend/krakend-circuitbreaker/v3 v3.0.0
+    internal/plugin/cobra               krakend/krakend-cobra/v2 v2.8.2
+    internal/plugin/cors                krakend/krakend-cors/v2 v2.2.1
+    internal/plugin/flexibleconfig      krakend/krakend-flexibleconfig/v2 v2.3.1
+    internal/plugin/httpcache           krakend/krakend-httpcache/v2 v2.2.0
+    internal/plugin/httpsecure          krakend/krakend-httpsecure/v2 v2.2.1
+    internal/plugin/influx              krakend/krakend-influx/v2 v2.2.0
+    internal/plugin/jose                krakend/krakend-jose/v2 v2.12.3
+    internal/plugin/jsonschema          krakend/krakend-jsonschema/v2 v2.2.1
+    internal/plugin/koanf               krakend/krakend-koanf v0.0.0-20251111142508-ab36eebbcf9b
+    internal/plugin/lambda              krakend/krakend-lambda/v2 v2.1.0
+    internal/plugin/lua                 krakend/krakend-lua/v2 v2.9.1
+    internal/plugin/martian             krakend/krakend-martian/v2 v2.3.0
+    internal/plugin/metrics             krakend/krakend-metrics/v2 v2.2.0
+    internal/plugin/oauth2-clientcredentials
+                                        krakend/krakend-oauth2-clientcredentials/v2 v2.2.0
+    internal/plugin/opencensus          krakend/krakend-opencensus/v2 v2.2.1
+    internal/plugin/pubsub              krakend/krakend-pubsub/v2 v2.3.1
+    internal/plugin/ratelimit           krakend/krakend-ratelimit/v3 v3.3.1
+    internal/plugin/rss                 krakend/krakend-rss/v2 v2.1.1
+    internal/plugin/xml                 krakend/krakend-xml/v2 v2.2.2
+    internal/pkg/bloomfilter            krakend/bloomfilter/v2 v2.1.0
+    internal/pkg/flatmap                krakend/flatmap v1.2.0
+    internal/pkg/lru                    krakend/lru v0.0.0-20250121172718-0e3a6eab620d
+
+  MIT — KrakenD forks of third-party libraries; each retains its original
+  author's copyright, which is reproduced in the directory's LICENSE:
+
+    internal/pkg/binder                 krakend/binder v0.0.0-20250826131726-e91a8a754ef8
+                                        Copyright (c) 2017 Alexey Popov
+    internal/pkg/go-auth0               krakend/go-auth0/v2 v2.0.4
+                                        Copyright (c) 2016 Yannick Heinrich
+    internal/pkg/httpcache              krakend/httpcache v1.1.1
+                                        Copyright © 2012 Greg Jones
+
+Three of the 34 folded modules ship no source here and are attributed only
+for completeness of the record: krakend-gelf/v2 v2.1.0, krakend-gologging/v2
+v2.1.1 and krakend-logstash/v2 v2.1.0 were replaced by internal/hanzolog, a
+first-party adapter over github.com/hanzoai/log. No code from those three
+remains in this repository.
+
+The vendored source is otherwise unmodified: per commit e329c72b, 196 of the
+197 vendored files are byte-identical to their upstream original once the
+import rewrite is applied. The single exception is bloomfilter's subpackage,
+renamed from `krakend` to `register` because Go would not accept the original
+package name at its new path.
+
+Some upstream identifiers are retained deliberately because they are behaviour
+rather than branding: the `github.com/devopsfaith/krakend*` extra_config
+namespace keys, the KRAKEND_ koanf environment prefix, and the
+core.KrakendVersion / KrakendUserAgent / X-KRAKEND constants (whose values,
+not names, are overwritten by rebrand.go).
 
 DEVIATIONS
 
@@ -37,6 +111,10 @@ Edition and Lura:
     carry Hanzo modifications; modified files are marked as changed.
   - Module path renamed to github.com/hanzoai/gateway/v2; the product is
     named "Hanzo Gateway".
+  - The Lura engine and the KrakenD component set are vendored under
+    internal/ rather than imported (see VENDORED UPSTREAM SOURCE above).
+  - Upstream's gelf, gologging and logstash logging components are replaced
+    by internal/hanzolog over github.com/hanzoai/log.
   - HTTP response branding rewritten (rebrand.go): the upstream "X-KRAKEND"
     and "X-Krakend-Completed" headers are replaced by "X-Powered-By"
     (BrandName "hanzoai/gateway") via BrandingMiddleware.
