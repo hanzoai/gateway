@@ -1,4 +1,4 @@
-.PHONY: all build test help deploy deploy-hanzo deploy-lux apply-hanzo apply-lux validate status clean docker
+.PHONY: all build test lint help deploy deploy-hanzo deploy-lux apply-hanzo apply-lux validate status clean docker
 
 BIN_NAME := gateway
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
@@ -65,6 +65,15 @@ build-ingress: ## Build the ingress binary
 test: build ## Build and run tests (both builds: the legacy edge and the default relay)
 	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 -v ./...
 	go test -mod=readonly -count=1 ./...
+
+# Twice, for exactly the reason `test` runs twice: a build tag selects a
+# different file set, so one run can only ever cover one of them. Untagged is
+# the HIP-0110 ZAP relay, ${BUILD_TAGS} is the legacy edge the image ships.
+# hanzo.yml's go-vet step calls this target — the two commands are stated here
+# and nowhere else.
+lint: ## Vet both builds (untagged relay + legacy edge)
+	go vet -mod=readonly ./...
+	go vet -mod=readonly -tags "${BUILD_TAGS}" ./...
 
 # cmd/gateway/schema/schema.json is COMMITTED, not fetched.
 #
