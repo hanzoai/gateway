@@ -27,10 +27,11 @@ test:
       export GOPRIVATE='github.com/hanzoai/*' GOWORK=off
       make test
   - name: go-vet
-    # The DEFAULT (untagged) build is the HIP-0110 ZAP relay — a different file
-    # set from the legacy edge above. Vet both so neither half rots unnoticed.
+    # `make lint`, for the same reason the step above is `make test`: the two
+    # vet runs live in the Makefile and are called from here. The DEFAULT
+    # (untagged) build is the HIP-0110 ZAP relay — a different file set from
+    # the legacy edge — so both are vetted and neither half rots unnoticed.
     run: |
       set -e
       export GOPRIVATE='github.com/hanzoai/*' GOWORK=off
-      go vet ./...
-      go vet -tags legacy ./...
+      make lint
