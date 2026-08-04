@@ -1,4 +1,4 @@
-.PHONY: all build test lint help deploy deploy-hanzo deploy-lux apply-hanzo apply-lux validate status clean docker
+.PHONY: all build dev test lint help deploy deploy-hanzo deploy-lux apply-hanzo apply-lux validate status clean docker
 
 BIN_NAME := gateway
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
@@ -42,6 +42,12 @@ build: ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	-X ${CORE}.GlibcVersion=${GLIBC_VERSION}" \
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
+
+# The invocation the image ships: Dockerfile ENTRYPOINT+CMD and the k8s
+# deployment both run `gateway run -c <config>`, so dev is that same command
+# against the in-tree hanzo config. Ctrl-C to stop.
+dev: build ## Run the gateway locally on :8080 (hanzo config; Ctrl-C to stop)
+	./${BIN_NAME} run -c configs/hanzo/gateway.json
 
 build-ingress: ## Build the ingress binary
 	@echo "Building the ingress binary..."
