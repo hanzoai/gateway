@@ -54,7 +54,7 @@ build-ingress: ## Build the ingress binary
 	@CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=${VERSION}" -o ingress ./cmd/ingress
 	@echo "You can now use ./ingress"
 
-# ./... , not ./tests — the gate runs every package, tagged the way the binary is
+# ./... , not ./tests — the suite runs every package, tagged the way the binary is
 # built. Two ways to run zero tests were live here at once: the target passed no
 # ${BUILD_TAGS}, so the `legacy`-tagged fixture suite under tests/ was excluded
 # wholesale; and it named ONE directory, so the 20-odd _test.go files in the root
@@ -63,7 +63,7 @@ build-ingress: ## Build the ingress binary
 # ./gateway as the system under test.
 #
 # BOTH halves, for the same reason `go vet` already runs twice: a build tag
-# selects a different file set, so one run can only ever gate one of them.
+# selects a different file set, so one run can only ever cover one of them.
 # cmd/gateway/main_test.go is `//go:build !legacy` — TestShutdownGraceFromEnv
 # (six cases over the drain window a rollout depends on) and TestEnvOr — and the
 # legacy run excludes it, so those tests existed and had never executed. Same
