@@ -596,7 +596,7 @@
       ]
     },
     {
-      "host": "kms.lux.network",
+      "host": "kms.lux.cloud",
       "backends": [
         {
           "path": "/",
