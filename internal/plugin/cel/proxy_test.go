@@ -184,10 +184,15 @@ func TestReqBodyIsDeclared(t *testing.T) {
 }
 
 // TestProductionRuleIsRefused pins the live config's own expression. It is
-// malformed CEL, so the endpoint declaring it must now be REFUSED at boot.
-// Previously it compiled to nothing and the endpoint served every method,
-// which is how info.peers stayed reachable on five public API hosts behind a
-// rule that names the four methods it means to permit.
+// malformed CEL, so the endpoint declaring it must be refused rather than
+// served unguarded — previously it compiled to nothing and the endpoint served
+// every method, which is how info.peers stayed reachable on five public API
+// hosts behind a rule naming the four methods it means to permit.
+//
+// The error does NOT stop the process. The gin router registers this one
+// endpoint with a 500 handler and carries on, so the cost of a bad rule is
+// that endpoint, loudly — not a crash. That is why the corrected config has to
+// roll BEFORE this image.
 func TestProductionRuleIsRefused(t *testing.T) {
 	var seen string
 	p, err := ProxyFactory(logging.NoOp, echoFactory(&seen)).New(&config.EndpointConfig{
