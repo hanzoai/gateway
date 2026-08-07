@@ -36,9 +36,14 @@ BUILD_TAGS ?= legacy
 # version in the User-Agent and X-Api-Version with no build error.
 CORE := ${MODULE}/v2/internal/lura/core
 
+# CGO_ENABLED=0 matches the Dockerfile, so `make build` produces the artifact
+# that ships instead of one that merely resembles it. It is also the difference
+# between building and not building on a mac: cgo there hands the link to clang
+# and the target dies with "linker command failed", which reads as a broken
+# repo and is a default nobody chose.
 build: ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	@echo "Building the gateway binary (tags: ${BUILD_TAGS})..."
-	@go build -mod=readonly -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
+	@CGO_ENABLED=0 go build -mod=readonly -tags "${BUILD_TAGS}" -ldflags="-X ${CORE}.KrakendVersion=${VERSION} \
 	-X ${CORE}.GlibcVersion=${GLIBC_VERSION}" \
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
@@ -62,8 +67,22 @@ build-ingress: ## Build the ingress binary
 # (six cases over the drain window a rollout depends on) and TestEnvOr — and the
 # legacy run excludes it, so those tests existed and had never executed. Same
 # defect as the fixture suite, one tag over: the whole tree, both ways it builds.
+# THREE runs, and the split of the first two is what makes this gate stop
+# flaking. `./tests` spawns ./gateway and waits a FIXED 1500ms before probing
+# :8080; on a loaded runner that is not enough and every fixture fails with
+# connection refused — a startup race that reads exactly like a mass behavioural
+# regression. `-gateway_startup_wait` is the harness's own answer to that and
+# was only ever passed by .github/workflows/test.yml, never here, so `make test`
+# — the command hanzo.yml actually runs in CI — kept the race.
+#
+# It cannot be one run: `go test ./... -args -flag` forwards the flag to EVERY
+# package's binary and the unit packages abort with "flag provided but not
+# defined". So the harness is invoked on its own.
+TESTS_PKG := ./tests
+STARTUP_WAIT ?= 30s
 test: build ## Build and run tests (both builds: the legacy edge and the default relay)
-	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 -v ./...
+	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 -v $(shell go list -tags "${BUILD_TAGS}" ./... | grep -v '/tests$$')
+	go test -mod=readonly -tags "${BUILD_TAGS}" -count=1 ${TESTS_PKG} -args -gateway_startup_wait=${STARTUP_WAIT}
 	go test -mod=readonly -count=1 ./...
 
 # cmd/gateway/schema/schema.json is COMMITTED, not fetched.
