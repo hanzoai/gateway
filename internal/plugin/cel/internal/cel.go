@@ -114,12 +114,17 @@ func (p Parser) parseByKey(definitions []InterpretableDefinition, key string) ([
 			continue
 		}
 		v, err := p.Parse(def)
-		if _, ok := err.(ErrorChecking); ok {
-			p.l.Debug("[CEL]", err.Error())
-			continue
-		}
-
 		if err != nil {
+			// Including ErrorChecking — an expression naming a variable this
+			// environment does not declare.
+			//
+			// That case used to be logged at DEBUG and `continue`d, so
+			// parseByKey returned (no programs, nil error) and the caller
+			// built an endpoint with an empty evaluator list: a check that
+			// existed in config, reported nothing above Debug, and allowed
+			// every request. One mistyped variable name was the whole
+			// distance between a policy and no policy.
+			p.l.Error("[CEL]", "check cannot be compiled:", err.Error())
 			return res, err
 		}
 		res = append(res, v)
@@ -136,6 +141,19 @@ func defaultDeclarations() cel.EnvOption {
 		decls.NewConst(PreKey+"_params", decls.NewMapType(decls.String, decls.String), nil),
 		decls.NewConst(PreKey+"_headers", decls.NewMapType(decls.String, decls.NewListType(decls.String)), nil),
 		decls.NewConst(PreKey+"_querystring", decls.NewMapType(decls.String, decls.NewListType(decls.String)), nil),
+		// req_body, as a string, so a rule can match on the request payload.
+		//
+		// Every JSON-RPC method the edge multiplexes over ONE path lives in
+		// the body — `/v1/info` carries info.isBootstrapped and info.peers
+		// alike — so without this a path-based gate cannot tell them apart and
+		// no policy over methods is expressible at all. Both gateway configs
+		// in the estate were written against `req_body` anyway; undeclared,
+		// they failed env.Check(), and ProxyFactory answered that by handing
+		// back the UNGUARDED proxy. api.lux.network, api.hanzo.network and
+		// api.zoo.network served info.peers — full peer list, node IDs,
+		// addresses, staking port, exact luxd version — behind a rule that
+		// read as if it forbade exactly that.
+		decls.NewConst(PreKey+"_body", decls.String, nil),
 
 		decls.NewConst(PostKey+"_completed", decls.Bool, nil),
 		decls.NewConst(PostKey+"_metadata_status", decls.Int, nil),
