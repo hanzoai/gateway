@@ -14,18 +14,44 @@
 # natively ("no images: in hanzo.yml — test-only caller, skipping build").
 test:
   - name: go-test
-    # `make test`, not a bare `go test` — the target carries the three things a
-    # bare run gets wrong: BUILD_TAGS=legacy (every file under tests/ is behind
-    # //go:build legacy, and so is the engine the shipping image runs), the
-    # `build` prerequisite (the fixture harness spawns ./gateway as the system
-    # under test), and a second, UNTAGGED pass so the `!legacy` half is gated too
-    # (cmd/gateway/main_test.go had never executed). It runs ./... both ways, so
-    # the root package's own suites — auth, CORS, widget security, production
-    # headers, AI-endpoint routing — are in scope as they build in each image.
+    # `go` directly, NOT `make test` — the runner has no make. That is the whole
+    # reason this gate was red: the step died at `make: command not found` in
+    # seconds, go-vet then ran its ~40s and passed, and the step reported failure
+    # with no test having executed. Every other repo in the estate whose gate is
+    # green calls go directly; this was the only one reaching for make. The
+    # repo's own notes already record `make: command not found (127)` on these
+    # runners, and .github/workflows/test.yml had already stopped using it — so
+    # the lane that gates merges kept the defect the lane that does not had fixed.
+    #
+    # The Makefile target is still correct and still the developer entry point.
+    # This mirrors it: same tags, same ldflags, same three runs.
+    #
+    # THREE runs, and the split is load-bearing:
+    #   1. legacy unit packages — every file under tests/ is behind
+    #      //go:build legacy, and so is the engine the shipping image runs.
+    #   2. the fixture harness ALONE, because `go test ./... -args -flag`
+    #      forwards the flag to every package's binary and the unit packages
+    #      abort with "flag provided but not defined". It also spawns ./gateway,
+    #      so the binary is built first, and it waits a FIXED 1500ms before
+    #      probing :8080 unless told otherwise — on a loaded runner that is not
+    #      enough and every fixture fails with connection refused, which reads
+    #      exactly like a mass regression and is not one.
+    #   3. the UNTAGGED build — a different file set (the HIP-0110 ZAP relay),
+    #      whose cmd/gateway/main_test.go is `//go:build !legacy` and had never
+    #      executed.
+    #
+    # CGO_ENABLED=0 matches the Dockerfile, so the binary under test is the one
+    # that ships rather than one that merely resembles it.
     run: |
       set -e
-      export GOPRIVATE='github.com/hanzoai/*' GOWORK=off
-      make test
+      export GOPRIVATE='github.com/hanzoai/*' GOWORK=off CGO_ENABLED=0
+      VERSION=$(sed -n 's/^VERSION := *//p' Makefile)
+      CORE=github.com/hanzoai/gateway/v2/internal/lura/core
+      go build -mod=readonly -tags legacy \
+        -ldflags="-X ${CORE}.KrakendVersion=${VERSION}" -o gateway ./cmd/gateway
+      go test -mod=readonly -tags legacy -count=1 $(go list -tags legacy ./... | grep -v '/tests$')
+      go test -mod=readonly -tags legacy -count=1 ./tests -args -gateway_startup_wait=30s
+      go test -mod=readonly -count=1 ./...
   - name: go-vet
     # The DEFAULT (untagged) build is the HIP-0110 ZAP relay — a different file
     # set from the legacy edge above. Vet both so neither half rots unnoticed.
