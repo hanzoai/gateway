@@ -31,17 +31,28 @@ func ProxyFactory(l logging.Logger, pf proxy.Factory) proxy.Factory {
 
 		p, err := newProxy(l, logPrefix, def, next)
 		if err != nil {
-			// An endpoint that DECLARES a check and cannot compile it is
-			// refused, at boot, where the router is built.
+			// An endpoint that DECLARES a check and cannot compile it does not
+			// get served without the check.
 			//
-			// This used to warn and return `next` — the pipe without the
-			// check. So a rule with a typo in it, or one naming a variable
-			// this environment does not declare, produced an endpoint that
-			// looked guarded in config, logged two lines at Warning nobody
-			// reads, and then served everything. That is precisely how
-			// info.peers stayed open on three public API hosts behind a rule
-			// written to forbid it. Failing to start is loud, happens before
-			// any traffic, and cannot be mistaken for a working gate.
+			// It used to warn and return `next` — the pipe WITHOUT the check.
+			// So a rule with a typo, or one naming a variable this environment
+			// does not declare, produced an endpoint that looked guarded in
+			// config, logged two lines at Warning nobody reads, and then served
+			// everything. That is how info.peers stayed open on five public API
+			// hosts behind a rule written to forbid it.
+			//
+			// WHAT RETURNING AN ERROR ACTUALLY DOES, precisely, because the
+			// deploy order depends on it: the gin router's
+			// registerKrakendEndpoints logs at Error and registers THIS
+			// endpoint with a handler that answers 500, then continues with the
+			// rest. The process still starts and every other endpoint serves
+			// normally — this is not a crash and not a boot failure.
+			//
+			// So a config whose check does not compile costs that one endpoint,
+			// loudly, instead of costing the policy silently. Roll the
+			// corrected config BEFORE this image or `/v1/info` answers 500 —
+			// which also takes info.isBootstrapped with it, not just the
+			// methods the rule means to deny.
 			l.Error(logPrefix, "Refusing to serve an endpoint whose check cannot be compiled:", err.Error())
 			return nil, fmt.Errorf("%s cel: %w", logPrefix, err)
 		}
