@@ -172,8 +172,8 @@ func zipCORS(policy corsPolicy) zip.Handler {
 			return c.Continue()
 		}
 		a.credentials(c.SetHeader)
-		a.negotiation(c.SetHeader)
 		if c.Method() == http.MethodOptions {
+			a.negotiation(c.Header("Access-Control-Request-Headers"), c.SetHeader)
 			return c.NoContent(http.StatusNoContent)
 		}
 		return c.Continue()

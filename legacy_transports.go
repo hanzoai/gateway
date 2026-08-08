@@ -89,8 +89,8 @@ func corsPreflightMiddleware() gin.HandlerFunc {
 			return
 		}
 		a.credentials(c.Writer.Header().Set)
-		a.negotiation(c.Writer.Header().Set)
 		if c.Request.Method == http.MethodOptions {
+			a.negotiation(c.GetHeader("Access-Control-Request-Headers"), c.Writer.Header().Set)
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}

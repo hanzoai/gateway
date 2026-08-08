@@ -67,17 +67,61 @@ func (a *corsAnswer) credentials(set func(name, value string)) {
 // is separate from [corsAnswer.credentials] because the error path deliberately
 // sends only the credentials half — describing what a 500 may be read by, not
 // what the API accepts.
-func (a *corsAnswer) negotiation(set func(name, value string)) {
-	set("Access-Control-Allow-Headers", corsAllowHeaders)
+//
+// ask is the preflight's Access-Control-Request-Headers, and Vary names it for
+// the same reason credentials names Origin. Both are written here rather than
+// appended because set is a two-string Set: the last writer wins, so the whole
+// value has to be stated at once.
+func (a *corsAnswer) negotiation(ask string, set func(name, value string)) {
+	set("Access-Control-Allow-Headers", corsAllowHeaders(ask))
 	set("Access-Control-Allow-Methods", corsAllowMethods)
 	set("Access-Control-Max-Age", corsMaxAge)
+	set("Vary", "Origin, Access-Control-Request-Headers")
 }
 
 const (
-	corsAllowHeaders = "Content-Type, Authorization, X-User-Id, X-Org-Id, X-Project-Id, X-Environment, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, Accept-Language"
 	corsAllowMethods = "GET, POST, PUT, PATCH, DELETE, OPTIONS"
 	corsMaxAge       = "86400"
 )
+
+// corsAllowHeaders answers a preflight with the header names the BROWSER said
+// the script attached — the Access-Control-Request-Headers it is asking about.
+//
+// This used to be a literal list, and a literal list is a standing outage
+// waiting for the next client header: a name absent from it fails PREFLIGHT, and
+// the browser reports that as an opaque "TypeError: Failed to fetch" with nothing
+// on the server side to see. The request never arrives, so there is no log, no
+// metric and no 4xx to notice. This copy had drifted four names behind the one
+// cloud serves (middleware_edge.go), which is what a second literal list of the
+// same thing always does.
+//
+// Answering the ask widens nothing. Naming a header only lets the browser SEND
+// it, and the auth gate still validates and re-mints every client-supplied
+// identity header — an intent is validated, never believed. The forbidden names a
+// script must never set the browser refuses on its own. [corsPolicy.admit] is the
+// enforcement, and it did not move.
+//
+// Only well-formed tokens are echoed, so a hand-written request cannot fold a
+// CRLF into a response header.
+func corsAllowHeaders(ask string) string {
+	names := make([]string, 0, 8)
+	for _, name := range strings.Split(ask, ",") {
+		if name = strings.TrimSpace(name); headerToken(name) {
+			names = append(names, name)
+		}
+	}
+	return strings.Join(names, ", ")
+}
+
+// headerToken reports whether s is a single RFC 9110 field-name token — the only
+// shape a header name can have.
+func headerToken(s string) bool {
+	const tchar = "!#$%&'*+-.^_`|~0123456789" +
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	return s != "" && strings.IndexFunc(s, func(r rune) bool {
+		return !strings.ContainsRune(tchar, r)
+	}) < 0
+}
 
 // newCORSOriginAllower builds the gateway's single credentialed-CORS origin
 // predicate. An origin is allowlisted iff it EITHER exact-matches a dev/env
