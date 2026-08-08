@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/hanzoai/authz"
@@ -229,6 +230,7 @@ func TestMount_GatesAreOnTheChainMountInstalls(t *testing.T) {
 		req := httptest.NewRequest(http.MethodOptions, "/v1/chat/completions", nil)
 		req.Host = "api.hanzo.ai"
 		req.Header.Set("Origin", "https://hanzo.ai")
+		req.Header.Set("Access-Control-Request-Headers", "content-type, x-idempotency-key")
 		resp, err := app.Fiber().Test(req)
 		if err != nil {
 			t.Fatalf("Fiber Test: %v", err)
@@ -239,8 +241,13 @@ func TestMount_GatesAreOnTheChainMountInstalls(t *testing.T) {
 		if got := resp.Header.Get("Access-Control-Allow-Origin"); got != "https://hanzo.ai" {
 			t.Errorf("Access-Control-Allow-Origin: got %q want the reflected origin", got)
 		}
-		if resp.Header.Get("Vary") != "Origin" {
+		if !strings.Contains(resp.Header.Get("Vary"), "Origin") {
 			t.Error("a reflected origin without Vary: Origin lets a shared cache cross tenants")
+		}
+		// The header the browser asked about must come back, or it cannot send it and
+		// the call dies at the preflight with nothing on this side to see.
+		if got := resp.Header.Get("Access-Control-Allow-Headers"); got != "content-type, x-idempotency-key" {
+			t.Errorf("Access-Control-Allow-Headers: got %q want the asked-for names", got)
 		}
 	})
 

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -220,7 +221,7 @@ func TestBothTransportsAnswerPreflightAlike(t *testing.T) {
 			// shared cache must never hand one origin's ACAO to another.
 			if tc.acao != "" {
 				for _, e := range []edgeResult{g, z} {
-					if e.credentials != "true" || e.vary != "Origin" {
+					if e.credentials != "true" || !strings.Contains(e.vary, "Origin") {
 						t.Errorf("%s: reflected an origin without the credentials+Vary pair: %+v", e.name, e)
 					}
 				}
