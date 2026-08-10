@@ -1,5 +1,5 @@
 {
-	"@comment": "Preflight from an ALLOWLISTED origin. corsPreflightMiddleware (routes.go) runs before routing and answers 204 with the Origin ECHOED — never '*' — alongside credentials:true and Vary:Origin, so a shared cache can never serve one origin's grant to another. http://localhost:3000 is a baked-in dev origin in newCORSOriginAllower, the ONE allowlist this gateway has.",
+	"@comment": "Preflight from an ALLOWLISTED origin. corsPreflightMiddleware (routes.go) runs before routing and answers 204 with the Origin ECHOED — never '*' — alongside credentials:true, so a shared cache can never serve one origin's grant to another. http://localhost:3000 is a baked-in dev origin in newCORSOriginAllower, the ONE allowlist this gateway has. Allow-Headers is the ask echoed back name for name (corsAllowHeaders), not a literal list — so it is exactly the Access-Control-Request-Headers above, and Vary names that header too, because the answer now depends on it.",
 	"in": {
 		"method": "OPTIONS",
 		"url": "http://localhost:8080/param_forwarding/some/foo/bar?a=1&b=2",
@@ -16,9 +16,9 @@
 			"Access-Control-Allow-Origin": ["http://localhost:3000"],
 			"Access-Control-Allow-Credentials": ["true"],
 			"Access-Control-Allow-Methods": ["GET, POST, PUT, PATCH, DELETE, OPTIONS"],
-			"Access-Control-Allow-Headers": ["Content-Type, Authorization, X-User-Id, X-Org-Id, X-Project-Id, X-Environment, X-Roles, X-User-Email, X-Request-ID, X-Client-ID, X-Requested-With, Accept, Accept-Language"],
+			"Access-Control-Allow-Headers": ["content-type, origin"],
 			"Access-Control-Max-Age": ["86400"],
-			"Vary": ["Origin"],
+			"Vary": ["Origin, Access-Control-Request-Headers"],
 			"Server": ["gateway"],
 			"X-Content-Type-Options": ["nosniff"]
 		}
