@@ -2,8 +2,6 @@ module github.com/hanzoai/gateway/v2
 
 go 1.26.5
 
-require github.com/hanzoai/cloud v1.801.415
-
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/gin-gonic/gin v1.12.0
@@ -22,64 +20,32 @@ require (
 
 require (
 	dario.cat/mergo v1.0.2 // indirect
+	github.com/antithesishq/antithesis-sdk-go v0.7.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/fasthttp/websocket v1.5.12 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
-	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang/mock v1.7.0-rc.1 // indirect
 	github.com/gorilla/rpc v1.2.1 // indirect
 	github.com/hanzo-ds/native v0.72.0 // indirect
-	github.com/hanzoai/account v0.2.1 // indirect
-	github.com/hanzoai/cek v0.2.3 // indirect
-	github.com/hanzoai/csqlite v0.1.0 // indirect
-	github.com/hanzoai/dbx v1.17.2 // indirect
-	github.com/hanzoai/decimal v0.1.2 // indirect
-	github.com/hanzoai/go-openai v1.41.0 // indirect
-	github.com/hanzoai/ha v0.1.1 // indirect
-	github.com/hanzoai/iam v1.34.42 // indirect
-	github.com/hanzoai/metrics v1.110.2 // indirect
-	github.com/hanzoai/money v0.2.5 // indirect
-	github.com/hanzoai/namespace v1.2.0 // indirect
-	github.com/hanzoai/orm v0.6.21 // indirect
-	github.com/hanzoai/s3-go v1.0.0 // indirect
-	github.com/hanzoai/sqlcipher v0.1.1 // indirect
-	github.com/hanzoai/sqlite v0.5.0 // indirect
-	github.com/hanzoai/tasks v1.52.9 // indirect
-	github.com/hanzoai/vfs v0.6.6 // indirect
-	github.com/hanzokv/go/v9 v9.22.0 // indirect
-	github.com/klauspost/crc32 v1.3.0 // indirect
 	github.com/luxfi/accel v1.2.4 // indirect
 	github.com/luxfi/crypto v1.20.2 // indirect
-	github.com/luxfi/trace v1.4.0 // indirect
-	github.com/minio/crc64nvme v1.1.1 // indirect
-	github.com/minio/md5-simd v1.1.2 // indirect
-	github.com/ncruces/go-strftime v1.0.0 // indirect
+	github.com/luxfi/pq v1.1.0 // indirect
+	github.com/minio/highwayhash v1.0.4 // indirect
+	github.com/nats-io/jwt/v2 v2.8.1 // indirect
+	github.com/nats-io/nats-server/v2 v2.12.3 // indirect
 	github.com/paulmach/orb v0.13.0 // indirect
-	github.com/prometheus/otlptranslator v1.0.0 // indirect
-	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	github.com/robfig/cron/v3 v3.0.1 // indirect
-	github.com/rs/xid v1.6.0 // indirect
-	github.com/savsgio/gotils v0.0.0-20240704082632-aef3928b8a38 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/zap-proto/fiber/v3 v3.2.1 // indirect
 	github.com/zap-proto/go v1.3.0 // indirect
-	github.com/zap-proto/md v0.1.0 // indirect
-	go.opentelemetry.io/otel/exporters/prometheus v0.65.0 // indirect
 	go.opentelemetry.io/otel/log v0.20.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.20.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
-	modernc.org/libc v1.72.3 // indirect
-	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.51.0 // indirect
 )
 
 require (
@@ -303,21 +269,8 @@ require (
 
 replace github.com/lyft/protoc-gen-validate v0.0.13 => github.com/envoyproxy/protoc-gen-validate v0.1.0
 
-// Mirror hanzoai/cloud's canonical replace set (required to build the unified
-// binary's cloud/ai deps consistently — go-openai fork carries Delta.ReasoningContent,
-// the go-sqlite3 phantom-version redirect, and the edge-router fork pins).
-replace github.com/apache/thrift => github.com/apache/thrift v0.16.0
-
-replace github.com/uber/jaeger-client-go => github.com/uber/jaeger-client-go v2.28.0+incompatible
-
-replace github.com/abbot/go-http-auth => github.com/containous/go-http-auth v0.4.1-0.20200324110947-a37a7636d23e
-
-replace github.com/mailgun/minheap => github.com/containous/minheap v0.0.0-20190809180810-6e71eb837595
-
 // Same commit hanzoai/ingress pins; sourced from the hanzoai fork rather than
 // the upstream one so the dependency is on a path we control.
 replace github.com/vulcand/oxy/v2 => github.com/hanzoai/oxy/v2 v2.0.0-20260126093803-fb11d60e0fdf
-
-replace github.com/mattn/go-sqlite3 v2.0.3+incompatible => github.com/mattn/go-sqlite3 v1.14.47
 
 exclude github.com/hanzoai/o11y v1.5.31-0.20260726155004-2b66f3201d03

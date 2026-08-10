@@ -21,10 +21,38 @@ import (
 	"strings"
 
 	"github.com/hanzoai/authz/edge"
-	"github.com/hanzoai/cloud"
 	"github.com/hanzoai/gateway/v2/token"
+	luxlog "github.com/luxfi/log"
 	"github.com/zap-proto/zip"
 )
+
+// MountDeps is the whole of what the boundary needs from whoever installs it —
+// alongside RouterDeps (BuildApp) and RelayDeps (RegisterRelay), one narrow
+// shape per entrypoint, all three declared in this module.
+//
+// It was the HOST's own cloud.Deps: 24 fields carried across the boundary to
+// reach three. The other 21 were not unused so much as untyped coupling, and
+// coupling to a NAME rather than to a value — hanzoai/cloud ships two editions
+// under one module path, so cloud.Deps denotes a different type in each, and a
+// package that takes it can be composed by exactly one of them. Which one is
+// decided by whichever edition happens to be in the build, not by anything this
+// package says.
+//
+// Naming the three values instead turns the arrow around: the host knows the
+// gateway, and the gateway knows zip and nothing of whoever runs it.
+type MountDeps struct {
+	// Logger receives the mount's own lifecycle lines. Required — Mount refuses
+	// a nil one rather than dropping the record of what boundary it installed.
+	Logger luxlog.Logger
+	// Brand is the white-label deployment id ("hanzo", "lux", "zoo", ...). The
+	// boundary derives NO behaviour from it; it is logged so an operator can see
+	// which deployment's edge came up.
+	Brand string
+	// Domain is the deployment's own public API host (api.hanzo.ai,
+	// api.lux.network). It supplies the default JWKS URL when JWKS_URL is unset,
+	// which is the one decision this value drives.
+	Domain string
+}
 
 // Mount registers the gateway subsystem on app per HIP-0106. The mount
 // does three things:
@@ -44,10 +72,18 @@ import (
 //  3. Exposes /_/gateway/healthz on the native zip surface so liveness
 //     probes work even with auth fully enabled.
 //
-// Mount is idempotent — calling it twice on the same App will install
-// the middleware twice; the cloud composition root (apps.Wire) lists the
-// gateway MountSpec once, so it is mounted exactly once per process.
-func Mount(app *zip.App, deps cloud.Deps) error {
+// Mount installs onto the HOST's App and returns nothing, which is the whole
+// difference between this subsystem and one that contributes routes. A child
+// App's Use-chain is scoped to that child's own subtree (zip's snapshot
+// semantics), so a gateway that built and returned its own App would guard its
+// two probes and leave every sibling subsystem on the host unguarded — the
+// boundary would still be there, still tested, and no longer on the path.
+// Composition by return value is right for a subsystem that OWNS a prefix;
+// this one owns the whole edge.
+//
+// Mount is not idempotent — calling it twice on the same App installs the
+// middleware twice. A host lists the gateway once.
+func Mount(app *zip.App, deps MountDeps) error {
 	if app == nil {
 		return fmt.Errorf("gateway.Mount: nil zip.App")
 	}
@@ -181,8 +217,8 @@ func zipCORS(policy corsPolicy) zip.Handler {
 }
 
 // authConfigFromEnv builds the gateway AuthConfig from env, applying
-// cloud-friendly defaults derived from deps when env is unset.
-func authConfigFromEnv(deps cloud.Deps) AuthConfig {
+// deployment defaults derived from deps when env is unset.
+func authConfigFromEnv(deps MountDeps) AuthConfig {
 	// Audience allowlist: the shared known-client_id + origin set
 	// (token.AudiencesFromEnv, overridable via GATEWAY_ALLOWED_AUDIENCES).
 	// A JWT_AUDIENCE override widens the set (parity with AUTH_AUDIENCE) — it
