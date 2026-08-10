@@ -8,15 +8,17 @@
 //
 // The canonical entrypoint is Mount, in mount.go at the module root:
 //
-//	func Mount(app *zip.App, deps cloud.Deps) error
+//	func Mount(app *zip.App, deps MountDeps) error
 //
-// It carries NO build tag — it compiles in the default build. Consequently
-// github.com/hanzoai/cloud is an unconditional dependency of this package
-// and of the standalone cmd/gateway binary. Mount installs the native zip
-// gate chain (zipCORS, zipAuth, zipWidget), serves the typed probe pair
-// under /_/gateway, and best-effort loads the routes table; it is called
-// explicitly by cloud's composition root (cloud/apps.Wire), not by an init()
-// and not via a global registry.
+// It carries NO build tag — it compiles in the default build. Mount installs
+// the native zip gate chain (zipCORS, zipAuth, zipWidget), serves the typed
+// probe pair under /_/gateway, and best-effort loads the routes table. A host
+// calls it explicitly, not an init() and not a global registry.
+//
+// MountDeps is declared HERE, in three fields, and names no host. This package
+// imports zip and nothing of whoever composes it: the dependency points from
+// the host into the gateway, so any host can install this boundary and none of
+// them can be the only one that compiles.
 //
 // # One policy per gate, two HTTP transports
 //

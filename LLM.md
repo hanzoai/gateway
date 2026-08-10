@@ -30,6 +30,37 @@ repo-adjacent `~/work/hanzo/go.work`, which does not list this module:
 GOWORK=off CGO_ENABLED=0 go build ./... && GOWORK=off CGO_ENABLED=0 go build -tags legacy ./...
 ```
 
+## No host in the import graph — `MountDeps`, not `cloud.Deps`
+
+`Mount` took `cloud.Deps` and read three of its 24 fields (`Logger`, `Brand`,
+`Domain`). It now takes `MountDeps`, declared in `mount.go` with exactly those
+three, and `github.com/hanzoai/cloud` is gone from `go.mod` — not merely
+unimported, absent.
+
+The rule, and it is general: **a subsystem imports `zip`, never its host.**
+hanzoai/cloud ships two editions under one module path, so `cloud.Deps` denotes
+a different type in each; a package that names it can be composed by exactly one
+of them, decided by whichever edition is in the build. Naming the three values
+instead turns the arrow around — the host knows the gateway, the gateway knows
+zip and nothing of whoever runs it. `MountDeps` joins `RouterDeps` (BuildApp)
+and `RelayDeps` (RegisterRelay): one narrow shape per entrypoint, all declared
+here.
+
+**`Mount` stays a mount — do not "convert" it to `App() (*zip.App, error)`.**
+That conversion is right for a subsystem that owns a prefix and contributes
+routes (see hanzoai/ai). This one contributes a global middleware chain, and a
+child App's `Use`-chain is scoped to that child's own subtree under zip's
+snapshot semantics — verified, not assumed. A gateway that returned its own App
+would guard its two probes and leave every sibling subsystem on the host
+unguarded: the boundary still present, still passing its tests, and no longer on
+the path. `TestMount_GatesAreOnTheChainMountInstalls` is what catches the
+half of that a compiler will not.
+
+Dropped alongside: five inert `replace` directives (thrift, jaeger-client-go,
+abbot/go-http-auth, mailgun/minheap, mattn/go-sqlite3) whose comment attributed
+them to cloud's replace set. None appeared in `go.sum` before or after; deleting
+them leaves `go.sum` byte-identical.
+
 ## Framework Ownership — Lura is `legacy`-gated (#29)
 
 The gateway owns its module path (`github.com/hanzoai/gateway/v2`) and its

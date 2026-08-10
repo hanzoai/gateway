@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hanzoai/authz"
-	"github.com/hanzoai/cloud"
 	luxlog "github.com/luxfi/log"
 
 	"github.com/zap-proto/zip"
@@ -25,11 +24,10 @@ func mountApp(t *testing.T) *zip.App {
 	t.Setenv("AUTH_ENABLED", "false")
 	_ = os.Unsetenv("GATEWAY_ROUTES_FILE")
 	app := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
-	deps := cloud.Deps{
-		Logger:  luxlog.New("test"),
-		Brand:   "hanzo",
-		Domain:  "api.hanzo.ai",
-		DataDir: t.TempDir(),
+	deps := MountDeps{
+		Logger: luxlog.New("test"),
+		Brand:  "hanzo",
+		Domain: "api.hanzo.ai",
 	}
 	if err := Mount(app, deps); err != nil {
 		t.Fatalf("Mount: %v", err)
