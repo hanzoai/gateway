@@ -42,7 +42,7 @@ require (
 	github.com/hanzoai/decimal v0.1.2 // indirect
 	github.com/hanzoai/go-openai v1.41.0 // indirect
 	github.com/hanzoai/ha v0.1.1 // indirect
-	github.com/hanzoai/iam v1.34.12 // indirect
+	github.com/hanzoai/iam v1.34.42 // indirect
 	github.com/hanzoai/metrics v1.110.2 // indirect
 	github.com/hanzoai/money v0.2.5 // indirect
 	github.com/hanzoai/namespace v1.2.0 // indirect

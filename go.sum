@@ -477,8 +477,8 @@ github.com/hanzoai/go-openai v1.41.0 h1:/jF/fZbBHyK7N14mQquUKzCnjwomcuy5YVBIn8AR
 github.com/hanzoai/go-openai v1.41.0/go.mod h1:v0q1gjYS3fpa41xOwzUUXF/julZXhoSmGULcDhmxMY8=
 github.com/hanzoai/ha v0.1.1 h1:FyiD6mRAdAKbPRlzSqOWujvDG/O9OgZ3CHvqO+XRfsY=
 github.com/hanzoai/ha v0.1.1/go.mod h1:7G+gwkCWNpVsioNpKpK+x6ECoUYY2N/m/rlgPbxCqrA=
-github.com/hanzoai/iam v1.34.12 h1:EgLkQQOuoRH2mpKB+k+Lyzn/nxEZ/twDWgL5KdYb4Pg=
-github.com/hanzoai/iam v1.34.12/go.mod h1:PPTue1TxsvGzC939Jzl4/vRuBQSEZi5QOrc+kbRlORc=
+github.com/hanzoai/iam v1.34.42 h1:U8jiUZh/GDmqY+/j5M7Pl1XMKPiEv/3Nru0oEBjZ2sc=
+github.com/hanzoai/iam v1.34.42/go.mod h1:qfUXW8LhH+BkgBt1csXfJrDebFvNWgvL/7i1ZP7N42A=
 github.com/hanzoai/log v0.1.0 h1:xUJyibpbaUL1hvr/oR7am2uxlVjecT7MGEm6IAbToBA=
 github.com/hanzoai/log v0.1.0/go.mod h1:fF/SPVzsIcX436nITnZpKoMNQhe+3jek2rQI2juhuCk=
 github.com/hanzoai/metrics v1.110.2 h1:Q79loK4YKNF255hIaf0CJsd5oq+yMRTsxZyoZREwTwQ=
