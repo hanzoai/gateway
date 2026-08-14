@@ -16,7 +16,7 @@ func TestIsWidgetKey(t *testing.T) {
 	}{
 		{"hz_widget_public", true},
 		{"hz_custom_key", true},
-		{"hk-some-key", false},
+		{"pk-publishable-key", false},
 		{"sk-openai-key", false},
 		{"Bearer hz_widget_public", false}, // raw token, not header
 		{"", false},
@@ -221,7 +221,7 @@ func TestWidgetGate_RateLimit(t *testing.T) {
 func TestWidgetGate_NonWidgetPassthrough(t *testing.T) {
 	gate := zipWidget(DefaultWidgetSecurityConfig())
 	if code := widgetRequest(t, gate, map[string]string{
-		"Authorization": "Bearer hk-some-api-key",
+		"Authorization": "Bearer sk-some-api-key",
 	}); code != http.StatusOK {
 		t.Errorf("non-widget key should pass through, got %d", code)
 	}

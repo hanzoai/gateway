@@ -311,7 +311,7 @@ func (g *widgetGate) admit(h edge.Headers, peer string) *refusal {
 			// this branch at all.
 			return &refusal{Status: http.StatusForbidden, Body: map[string]string{
 				"error":   "forbidden",
-				"message": "Widget keys require an Origin header. Use a Hanzo API key (hk-*) for server-to-server requests.",
+				"message": "Widget keys require an Origin header. Use a Hanzo API key (sk-*) for server-to-server requests.",
 			}}
 		} else if !isAllowedOrigin(originHost, g.allowed) {
 			return &refusal{Status: http.StatusForbidden, Body: map[string]string{
@@ -325,7 +325,7 @@ func (g *widgetGate) admit(h edge.Headers, peer string) *refusal {
 	if !g.limiter.allow(g.peers.clientIP(peer, h.Get("X-Forwarded-For"))) {
 		return &refusal{Status: http.StatusTooManyRequests, Body: map[string]string{
 			"error":   "rate_limited",
-			"message": "Widget rate limit exceeded. Try again shortly, or use a Hanzo API key (hk-*) for higher limits.",
+			"message": "Widget rate limit exceeded. Try again shortly, or use a Hanzo API key (sk-*) for higher limits.",
 		}}
 	}
 

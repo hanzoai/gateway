@@ -187,7 +187,7 @@ func (g *authGate) admit(method, host, path string, h Headers) *refusal {
 		return nil
 	}
 
-	// API keys (hk-*, sk-*, fw_*, hz_*, pk-*) are validated by the backend
+	// API keys (sk-*, pk-*, fw_*, hz_*, and retired hk-*) are validated by the backend
 	// services directly (cloud, commerce, …), not by the gateway. Pass them
 	// through without JWT validation.
 	if authz.IsAPIKey(tok) {
