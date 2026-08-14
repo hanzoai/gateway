@@ -257,17 +257,36 @@ func tenantOrgForHost(host string) (string, bool) {
 }
 
 // loginOrg is the IAM `organization` hint the guard pins for the interactive
-// PKCE login on a host. A TENANT admin surface (admin.<brand>) pins that brand's
-// org so a tenant admin authenticates into the org the host belongs to; the
-// global/DO-infra surfaces (platform.hanzo.ai, …) and any unrecognized host pin
-// the reserved global-admin org, preserving today's global-admin login there.
+// PKCE login on a host, under the policy the guarded surface is gated by. A
+// TENANT admin surface (admin.<brand>) pins that brand's org so a tenant admin
+// authenticates into the org the host belongs to; the global/DO-infra surfaces
+// (platform.hanzo.ai, …) and any unrecognized host pin the reserved global-admin
+// org, preserving today's global-admin login there.
+//
+// An AUTHN surface pins NOTHING, and the empty string is the whole fix. Pinning
+// an org on a surface whose policy admits any principal is a contradiction the
+// login layer resolves the wrong way: IAM refuses an authorize whose resolved
+// user is not in the pinned org — "federation is not permitted for this
+// application" — so a hint of the reserved admin org silently makes an
+// admits-anyone surface admin-ONLY. That is precisely the platform-sudo gate
+// o11y-guard chose verify-authn to avoid: Observe shows an org its OWN telemetry,
+// and gating it on sudo makes it a dashboard its users cannot open.
+//
+// Pinning the host's BRAND org instead would only move the exclusion — the same
+// refusal would then turn away the global admins who are the only ones who can
+// reach it today. Both are real users of an authn surface, so the honest hint is
+// no hint: let IAM resolve the org from the credential the person presents.
 //
 // This only steers WHICH login the browser is offered; it grants nothing.
 // handleCallback re-runs authorize() before minting a session, so a login that
-// resolves an unexpected owner is denied (fail closed), never trusted.
-func (c *config) loginOrg(host string) string {
+// resolves an unexpected owner is denied (fail closed), never trusted — which is
+// what makes declining to pin safe rather than permissive.
+func (c *config) loginOrg(host string, pol policy) string {
 	if org, ok := tenantOrgForHost(host); ok {
 		return org
+	}
+	if pol.name == authnPolicy.name {
+		return ""
 	}
 	return c.adminOrg
 }
