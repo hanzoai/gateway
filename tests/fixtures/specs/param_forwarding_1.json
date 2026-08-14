@@ -3,14 +3,14 @@
 		"method": "GET",
 		"url": "http://localhost:8080/param_forwarding/some/foo/bar?a=1&b=2",
 		"header": {
-			"Authorization": "bearer hk-test-fixture-token",
+			"Authorization": "bearer sk-test-fixture-token",
 			"X-Y-Z": "true",
 			"A-B-C": "ignore"
 		}
 	},
 	"out": {
 		"status_code": 200,
-		"body": "{\"foo\":42,\"headers\":{\"Accept-Encoding\":[\"gzip\"],\"Authorization\":[\"bearer hk-test-fixture-token\"],\"User-Agent\":[\"hanzoai/gateway Version 2.13.0\"],\"X-Forwarded-Host\":[\"localhost:8080\"],\"X-Y-Z\":[\"true\"]},\"path\":\"/param_forwarding/bar\",\"query\":{\"foo\":[\"foo\"]}}",
+		"body": "{\"foo\":42,\"headers\":{\"Accept-Encoding\":[\"gzip\"],\"Authorization\":[\"bearer sk-test-fixture-token\"],\"User-Agent\":[\"hanzoai/gateway Version 2.13.0\"],\"X-Forwarded-Host\":[\"localhost:8080\"],\"X-Y-Z\":[\"true\"]},\"path\":\"/param_forwarding/bar\",\"query\":{\"foo\":[\"foo\"]}}",
 		"header": {
 			"content-type": ["application/json; charset=utf-8"],
 			"Cache-Control": ["public, max-age=3600"],
