@@ -103,7 +103,7 @@ func newGate(cfg AuthConfig) forward.Gate {
 			return nil, nil
 		}
 
-		// Opaque API keys (hk-/sk-/fw_/hz_/pk-) are validated by the
+		// Opaque API keys (sk-/pk-/fw_/hz_, and retired hk-) are validated by the
 		// backend service directly, not as a JWT here. Pass them through
 		// with no edge identity, exactly like the gin middleware.
 		if authz.IsAPIKey(token) {

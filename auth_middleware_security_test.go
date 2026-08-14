@@ -345,8 +345,8 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			expectCode:  http.StatusOK,
 		},
 		{
-			name:        "API key (hk-*) with forged X-Identity headers",
-			authHeader:  "Bearer hk-0d2eb9cfafd049389f2904cad770a9d8",
+			name:        "API key (pk-*) with forged X-Identity headers",
+			authHeader:  "Bearer pk-publishable-test-key",
 			host:        "api.hanzo.ai",
 			path:        "/v1/chat/completions",
 			requireAuth: true,

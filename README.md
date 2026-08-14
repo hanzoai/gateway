@@ -63,7 +63,7 @@ Plus `X-User-Email` (`email`), `X-Phone-Number` (`phone_number` / `phone`) and
 `X-User-IsAdmin` (`isAdmin`) when the token carries them.
 
 `Authorization`, `Content-Type`, `Accept` and `X-Request-ID` pass through
-untouched. Opaque API keys (`hk-`, `sk-`, `fw_`, `hz_`, `pk-`) are not JWTs and
+untouched. Opaque API keys (`sk-`, `pk-`, `fw_`, `hz_`) are not JWTs and
 are forwarded to the backend that owns them for validation.
 
 ## Calling the API

@@ -280,7 +280,7 @@ func TestMount_GatesAreOnTheChainMountInstalls(t *testing.T) {
 	t.Run("server_to_server_key_is_untouched", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/v1/chat/completions", nil)
 		req.Host = "api.hanzo.ai"
-		req.Header.Set("Authorization", "Bearer hk-server-side")
+		req.Header.Set("Authorization", "Bearer sk-server-side")
 		resp, err := app.Fiber().Test(req)
 		if err != nil {
 			t.Fatalf("Fiber Test: %v", err)

@@ -299,7 +299,7 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
   /v1/ai/providers/global` does NOT and is must-gate.
 - **AI / API-KEY** (8): `/v1/chat`, `/v1/chat/completions`, `/v1/completions`,
   `/v1/messages`, `/ai/{path}`, `/v1/ai/{path}`. NO IAM-JWT validator — these
-  use opaque API keys (hk-/sk-) and are billed per-token by cloud. Adding
+  use opaque API keys (sk-) and are billed per-token by cloud. Adding
   an `auth/validator` here would 401 every API-key call.
 - **MUST-GATE** (29, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}` (both
   GET/POST/PATCH/DELETE), `/v1/commerce/{path}`, `/v1/tasks/{path}`,

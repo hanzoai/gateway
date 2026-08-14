@@ -87,7 +87,7 @@ func TestBothTransportsGateWidgetKeysAlike(t *testing.T) {
 		header map[string]string
 		want   int
 	}{
-		{"not_a_widget_key_passes", map[string]string{"Authorization": "Bearer hk-server-side"}, 200},
+		{"not_a_widget_key_passes", map[string]string{"Authorization": "Bearer sk-server-side"}, 200},
 		{"no_credential_passes", nil, 200},
 		{"widget_key_allowed_origin", map[string]string{
 			"Authorization": "Bearer hz_public", "Origin": "https://hanzo.ai"}, 200},
