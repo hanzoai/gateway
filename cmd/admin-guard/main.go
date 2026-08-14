@@ -589,13 +589,22 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 
 	q := url.Values{}
 	q.Set("client_id", c.clientID)
-	// Pin the login org to the surface being guarded (see loginOrg): a tenant
-	// surface (admin.lux.cloud) authenticates the user into that tenant org (lux)
-	// so a tenant admin can log in; the global/DO-infra surfaces + unknown hosts
-	// pin the reserved admin org, preserving the global-admin login there. This
-	// only steers the login; handleCallback re-runs authorize() before minting a
-	// session, so an unexpected resolved org is denied, never trusted.
-	q.Set("organization", c.loginOrg(requestHost(r)))
+	// Pin the login org to the surface being guarded, under ITS policy (see
+	// loginOrg): a tenant surface (admin.lux.cloud) authenticates the user into
+	// that tenant org (lux) so a tenant admin can log in; the global/DO-infra
+	// surfaces + unknown hosts pin the reserved admin org, preserving the
+	// global-admin login there; an authn surface pins nothing and lets IAM resolve
+	// the org from the credential. This only steers the login; handleCallback
+	// re-runs authorize() before minting a session, so an unexpected resolved org
+	// is denied, never trusted.
+	//
+	// An EMPTY hint is omitted rather than sent blank. `organization=` is not the
+	// same request as no organization at all: it hands IAM a stated-and-empty org
+	// to resolve, which is how "no preference" turns into a refusal on a field the
+	// caller never meant to constrain.
+	if org := c.loginOrg(requestHost(r), pol); org != "" {
+		q.Set("organization", org)
+	}
 	q.Set("response_type", "code")
 	q.Set("scope", "openid profile email")
 	q.Set("redirect_uri", c.callbackURI(r))
@@ -610,6 +619,27 @@ func (c *config) startLogin(w http.ResponseWriter, r *http.Request, returnTo str
 // handleCallback completes the PKCE exchange, derives the org, sets the guard
 // session, and returns the browser to where it started.
 func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
+	// A refused authorize arrives HERE, as a redirect carrying `error` instead of
+	// `code` (RFC 6749 §4.1.2.1) — so the no-code branch below is the shape a
+	// REFUSAL takes, not only the shape a malformed callback takes. Reporting it
+	// as "missing code/state" told an operator their request was malformed when
+	// IAM had in fact answered them, in words, about their identity: an
+	// access_denied whose description read "federation is not permitted for this
+	// application" surfaced as a parameter complaint, which sends the reader to
+	// look for a broken link instead of at the account they signed in with.
+	//
+	// The description is IAM's own prose about a login the user just attempted, so
+	// it goes back verbatim. It is not echoed into HTML — http.Error writes
+	// text/plain, so the value cannot become markup in the operator's browser.
+	if e := r.URL.Query().Get("error"); e != "" {
+		msg := "sign-in refused: " + e
+		if d := r.URL.Query().Get("error_description"); d != "" {
+			msg += ": " + d
+		}
+		http.Error(w, msg, http.StatusForbidden)
+		return
+	}
+
 	code := r.URL.Query().Get("code")
 	gotState := r.URL.Query().Get("state")
 	if code == "" || gotState == "" {
