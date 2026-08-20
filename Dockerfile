@@ -54,8 +54,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=secret,id=GIT_AUTH_TOKEN \
     if [ -s /run/secrets/GIT_AUTH_TOKEN ]; then \
-      git config --global url."https://x-access-token:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/".insteadOf "https://github.com/"; \
-    fi && \
+      export GIT_CONFIG_COUNT=1 \
+             GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/.insteadOf" \
+             GIT_CONFIG_VALUE_0="https://github.com/"; \
+    fi; \
     CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
     CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
 
