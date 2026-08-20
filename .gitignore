@@ -24,7 +24,6 @@ vendor/
 ingress
 
 # AI agent context files
-CLAUDE.md
 AGENTS.md
 GEMINI.md
 QWEN.md
