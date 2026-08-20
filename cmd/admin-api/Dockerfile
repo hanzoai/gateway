@@ -14,9 +14,10 @@ RUN apk --no-cache add git
 COPY . /app
 WORKDIR /app
 
-# Private cross-repo modules (hanzoai/cloud, hanzoai/datastore-go, luxfi/*) are
-# fetched via authenticated git (gh_token secret), bypassing the public proxy.
-ENV GOPRIVATE=github.com/hanzoai/*,github.com/lux-private/*,github.com/zap-proto/*
+# Private cross-repo modules (hanzoai/cloud, hanzoai/datastore-go) are fetched
+# via authenticated git (gh_token secret). Everything else resolves through the
+# public proxy and is verified against sum.golang.org.
+ENV GOPRIVATE=github.com/hanzoai/*
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
