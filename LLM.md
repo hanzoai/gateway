@@ -506,14 +506,13 @@ stayed green, because the test jobs ran go tooling directly on the
 `hanzo-build-linux-amd64` runner without the environment the Dockerfile builder
 provides. Root causes and fixes:
 
-- Module auth: `go vet`/`go test` fell through to `direct` for private
-  first-party modules (`hanzoai/cloud`, `zap-proto/*`) and died on
-  `git ls-remote ... exit 128` — no git credential. Fixed by mirroring the
-  Dockerfile module env (`GOPRIVATE=zap-proto/*`, `GONOSUMDB=zap-proto/*`,
-  `GOSUMDB=off`, `GOPROXY=proxy,direct`, `GOFLAGS=-mod=mod`) plus a per-job
+- Module resolution: the test jobs mirror the Dockerfile module env
+  (`GONOSUMDB=github.com/hanzoai/*`, `GOPROXY=proxy,direct`) plus a per-job
   `git config --global url."https://x-access-token:${GH_PAT}@github.com/".insteadOf`
   step — same GH_PAT the deploy Dockerfile secret uses, same pattern as
-  `hanzoai/ingress` CI.
+  `hanzoai/ingress` CI. `github.com/hanzoai/*` is the one namespace the public
+  checksum database cannot cover; `zap-proto/*` and `luxfi/*` are public, so they
+  resolve through the proxy and stay verified against `sum.golang.org`.
 - `make: command not found` (127): the runner ships go (setup-go) but not
   make/wget. `make build` is replaced with a direct `go build -tags legacy`,
   reading `VERSION` from the Makefile and stamping `lura/v2/core.KrakendVersion`
