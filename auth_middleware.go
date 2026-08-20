@@ -405,51 +405,44 @@ func (c AuthConfig) Validate() error {
 //   - Fail-open: if billing service is unreachable, request proceeds
 //   - If balance <= 0: returns 402 Payment Required
 //
-// isErrorIngestPath matches ONLY the Sentry error-ingest wire endpoints:
-// POST /v1/o11y/api/<project>/envelope/ and POST /v1/o11y/api/<project>/store/.
-// The <project> segment varies, so it is matched by method + prefix + suffix — never
-// a bare prefix — so the o11y read APIs under /v1/o11y/api/vN/… stay JWT-gated.
-// (The trailing slash is the Sentry protocol form; the slash-less variant is
-// tolerated defensively.)
-func isErrorIngestPath(method, path string) bool {
-	if method != http.MethodPost {
-		return false
-	}
-	if !strings.HasPrefix(path, "/v1/o11y/api/") {
-		return false
-	}
-	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
-		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
-}
+// ingestRoots are the two prefixes the DSN-authed error wire arrives on. It is
+// ONE list because it answers ONE question, and it is the same pair cloud's own
+// module.IngestWire names: /v1/event is the door a minted DSN spells, and
+// /v1/o11y/api is the suffix a stock Sentry SDK appends to whatever DSN path it
+// is given — a third party's shape, received rather than published.
+//
+// THE TWO SIDES MUST AGREE. The gateway lets this class through tokenless and
+// cloud DSN-authenticates it; a path one admits and the other refuses is a beacon
+// that dies at 401 with nothing on either side saying why. This used to be two
+// functions of identical shape differing only by prefix, which is two places for
+// that agreement to rot.
+var ingestRoots = []string{"/v1/event/", "/v1/o11y/api/"}
 
-// isSentryIngestPath matches ONLY the Hanzo Sentry error-ingest wire endpoints:
-// POST /v1/sentry/<project>/envelope/ and POST /v1/sentry/<project>/store/.
-// Byte-identical shape to isErrorIngestPath and to the cloud-side isSentryIngestPath
-// gate (clients/o11y/o11y.go): method + prefix + suffix — NEVER a bare /v1/sentry/
-// prefix — so the Sentry READ APIs (issues, discover, projects, logs, traces, stats)
-// stay JWT-gated. The two allowlists MUST agree so the tokenless ingest the gateway
-// lets through is not then 403'd at cloud. (Trailing slash is the Sentry wire form;
-// the slash-less variant is tolerated defensively.)
-func isSentryIngestPath(method, path string) bool {
-	if method != http.MethodPost {
-		return false
-	}
-	if !strings.HasPrefix(path, "/v1/sentry/") {
-		return false
-	}
-	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
-		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
-}
-
-// isIngestPath is the ROUTE-CLASS selector for the tokenless DSN ingest plane:
-// the union of the o11y errortracking wire (isErrorIngestPath) and the Hanzo
-// Sentry wire (isSentryIngestPath). Both are POST-only + suffix-anchored on
-// {envelope,store}, so this selector can NEVER match a read — every Sentry/o11y
-// READ routes to the authed class and stays JWT-gated. Cloud DSN-authenticates
-// this class and resolves the org FROM the DSN; the gateway writes no identity for
-// it. This is the routing selector for class 1 — not a bypass hole in a global gate.
+// isIngestPath is the ROUTE-CLASS selector for the tokenless DSN ingest plane.
+// POST-only and suffix-anchored on {envelope,store}, NEVER a bare prefix, so it
+// can never match a read: every error-plane READ — issues, discover, projects,
+// logs, traces, stats — routes to the authed class and stays JWT-gated. Cloud
+// DSN-authenticates this class and resolves the org FROM the DSN, so the gateway
+// writes no identity for it. This is the routing selector for class 1, not a
+// bypass hole in a global gate.
 func isIngestPath(method, path string) bool {
-	return isErrorIngestPath(method, path) || isSentryIngestPath(method, path)
+	if method != http.MethodPost {
+		return false
+	}
+	under := false
+	for _, root := range ingestRoots {
+		if strings.HasPrefix(path, root) {
+			under = true
+			break
+		}
+	}
+	if !under {
+		return false
+	}
+	// The trailing slash is the wire's form; the slash-less variant is tolerated
+	// defensively.
+	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
+		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
 }
 
 // The ALLOW/DENY ladder itself — strip, route class, public allowlists, token
