@@ -35,8 +35,8 @@ func TestIsErrorIngestPath(t *testing.T) {
 		{http.MethodPost, "/v1/iam/api/acme/envelope/", false}, // wrong service prefix
 	}
 	for _, c := range cases {
-		if got := isErrorIngestPath(c.method, c.path); got != c.want {
-			t.Errorf("isErrorIngestPath(%q, %q) = %v, want %v", c.method, c.path, got, c.want)
+		if got := isIngestPath(c.method, c.path); got != c.want {
+			t.Errorf("isIngestPath(%q, %q) = %v, want %v", c.method, c.path, got, c.want)
 		}
 	}
 }

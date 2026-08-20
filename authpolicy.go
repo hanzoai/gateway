@@ -140,7 +140,7 @@ func (g *authGate) admit(method, host, path string, h Headers) *refusal {
 	host = hostOnly(host)
 
 	// ── ROUTE CLASS 1 — tokenless DSN ingest (orthogonal to the authed API) ──
-	// POST /v1/sentry/<project>/{envelope,store}[/] and the o11y errortracking
+	// POST /v1/sentinel/<project>/{envelope,store}[/] and the o11y errortracking
 	// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
 	// decision, NOT a hole punched in the authed gate: this class has its own
 	// (empty) auth — forward to cloud with NO IAM-JWT gate and NO written
