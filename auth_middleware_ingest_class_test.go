@@ -68,11 +68,11 @@ func TestIngestClass_AuthedReadRequiresJWT(t *testing.T) {
 	var saw backendSaw
 	recordingBackend(r, &saw)
 
-	if w := send(r, http.MethodGet, "/v1/sentry/issues?project=019f5339", "", nil); w.Code != http.StatusUnauthorized {
+	if w := send(r, http.MethodGet, "/v1/sentinel/issues?project=019f5339", "", nil); w.Code != http.StatusUnauthorized {
 		t.Errorf("read with no JWT: got %d, want 401", w.Code)
 	}
 	// A forged X-Org-Id must NOT buy a read (the gate rejects for lack of a valid JWT).
-	if w := send(r, http.MethodGet, "/v1/sentry/issues", "", map[string]string{"X-Org-Id": "victim-org"}); w.Code != http.StatusUnauthorized {
+	if w := send(r, http.MethodGet, "/v1/sentinel/issues", "", map[string]string{"X-Org-Id": "victim-org"}); w.Code != http.StatusUnauthorized {
 		t.Errorf("read with forged X-Org-Id + no JWT: got %d, want 401", w.Code)
 	}
 	if saw.reached {
@@ -91,7 +91,7 @@ func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	recordingBackend(r, &saw)
 
 	tok := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai")) // Owner=hanzo, not global-admin
-	w := send(r, http.MethodGet, "/v1/sentry/issues", tok, map[string]string{
+	w := send(r, http.MethodGet, "/v1/sentinel/issues", tok, map[string]string{
 		"X-Org-Id":             "victim-org",
 		"X-User-IsGlobalAdmin": "true",
 		"X-User-Owner":         "admin",
@@ -121,8 +121,8 @@ func TestIngestClass_TokenlessIngestReachesBackend(t *testing.T) {
 	recordingBackend(r, &saw)
 
 	for _, p := range []string{
-		"/v1/sentry/019f5339/envelope/",
-		"/v1/sentry/019f5339/store/",
+		"/v1/event/019f5339/envelope/",
+		"/v1/event/019f5339/store/",
 		"/v1/o11y/api/hanzo/envelope/", // the o11y errortracking wire, same class
 	} {
 		saw = backendSaw{}
@@ -144,7 +144,7 @@ func TestIngestClass_IngestForwardsNoClientIdentity(t *testing.T) {
 	var saw backendSaw
 	recordingBackend(r, &saw)
 
-	w := send(r, http.MethodPost, "/v1/sentry/019f5339/envelope/", "", map[string]string{
+	w := send(r, http.MethodPost, "/v1/event/019f5339/envelope/", "", map[string]string{
 		"X-Org-Id":             "victim-org",
 		"X-User-Id":            "attacker",
 		"X-User-IsGlobalAdmin": "true",
