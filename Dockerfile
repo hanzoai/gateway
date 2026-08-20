@@ -20,27 +20,18 @@ WORKDIR /app
 ARG GO_EXPERIMENT=jsonv2
 ENV GOEXPERIMENT=${GO_EXPERIMENT}
 
-# hanzoai/* and luxfi/* resolve via the IMMUTABLE public proxy — go.sum pins
-# those canonical hashes, so a force-re-pointed tag can never break the build.
-# Routing them DIRECT (the old GOPRIVATE approach) re-fetches a re-tagged tree
-# (e.g. luxfi/zap@v0.8.8) whose hash differs from go.sum's proxy hash →
-# "checksum mismatch / SECURITY ERROR". This matches the drop-GOPRIVATE fix
-# already shipped in hanzoai/cloud + iam + luxfi/kms. Only zap-proto/* stays
-# first-party-direct (kept in GOPRIVATE) — authenticated git via gh_token.
+# Modules resolve through the public proxy, which serves the immutable copy
+# sum.golang.org signed. go.sum pins those hashes, so a re-cut tag cannot change
+# what this image is built from.
 #
-# GOSUMDB is NO LONGER `off`. A global `off` disabled checksum-database
-# verification for the ENTIRE 1500-module graph, which fails OPEN: paired with
-# GOFLAGS=-mod=mod it let any fetch rewrite go.sum from whatever the source
-# served. The bypass is now scoped with GONOSUMDB to exactly the namespaces that
-# genuinely cannot be in the public sumdb — our own first-party orgs, several of
-# whose repos are private — while every third-party module is verified against
-# sum.golang.org again.
+# GONOSUMDB names the one namespace the public checksum database cannot cover:
+# github.com/hanzoai/*, some of whose repos are private. Those fall through to a
+# direct authenticated fetch (gh_token, below). Every other module — ours and
+# third-party alike — is verified against sum.golang.org.
 #
-# GOFLAGS no longer carries -mod=mod either: the default (-mod=readonly) makes
-# the committed go.mod/go.sum authoritative and fails the build rather than
-# silently rewriting them.
-ENV GOPRIVATE=github.com/zap-proto/* \
-    GONOSUMDB=github.com/zap-proto/*,github.com/hanzoai/*,github.com/lux-private/* \
+# GOFLAGS keeps its default (-mod=readonly), so the committed go.mod/go.sum are
+# authoritative and drift fails the build instead of being rewritten in place.
+ENV GONOSUMDB=github.com/hanzoai/* \
     GOPROXY=https://proxy.golang.org,direct
 
 # GIT_AUTH_TOKEN, not gh_token. That is the secret id the fabric actually
