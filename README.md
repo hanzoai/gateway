@@ -110,7 +110,6 @@ requests get `429` with `Retry-After`.
 
 ```bash
 make build          # gateway binary (legacy HTTP edge, BUILD_TAGS=legacy)
-make build-ingress  # ingress sidecar binary
 make test           # both builds
 make validate       # validate every config
 ```
@@ -146,11 +145,9 @@ only.
 ```
 configs/
   hanzo/gateway.json    Hanzo config
-  hanzo/ingress.json    ingress sidecar config
   lux/                  same, Lux brand
 k8s/                    cluster manifests
 cmd/gateway/            gateway entry point
-cmd/ingress/            ingress sidecar entry point
 tests/                  integration tests
 ```
 

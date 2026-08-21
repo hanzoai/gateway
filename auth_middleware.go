@@ -67,7 +67,7 @@ type AuthConfig struct {
 
 // hanzoJWTClaims and the JWKS cache, token validation, extraction, and the
 // identity-header trust boundary live in hanzoai/authz + hanzoai/authz/edge (the
-// edge-auth implementation shared with cmd/ingress). Thin shims preserving
+// edge-auth implementation shared with the estate). Thin shims preserving
 // the symbols this file and its tests use are in auth_compat.go.
 
 // permissionBits is the canonical name → bit-position map. Values MUST
@@ -453,5 +453,5 @@ func isIngestPath(method, path string) bool {
 //
 // validateToken, the JWKS cache, the identity-header trust boundary,
 // the API-key test, and the token extractors live in hanzoai/authz/edge — the one
-// edge-auth implementation shared with cmd/ingress. The thin shims that keep
+// edge-auth implementation shared with the estate. The thin shims that keep
 // this file's symbols stable are in auth_compat.go.

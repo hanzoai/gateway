@@ -8,7 +8,7 @@
 // the Forward with that identity and ships it to the chosen backend.
 //
 // One auth implementation: the gate reuses hanzoai/authz/edge (the same
-// JWKS cache + JWT validation + token extraction shared with cmd/ingress
+// JWKS cache + JWT validation + token extraction shared with hanzoai/ingress
 // and the gin/Lura middleware) and gateway's own permission bit-field
 // math (computePermissionsBitField / permissionBits). No second copy.
 //
