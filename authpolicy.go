@@ -158,13 +158,14 @@ func (g *authGate) admit(method, host, path string, h Headers) *refusal {
 	host = hostOnly(host)
 
 	// ── ROUTE CLASS 1 — tokenless DSN ingest (orthogonal to the authed API) ──
-	// POST /v1/sentinel/<project>/{envelope,store}[/] and the o11y errortracking
-	// wire POST /v1/o11y/api/<project>/{envelope,store}[/]. A first-class ROUTING
-	// decision, NOT a hole punched in the authed gate: this class has its own
-	// (empty) auth — forward to cloud with NO IAM-JWT gate and NO written
-	// identity; cloud DSN-authenticates and derives the org FROM the DSN.
-	// isIngestPath is POST-only + suffix-anchored, so every Sentry/o11y READ falls
-	// through to the authed class below and stays JWT-gated.
+	// POST /v1/event/<project>/{envelope,store}[/] (a minted DSN) and POST
+	// /v1/o11y/api/<project>/{envelope,store}[/] (a stock Sentry SDK's appended
+	// suffix). A first-class ROUTING decision, NOT a hole punched in the authed
+	// gate: this class has its own (empty) auth — forward to cloud with NO
+	// IAM-JWT gate and NO written identity; cloud DSN-authenticates and derives
+	// the org FROM the DSN. isIngestPath is POST-only + suffix-anchored, so every
+	// error-plane READ falls through to the authed class below and stays
+	// JWT-gated.
 	if isIngestPath(method, path) {
 		return nil
 	}
