@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -232,39 +231,40 @@ func TestPolicyAdmitsShippedConfigs(t *testing.T) {
 	}
 }
 
-// The shipped hanzo config must still mean what canon meant, one route at a
-// time: the routes canon gated with auth/validator are the routes this config
-// states as needing an identity, and the routes canon left open are the ones it
-// states as public. The migration moved where that is written down, not which
-// routes are which.
+// The shipped hanzo config must still mean what the validators it replaced
+// meant, one route at a time: the routes canon gated with auth/validator are the
+// routes this config states as needing an identity, and the routes canon left
+// open are the ones it states as public. The migration moved where that is
+// written down, not which routes are which.
 //
-// Both sides go through the same parser, because the parser rewrites paths —
-// {action} becomes :action — and comparing a parsed path to a raw one compares
-// spellings rather than routes.
+// The baseline is a frozen fixture, not a moving ref. Reading it from
+// canon/main worked only until this change merged — after which that ref
+// returns this very config and the check compares it against itself. The
+// fixture is the pre-migration gating captured once, so the property is guarded
+// the same way in review, in CI with no remotes, and on main tomorrow.
 func TestShippedConfigMatchesTheGatingItReplaced(t *testing.T) {
-	raw, err := exec.Command("git", "show", "canon/main:configs/hanzo/gateway.json").Output()
+	var baseline struct {
+		Routes map[string]bool `json:"routes"`
+	}
+	raw, err := os.ReadFile("tests/fixtures/policy/canon_gating.json")
 	if err != nil {
-		t.Skipf("canon/main not fetched in this checkout: %v", err)
+		t.Fatalf("read baseline: %v", err)
 	}
-	path := filepath.Join(t.TempDir(), "gateway.json")
-	if err := os.WriteFile(path, raw, 0o600); err != nil {
-		t.Fatal(err)
+	if err := json.Unmarshal(raw, &baseline); err != nil {
+		t.Fatalf("decode baseline: %v", err)
 	}
-
-	canon := map[string]bool{} // route -> gated on canon
-	for _, e := range parse(t, path).Endpoints {
-		_, gated := e.ExtraConfig["auth/validator"]
-		canon[route(e)] = gated
+	if len(baseline.Routes) == 0 {
+		t.Fatal("baseline fixture declares no routes")
 	}
 
 	now := parse(t, "configs/hanzo/gateway.json")
-	if len(now.Endpoints) != len(canon) {
-		t.Fatalf("%d endpoints now, %d on canon", len(now.Endpoints), len(canon))
+	if len(now.Endpoints) != len(baseline.Routes) {
+		t.Fatalf("%d endpoints now, %d in the baseline", len(now.Endpoints), len(baseline.Routes))
 	}
 	for _, e := range now.Endpoints {
-		wasGated, known := canon[route(e)]
+		wasGated, known := baseline.Routes[route(e)]
 		if !known {
-			t.Errorf("%s is not on canon", route(e))
+			t.Errorf("%s is not in the baseline", route(e))
 			continue
 		}
 		open, stated := e.ExtraConfig[authPublic].(bool)
@@ -273,7 +273,7 @@ func TestShippedConfigMatchesTheGatingItReplaced(t *testing.T) {
 			continue
 		}
 		if open == wasGated {
-			t.Errorf("%s: canon gated=%v, this config states open=%v", route(e), wasGated, open)
+			t.Errorf("%s: baseline gated=%v, this config states open=%v", route(e), wasGated, open)
 		}
 	}
 }
