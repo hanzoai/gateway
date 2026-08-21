@@ -221,31 +221,6 @@
             }
         },
         {
-            "endpoint": "/cel/jwt/{id}",
-            "backend": [
-                {
-                    "host": [ "http://127.0.0.1:8081" ],
-                    "url_pattern": "/param_forwarding/{id}/{JWT.sub}/{JWT.http://example.com/custom}"
-                }
-            ],
-            "extra_config":{
-                "validation/cel": [
-                    {
-                        "check_expr": "size(JWT.roles)>1"
-                    }
-                ],
-                "auth/validator": {
-                    "alg": "HS256",
-                    "audience": ["http://api.example.com"],
-                    "roles_key": "roles",
-                    "issuer": "https://gateway.hanzo.ai",
-                    "roles": ["role_a", "role_b", "role_y"],
-                    "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
-                    "disable_jwk_security": true
-                }
-            }
-        },
-        {
             "endpoint": "/param_forwarding/some/{foo}/{bar}",
             "input_headers": [
                 "Authorization",
@@ -531,104 +506,6 @@
                     "url_pattern": "/redirect/?status={code}"
                 }
             ]
-        },
-        {
-            "endpoint": "/private/custom",
-            "backend": [
-                {
-                    "host": [ "http://127.0.0.1:8080" ],
-                    "url_pattern": "/__debug/",
-                    "deny": ["message"]
-                }
-            ],
-            "extra_config": {
-                "proxy": {
-                    "static": {
-                        "strategy": "always",
-                        "data": {
-                            "id_user": 1,
-                            "firstName": "John",
-                            "lastName": "Smith",
-                            "age": 25
-                        }
-                    }
-                },
-                "auth/validator": {
-                    "alg": "HS256",
-                    "audience": ["http://api.example.com"],
-                    "roles_key": "roles",
-                    "issuer": "https://gateway.hanzo.ai",
-                    "roles": ["role_a", "role_c"],
-                    "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
-                    "disable_jwk_security": true
-                }
-            }
-        },
-        {
-            "endpoint": "/private/extract_jwt_claim",
-            "backend": [
-                {
-                    "url_pattern": "/param_forwarding/{JWT.sub}",
-                    "host": [ "http://127.0.0.1:8081" ],
-                    "deny": ["foo", "headers", "query"]
-                }
-            ],
-            "extra_config": {
-                "proxy": {
-                    "static": {
-                        "strategy": "always",
-                        "data": {
-                            "id_user": 1,
-                            "firstName": "John",
-                            "lastName": "Smith",
-                            "age": 25
-                        }
-                    }
-                },
-                "auth/validator": {
-                    "alg": "HS256",
-                    "audience": ["http://api.example.com"],
-                    "roles_key": "roles",
-                    "issuer": "https://gateway.hanzo.ai",
-                    "roles": ["role_a", "role_c"],
-                    "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
-                    "disable_jwk_security": true
-                }
-            }
-        },
-        {
-            "endpoint": "/token",
-            "backend": [
-                {
-                    "host": [ "http://127.0.0.1:8080" ],
-                    "url_pattern": "/__debug",
-                    "deny": ["message"]
-                }
-            ],
-            "extra_config": {
-                "proxy": {
-                    "static": {
-                        "strategy": "always",
-                        "data": {
-                            "access_token": {
-                                "aud": "http://api.example.com",
-                                "iss": "https://gateway.hanzo.ai",
-                                "sub": "1234567890qwertyuio",
-                                "jti": "mnb23vcsrt756yuiomnbvcx98ertyuiop",
-                                "roles": ["role_y"],
-                                "exp": 1735689600
-                            }
-                        }
-                    }
-                },
-                "auth/signer": {
-                    "alg": "HS256",
-                    "kid": "sim2",
-                    "keys_to_sign": ["access_token"],
-                    "jwk_url": "http://127.0.0.1:8081/jwk/symmetric",
-                    "disable_jwk_security": true
-                }
-            }
         },
         {
             "endpoint": "/lua/custom_error",

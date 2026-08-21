@@ -58,8 +58,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
              GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/GIT_AUTH_TOKEN)@github.com/.insteadOf" \
              GIT_CONFIG_VALUE_0="https://github.com/"; \
     fi; \
-    CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build && \
-    CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build-ingress
+    CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build
 
 # Stage 2: Runtime image
 FROM alpine:${ALPINE_VERSION}
@@ -69,16 +68,14 @@ LABEL maintainer="dev@hanzo.ai"
 RUN apk upgrade --no-cache --no-interactive && \
     apk add --no-cache ca-certificates tzdata && \
     adduser -u 1000 -S -D -H gateway && \
-    mkdir /etc/gateway /etc/ingress && \
+    mkdir /etc/gateway && \
     echo '{ "version": 3 }' > /etc/gateway/gateway.json
 
 COPY --from=builder /app/gateway /usr/bin/gateway
-COPY --from=builder /app/ingress /usr/bin/ingress
 
 # Bake in configs for the target cluster
 ARG CONFIG=hanzo
 COPY configs/${CONFIG}/gateway.json /etc/gateway/gateway.json
-COPY configs/${CONFIG}/ingress.json /etc/ingress/ingress.json
 
 USER 1000
 
