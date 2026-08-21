@@ -154,7 +154,7 @@
         }
       ],
       "extra_config": {
-        "auth/public": true
+        "auth/public": false
       }
     },
     {
@@ -274,7 +274,7 @@
         }
       ],
       "extra_config": {
-        "auth/public": true
+        "auth/public": false
       }
     },
     {
