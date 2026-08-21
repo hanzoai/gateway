@@ -767,15 +767,6 @@
       ]
     },
     {
-      "host": "registry.hanzo.ai",
-      "backends": [
-        {
-          "path": "/",
-          "url": "http://registry.hanzo.svc.cluster.local:5000"
-        }
-      ]
-    },
-    {
       "host": "s3.hanzo.ai",
       "backends": [
         {
