@@ -26,7 +26,8 @@
         "url_pattern": "/v1/bc/C/rpc",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/bc/C/ws",
@@ -37,7 +38,8 @@
         "url_pattern": "/v1/bc/C/ws",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/bc/X",
@@ -48,7 +50,8 @@
         "url_pattern": "/v1/bc/X",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/bc/P",
@@ -59,7 +62,8 @@
         "url_pattern": "/v1/bc/P",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/info",
@@ -70,7 +74,8 @@
         "url_pattern": "/v1/info",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/health",
@@ -81,7 +86,8 @@
         "url_pattern": "/v1/health",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/keystore",
@@ -92,7 +98,8 @@
         "url_pattern": "/v1/keystore",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/index/C/block",
@@ -103,7 +110,8 @@
         "url_pattern": "/v1/index/C/block",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/index/C/tx",
@@ -114,7 +122,8 @@
         "url_pattern": "/v1/index/C/tx",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/index/X/tx",
@@ -125,7 +134,8 @@
         "url_pattern": "/v1/index/X/tx",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/index/P/block",
@@ -136,7 +146,8 @@
         "url_pattern": "/v1/index/P/block",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/index/P/tx",
@@ -147,7 +158,8 @@
         "url_pattern": "/v1/index/P/tx",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/metrics",
@@ -158,7 +170,8 @@
         "url_pattern": "/v1/metrics",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     },
     {
       "endpoint": "/v1/admin",
@@ -169,7 +182,8 @@
         "url_pattern": "/v1/admin",
         "host": ["http://luxd.lux-mainnet.svc.cluster.local:9630"],
         "encoding": "no-op"
-      }]
+      }],
+      "extra_config": { "auth/public": true }
     }
   ]
 }

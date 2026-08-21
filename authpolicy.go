@@ -15,6 +15,7 @@
 //
 //	auth_middleware.go   gin, for the legacy Lura edge (the shipping image)
 //	mount.go             native zip, for the HIP-0106 unified cloud binary
+//	handler_factory.go   the endpoint pipeline's requirement — [AuthConfig.require]
 //
 // (The ZAP relay's envelope gate in gate.go states the same ALLOW/DENY ladder
 // against forward.Forward, which carries identity as fields rather than as
@@ -178,10 +179,7 @@ func (g *authGate) admit(method, host, path string, h Headers) *refusal {
 
 	if tok == "" {
 		if g.cfg.RequireAuth {
-			return &refusal{Status: http.StatusUnauthorized, Body: map[string]string{
-				"error":   "unauthorized",
-				"message": "Authentication required",
-			}}
+			return unauthorized()
 		}
 		// No token: pass through with no identity headers.
 		return nil
@@ -263,6 +261,38 @@ func (g *authGate) balance(path, ledgerOrg, userID string) *refusal {
 			"user":    billingUser,
 		}}
 	}
+}
+
+// require is the endpoint half of the same policy: [authGate.admit] VERIFIES a
+// credential, require states that a particular route NEEDS one.
+//
+// It performs no cryptography. It opens no JWKS, parses no token and knows no
+// signing algorithm — it reads the identity admit already proved and wrote, and
+// refuses when there is none. That is the whole of the fix for the double
+// validation: the endpoint pipeline used to answer "does this route need a
+// token?" by validating the token a second time, with a second library, against
+// a second key source. Now it reads the first answer.
+//
+// A request carrying an API key (hk-, sk-, …) reaches here with no identity by
+// design — admit passes those to the backend that owns them — so a route that
+// needs an IAM identity refuses it, which is what the endpoint validators did.
+//
+// AUTH_ENABLED=false means no auth: the strip still runs, nothing is required.
+func (c AuthConfig) require(h edge.Headers) *refusal {
+	if !c.Enabled || h.Get(authz.HeaderUser) != "" {
+		return nil
+	}
+	return unauthorized()
+}
+
+// unauthorized is the answer to a request that brought no usable credential,
+// written once so the token-required refusal and the endpoint-required refusal
+// are the same answer rather than two that drifted.
+func unauthorized() *refusal {
+	return &refusal{Status: http.StatusUnauthorized, Body: map[string]string{
+		"error":   "unauthorized",
+		"message": "Authentication required",
+	}}
 }
 
 // unavailable is the balance gate's outage answer, written once because it is
