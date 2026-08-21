@@ -228,7 +228,7 @@ func authConfigFromEnv(deps MountDeps) AuthConfig {
 		audiences = appendUniqueAud(audiences, a)
 	}
 	cfg := AuthConfig{
-		Enabled:        getenv("AUTH_ENABLED", "true") == "true",
+		Enabled:        authEnabled(),
 		JWKSURL:        getenv("JWKS_URL", "https://"+deps.Domain+"/v1/iam/.well-known/jwks"),
 		Issuer:         getenv("JWT_ISSUER", "https://hanzo.id"),
 		Audiences:      audiences,
