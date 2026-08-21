@@ -109,7 +109,6 @@ var aliases = map[string]string{
 	"github.com/devopsfaith/krakend-circuitbreaker/gobreaker": "qos/circuit-breaker",
 
 	"github.com/devopsfaith/krakend-oauth2-clientcredentials": "auth/client-credentials",
-	"github_com/devopsfaith/bloomfilter":                      "auth/revoker",
 
 	// auth/validator and auth/signer are deliberately absent. The endpoint
 	// pipeline validates no token: the ONE validator is the edge trust
