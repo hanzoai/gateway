@@ -373,7 +373,7 @@ func (c *config) iamSessionApproval(r *http.Request) (owner string, approved boo
 	if cookie == "" {
 		return "", false, iamDenied // no session to resolve
 	}
-	body, oc := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", cookie)
+	body, oc := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+"/v1/iam/account", cookie)
 	if oc != iamOK {
 		return "", false, oc
 	}
@@ -392,7 +392,7 @@ func (c *config) iamUserApproved(r *http.Request, id string) (approved bool, out
 	if id == "" || id == "/" {
 		return false, iamDenied
 	}
-	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/get-user?id=" + url.QueryEscape(id)
+	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/users/get?id=" + url.QueryEscape(id)
 	body, oc := c.iamGet(r, u, r.Header.Get("Cookie"))
 	if oc != iamOK {
 		return false, oc
@@ -647,7 +647,7 @@ func (c *config) getUserApprovedBearer(ctx context.Context, id, accessToken stri
 	if id == "" || id == "/" || accessToken == "" {
 		return false
 	}
-	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/get-user?id=" + url.QueryEscape(id)
+	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/users/get?id=" + url.QueryEscape(id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return false

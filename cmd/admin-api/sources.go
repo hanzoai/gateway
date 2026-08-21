@@ -83,7 +83,7 @@ func (a *aggregator) syncIAM(ctx context.Context) []string {
 			CreatedTime string `json:"createdTime"`
 		} `json:"data"`
 	}
-	err := httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/get-organizations?pageSize=1000&p=1", a.iamHeaders(), &orgEnv)
+	err := httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/organizations?pageSize=1000&p=1", a.iamHeaders(), &orgEnv)
 	if err != nil {
 		a.store.recordSync(ctx, "iam:orgs", false, 0, err.Error())
 	} else {
@@ -113,7 +113,7 @@ func (a *aggregator) syncIAM(ctx context.Context) []string {
 			LastSigninTime string `json:"lastSigninTime"`
 		} `json:"data"`
 	}
-	err = httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/get-global-users?pageSize=5000&p=1", a.iamHeaders(), &userEnv)
+	err = httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/users?pageSize=5000&p=1", a.iamHeaders(), &userEnv)
 	if err != nil {
 		a.store.recordSync(ctx, "iam:users", false, 0, err.Error())
 		return orgNames
@@ -292,7 +292,7 @@ func (a *aggregator) liveAudit(ctx context.Context, org string, pageSize int) ([
 	if org == "" {
 		org = a.cfg.adminOrg
 	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-records?owner=%s&pageSize=%d&p=1&sortField=createdTime&sortOrder=descend",
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/audit-logs?owner=%s&pageSize=%d&p=1&sortField=createdTime&sortOrder=descend",
 		a.cfg.iamInternal, url.QueryEscape(org), pageSize))
 }
 
@@ -308,7 +308,7 @@ func (a *aggregator) liveApplications(ctx context.Context, owner string, pageSiz
 	if pageSize <= 0 {
 		pageSize = 100
 	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-applications?owner=%s&pageSize=%d&p=1",
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/applications?owner=%s&pageSize=%d&p=1",
 		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
 }
 
@@ -321,7 +321,7 @@ func (a *aggregator) liveRoles(ctx context.Context, owner string, pageSize int) 
 	if pageSize <= 0 {
 		pageSize = 100
 	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-roles?owner=%s&pageSize=%d&p=1",
+	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/roles?owner=%s&pageSize=%d&p=1",
 		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
 }
 
