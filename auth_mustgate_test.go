@@ -354,28 +354,44 @@ func TestHanzoConfig_PublicSurfaceUnchanged(t *testing.T) {
 	}
 }
 
-// TestLuxConfig_AllPublic pins the Lux edge's surface. It fronts blockchain RPC
-// and carried no endpoint credential at all, so every one of its endpoints is
-// declared public — which is what preserves its behaviour under a policy whose
-// default is to require an identity.
+// TestLuxConfig pins the Lux edge's surface: every route states whether it needs
+// an identity, and the node-control route states that it does.
 //
-// It also makes the exposure legible: POST /v1/admin and GET /v1/metrics reach
-// luxd's admin and metrics APIs with no credential. That is what shipped
-// before this change and what still ships; it is written down here so it is a
-// decision someone can see rather than an omission nobody could.
-func TestLuxConfig_AllPublic(t *testing.T) {
+// The edge fronts blockchain RPC and carried no endpoint credential at all, so
+// declaring the RPC routes public is what preserves their behaviour under a
+// policy whose default is to require an identity. POST /v1/admin is the one
+// that does not get that treatment: it reaches luxd's admin API, it was open by
+// omission, and writing a route down turns an omission into a decision.
+//
+// GET /v1/metrics and POST /v1/keystore reach node internals and node key
+// management and are still declared public. That is inherited, not decided, and
+// it is pinned here so the next person sees it rather than having to find it.
+func TestLuxConfig(t *testing.T) {
 	cfg := readConfig(t, "configs/lux/gateway.json")
 	if len(cfg.Endpoints) == 0 {
 		t.Fatal("lux config declares no endpoints")
 	}
+	gated := map[string]bool{"POST /v1/admin": true}
+	inherited := map[string]bool{"GET /v1/metrics": true, "POST /v1/keystore": true}
+
 	for _, ep := range cfg.Endpoints {
-		var open bool
-		if raw, ok := ep.ExtraConfig["auth/public"]; ok {
-			json.Unmarshal(raw, &open)
+		name := ep.Method + " " + ep.Endpoint
+		raw, stated := ep.ExtraConfig["auth/public"]
+		if !stated {
+			t.Errorf("%s states no policy; every route on this edge says which it is", name)
+			continue
 		}
-		if !open {
-			t.Errorf("%s %s is not declared public; the Lux edge gated nothing before and would now 401",
-				ep.Method, ep.Endpoint)
+		var open bool
+		json.Unmarshal(raw, &open)
+
+		switch {
+		case gated[name] && open:
+			t.Errorf("%s reaches a node's admin API and is declared public", name)
+		case !gated[name] && !open:
+			t.Errorf("%s is not declared public; the Lux edge gated nothing before and would now 401", name)
+		}
+		if inherited[name] && open {
+			t.Logf("%s is public by inheritance, not by decision", name)
 		}
 	}
 }
