@@ -1,0 +1,1031 @@
+{
+  "$schema": "https://www.krakend.io/schema/v2.7/krakend.json",
+  "cache_ttl": "0s",
+  "endpoints": [
+    {
+      "endpoint": "/v1/tokens",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/tokens"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/pools",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/pools"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/trades",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/trades"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/price/{symbol}",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/price/{symbol}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/token/{address}/history",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/token/{address}/history"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/portfolio/{address}",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/portfolio/{address}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/tokens",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/tokens"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/pools",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/pools"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/trades",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/trades"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/price/{symbol}",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/price/{symbol}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/token/{address}/history",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/token/{address}/history"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dex/portfolio/{address}",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/v1/portfolio/{address}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/v3",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/v3"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/v2",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/v2"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/zoo/v3",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/zoo/v3"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/zoo/v2",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/zoo/v2"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/pars/v2",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/pars/v2"
+        }
+      ]
+    },
+    {
+      "endpoint": "/subgraph/hanzo/v2",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://exchange-api.lux-ns.svc:4000"
+          ],
+          "url_pattern": "/subgraph/hanzo/v2"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/P",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/P"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/X",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/X"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/info",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/info"
+        }
+      ],
+      "extra_config": {
+        "validation/cel": [
+          {
+            "check_expr": "req_body.matches('.*\"info\\\\.getNetworkID\".*') || req_body.matches('.*\"info\\\\.getNetworkName\".*') || req_body.matches('.*\"info\\\\.getBlockchainID\".*') || req_body.matches('.*\"info\\\\.isBootstrapped\".*') || req_body.matches('.*\"info\\\\.getNodeVersion\".*') || req_body.matches('.*\"info\\\\.getNodeID\".*')",
+            "message": "Method not allowed: only info.getNetworkID, info.getNetworkName, info.getBlockchainID, info.isBootstrapped, info.getNodeVersion, and info.getNodeID are permitted"
+          }
+        ],
+        "qos/ratelimit/router": {
+          "max_rate": 50,
+          "client_max_rate": 10,
+          "strategy": "ip"
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/health",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/health"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/health/liveness",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/health/liveness"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/chains",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/info"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/qchain/health",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-qchain.lux-mainnet.svc:4300"
+          ],
+          "url_pattern": "/health"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/qchain/stats",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-qchain.lux-mainnet.svc:4300"
+          ],
+          "url_pattern": "/api/v2/stats"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/zchain/health",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-zchain.lux-mainnet.svc:4400"
+          ],
+          "url_pattern": "/health"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/zchain/stats",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-zchain.lux-mainnet.svc:4400"
+          ],
+          "url_pattern": "/api/v2/stats"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/tchain/health",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-tchain.lux-mainnet.svc:4700"
+          ],
+          "url_pattern": "/health"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/tchain/stats",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-tchain.lux-mainnet.svc:4700"
+          ],
+          "url_pattern": "/api/v2/stats"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/achain/health",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-achain.lux-mainnet.svc:4500"
+          ],
+          "url_pattern": "/health"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/dag/achain/stats",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://indexer-achain.lux-mainnet.svc:4500"
+          ],
+          "url_pattern": "/api/v2/stats"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-c",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/cchain"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-c/v1",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/cchain"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-c/v1/{r1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/cchain/{r1}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-c/v1/{r1}/{r2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/cchain/{r1}/{r2}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-c/v1/{r1}/{r2}/{r3}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/cchain/{r1}/{r2}/{r3}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-hanzo",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/hanzo"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-hanzo/v1",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/hanzo"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-hanzo/v1/{r1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/hanzo/{r1}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-hanzo/v1/{r1}/{r2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/hanzo/{r1}/{r2}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-hanzo/v1/{r1}/{r2}/{r3}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/hanzo/{r1}/{r2}/{r3}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-zoo",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/zoo"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-zoo/v1",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/zoo"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-zoo/v1/{r1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/zoo/{r1}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-zoo/v1/{r1}/{r2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/zoo/{r1}/{r2}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-zoo/v1/{r1}/{r2}/{r3}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/zoo/{r1}/{r2}/{r3}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-pars",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/pars"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-pars/v1",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/pars"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-pars/v1/{r1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/pars/{r1}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-pars/v1/{r1}/{r2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/pars/{r1}/{r2}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-pars/v1/{r1}/{r2}/{r3}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/pars/{r1}/{r2}/{r3}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-spc",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/spc"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-spc/v1",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/spc"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-spc/v1/{r1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/spc/{r1}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-spc/v1/{r1}/{r2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/spc/{r1}/{r2}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/indexer/indexer-spc/v1/{r1}/{r2}/{r3}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_query_strings": [
+        "*"
+      ],
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://explorer.lux-mainnet.svc:80"
+          ],
+          "url_pattern": "/v1/indexer/spc/{r1}/{r2}/{r3}"
+        }
+      ]
+    },
+    {
+      "endpoint": "/v1/bc/{chain}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/bc/{chain}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/bc/{chain}/{p1}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}/{p1}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/bc/{chain}/{p1}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}/{p1}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/bc/{chain}/{p1}/{p2}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}/{p1}/{p2}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    },
+    {
+      "endpoint": "/v1/bc/{chain}/{p1}/{p2}",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "backend": [
+        {
+          "encoding": "no-op",
+          "host": [
+            "http://luxd-rpc.lux-mainnet.svc:9630"
+          ],
+          "url_pattern": "/v1/bc/{chain}/{p1}/{p2}",
+          "timeout": "60s"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 100,
+          "client_max_rate": 20,
+          "strategy": "ip",
+          "capacity": 200
+        }
+      }
+    }
+  ],
+  "extra_config": {
+    "security/cors": {
+      "allow_headers": [
+        "Content-Type",
+        "Authorization"
+      ],
+      "allow_methods": [
+        "GET",
+        "POST",
+        "OPTIONS"
+      ],
+      "allow_origins": [
+        "*"
+      ],
+      "expose_headers": [
+        "Content-Length"
+      ],
+      "max_age": "12h"
+    }
+  },
+  "name": "Lux Gateway - api.lux.network",
+  "port": 8080,
+  "timeout": "30s",
+  "version": 3
+}

@@ -164,6 +164,15 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		}
 
 		logger.Info(fmt.Sprintf("Starting Gateway v%s", core.KrakendVersion))
+
+		// The config is this edge's whole statement about credentials, so it is
+		// read before anything listens. A statement the binary cannot serve is
+		// a boot failure and not a per-request one — see policy.check.
+		if err := readPolicy(cfg).check(); err != nil {
+			logger.Critical("[SERVICE: Auth]", err.Error())
+			os.Exit(1)
+		}
+
 		startReporter(ctx, logger, cfg)
 
 		if wd, err := os.Getwd(); err == nil {
