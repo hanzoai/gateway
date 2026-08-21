@@ -182,9 +182,6 @@ routes:
   kms.hanzo.ai:
     - prefix: /
       backend: http://kms.hanzo.svc.cluster.local:80
-  registry.hanzo.ai:
-    - prefix: /
-      backend: http://registry.hanzo.svc.cluster.local:5000
   s3.hanzo.ai:
     - prefix: /
       backend: http://s3.hanzo.svc.cluster.local:9000
