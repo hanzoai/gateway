@@ -497,7 +497,7 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", nil)
+		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/account", nil)
 	if err != nil {
 		return principal{}, false
 	}

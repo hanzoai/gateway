@@ -402,7 +402,7 @@ in order, all reusing hanzoai/authz/edge:
      one admin login covers every guarded `*.hanzo.ai` host) — browser fast path;
   2. a Bearer/Basic JWT via hanzoai/authz/edge.Validator.Validate` (the JWT already carries
      `owner`, no IAM round-trip) — API path;
-  3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/get-account`
+  3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/account`
      server-side and reading `owner` — browser-with-IAM-session path.
 
 Login is standard OAuth2 PKCE against IAM (`client_id=hanzo-admin-guard`, app is

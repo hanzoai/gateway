@@ -29,13 +29,13 @@ func fakeIAM(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/v1/iam/get-applications"):
+		case strings.HasPrefix(r.URL.Path, "/v1/iam/applications"):
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "ok",
 				"data":   []map[string]any{{"owner": "admin", "name": "hanzo-cloud", "clientId": "abc123"}},
 				"total":  1,
 			})
-		case strings.HasPrefix(r.URL.Path, "/v1/iam/get-roles"):
+		case strings.HasPrefix(r.URL.Path, "/v1/iam/roles"):
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"status": "ok",
 				"data":   []map[string]any{{"owner": "admin", "name": "operators"}},
