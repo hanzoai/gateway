@@ -402,25 +402,27 @@ func stated(e *config.EndpointConfig) bool {
 
 // check reports whether this config is one the binary can serve.
 //
-// A route requires an IAM identity unless it declares authPublic, so the
-// config is where the open surface is NAMED. A config that carries routes and
-// names nothing — no open endpoint, no stated requirement — was written
-// against a different contract, and under this one it puts every route behind
-// an identity, including the ones meant to be reachable without one.
+// A route requires an IAM identity unless it declares authPublic, so the config
+// is where the open surface is NAMED — and the requirement is that EVERY route
+// says which it is. Not "somewhere in this file the word appears": a config
+// written against the older contract states a requirement on the routes it
+// gated and says nothing on the routes it left open, which reads as a config
+// that made a decision while every one of those open routes now demands an
+// identity nothing sends.
 //
 // Boot is the only place that difference is observable: the probes are a
 // process check and read no endpoint, so a process that starts reports healthy
-// whatever this config says. So the answer is to not start.
+// whatever this config says, and the routes that stopped answering are the ones
+// nobody was authenticating to. So the answer is to not start.
 //
-// Three configs pass and each is a real deployment. No endpoints at all: there
-// is no surface to state a policy about. Every endpoint open: an estate that
-// fronts a public API. Every endpoint gated: an estate with no public surface.
-// Only "routes, and not one word about credentials" is refused.
+// A config with no endpoints passes — there is no surface to state a policy
+// about, and 0 == 0+0.
 func (p policy) check() error {
-	if p.routes == 0 || p.open > 0 || p.gated > 0 {
+	if p.routes == p.open+p.gated {
 		return nil
 	}
-	return fmt.Errorf("config declares %d endpoints and states no credential policy on any of them: "+
-		"a route reachable without an IAM identity carries %q, and this config names none. "+
-		"Classify every endpoint in the mounted config, then start", p.routes, authPublic)
+	return fmt.Errorf("%d of %d endpoints state no credential policy: every route says whether it "+
+		"needs an IAM identity, with %q true or false, and this config leaves that unsaid on %d of "+
+		"them. Classify them in the mounted config, then start",
+		p.routes-p.open-p.gated, p.routes, authPublic, p.routes-p.open-p.gated)
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -138,9 +139,10 @@ func TestPolicyRefusesUnstated(t *testing.T) {
 	t.Logf("routes=%d open=%d gated=%d -> %v", p.routes, p.open, p.gated, err)
 }
 
-// One endpoint declaring itself open is a config that states a policy. The
-// same 63 routes, one key added, and the binary serves it.
-func TestPolicyAdmitsOneOpenRoute(t *testing.T) {
+// One endpoint declaring itself open is NOT a config that states a policy. The
+// other 62 still say nothing, and every one of them would demand an identity
+// while the process reports healthy.
+func TestPolicyRefusesAPartialStatement(t *testing.T) {
 	path := restate(t, liveShape, func(endpoints []any) {
 		ep := endpoints[0].(map[string]any)
 		ep["extra_config"] = map[string]any{authPublic: true}
@@ -148,6 +150,32 @@ func TestPolicyAdmitsOneOpenRoute(t *testing.T) {
 	p := readPolicy(parse(t, path))
 	if p.open != 1 {
 		t.Fatalf("open = %d, want 1", p.open)
+	}
+	err := p.check()
+	if err == nil {
+		t.Fatal("check() = nil for a config that classified 1 of 63 routes")
+	}
+	if !strings.Contains(err.Error(), "62") {
+		t.Errorf("refusal %q does not name the 62 routes still unsaid", err)
+	}
+}
+
+// Every route classified, either way, is a config that states a policy.
+func TestPolicyAdmitsAFullStatement(t *testing.T) {
+	path := restate(t, liveShape, func(endpoints []any) {
+		for i, e := range endpoints {
+			ep := e.(map[string]any)
+			extra, _ := ep["extra_config"].(map[string]any)
+			if extra == nil {
+				extra = map[string]any{}
+				ep["extra_config"] = extra
+			}
+			extra[authPublic] = i%2 == 0
+		}
+	})
+	p := readPolicy(parse(t, path))
+	if p.open+p.gated != p.routes {
+		t.Fatalf("routes=%d open=%d gated=%d", p.routes, p.open, p.gated)
 	}
 	if err := p.check(); err != nil {
 		t.Errorf("check() = %v, want nil", err)
@@ -189,14 +217,65 @@ func TestPolicyAdmitsNoRoutes(t *testing.T) {
 	}
 }
 
-// The configs built into this image state a policy, so the binary serves the
-// config it ships with.
+// The configs built into this image classify EVERY route, so the binary serves
+// the config it ships with — and no route in either of them is unsaid.
 func TestPolicyAdmitsShippedConfigs(t *testing.T) {
 	for _, path := range []string{"configs/hanzo/gateway.json", "configs/lux/gateway.json"} {
 		p := readPolicy(parse(t, path))
 		if err := p.check(); err != nil {
 			t.Errorf("%s: check() = %v, want nil", path, err)
 		}
+		if p.open+p.gated != p.routes {
+			t.Errorf("%s: %d of %d routes state no policy", path, p.routes-p.open-p.gated, p.routes)
+		}
 		t.Logf("%s: routes=%d open=%d gated=%d", path, p.routes, p.open, p.gated)
 	}
 }
+
+// The shipped hanzo config must still mean what canon meant, one route at a
+// time: the routes canon gated with auth/validator are the routes this config
+// states as needing an identity, and the routes canon left open are the ones it
+// states as public. The migration moved where that is written down, not which
+// routes are which.
+//
+// Both sides go through the same parser, because the parser rewrites paths —
+// {action} becomes :action — and comparing a parsed path to a raw one compares
+// spellings rather than routes.
+func TestShippedConfigMatchesTheGatingItReplaced(t *testing.T) {
+	raw, err := exec.Command("git", "show", "canon/main:configs/hanzo/gateway.json").Output()
+	if err != nil {
+		t.Skipf("canon/main not fetched in this checkout: %v", err)
+	}
+	path := filepath.Join(t.TempDir(), "gateway.json")
+	if err := os.WriteFile(path, raw, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	canon := map[string]bool{} // route -> gated on canon
+	for _, e := range parse(t, path).Endpoints {
+		_, gated := e.ExtraConfig["auth/validator"]
+		canon[route(e)] = gated
+	}
+
+	now := parse(t, "configs/hanzo/gateway.json")
+	if len(now.Endpoints) != len(canon) {
+		t.Fatalf("%d endpoints now, %d on canon", len(now.Endpoints), len(canon))
+	}
+	for _, e := range now.Endpoints {
+		wasGated, known := canon[route(e)]
+		if !known {
+			t.Errorf("%s is not on canon", route(e))
+			continue
+		}
+		open, stated := e.ExtraConfig[authPublic].(bool)
+		if !stated {
+			t.Errorf("%s states no policy", route(e))
+			continue
+		}
+		if open == wasGated {
+			t.Errorf("%s: canon gated=%v, this config states open=%v", route(e), wasGated, open)
+		}
+	}
+}
+
+func route(e *config.EndpointConfig) string { return e.Method + " " + e.Endpoint }
