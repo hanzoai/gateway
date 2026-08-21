@@ -21,28 +21,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// authPublic is the endpoint key that says a route is reachable without a
-// credential — the AI surface (which carries an API key the backend owns),
-// the health probes and the public catalogs.
-//
-// It is a DECLARATION, not a module: the endpoint pipeline runs no JWT
-// validator of its own. The one validator is the trust boundary the engine
-// installs ahead of routing (authpolicy.go), which verifies the IAM token
-// against hanzo.id over TLS, enforces the issuer and the audience allowlist,
-// strips what the client claimed and writes what the token proved. This key
-// only says whether THIS route needs that to have happened.
-//
-// The polarity is deliberate: absent means REQUIRED. An endpoint added to the
-// config without thinking about auth is gated, not open.
-const authPublic = "auth/public"
-
-// public reports whether cfg declares the endpoint reachable without a
-// credential. Anything but an explicit `true` is a gated route.
-func public(cfg *config.EndpointConfig) bool {
-	open, _ := cfg.ExtraConfig[authPublic].(bool)
-	return open
-}
-
 // requireIdentity refuses a request that reached a gated endpoint carrying no
 // verified identity.
 //
