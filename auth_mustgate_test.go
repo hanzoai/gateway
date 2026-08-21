@@ -355,27 +355,30 @@ func TestHanzoConfig_PublicSurfaceUnchanged(t *testing.T) {
 }
 
 // TestLuxConfig pins the Lux edge's surface: every route states whether it needs
-// an identity, and the node-control route states that it does.
+// an identity, and the routes that reach the node itself state that they do.
 //
 // The edge fronts blockchain RPC and carried no endpoint credential at all, so
-// declaring the RPC routes public is what preserves their behaviour under a
-// policy whose default is to require an identity. POST /v1/admin is the one
-// that does not get that treatment: it reaches luxd's admin API, it was open by
-// omission, and writing a route down turns an omission into a decision.
-//
-// GET /v1/metrics and POST /v1/keystore reach node internals and node key
-// management and are still declared public. That is inherited, not decided, and
-// it is pinned here so the next person sees it rather than having to find it.
+// declaring the RPC routes public preserves their behaviour under a policy whose
+// default is to require an identity. Three routes reach the node rather than the
+// chain — POST /v1/admin (admin API), POST /v1/keystore (key management), GET
+// /v1/metrics (node internals) — and each was open by omission. Writing a route
+// down turns an omission into a decision, and none of the three is one anyone
+// meant to make, so all three require an identity.
 func TestLuxConfig(t *testing.T) {
 	cfg := readConfig(t, "configs/lux/gateway.json")
 	if len(cfg.Endpoints) == 0 {
 		t.Fatal("lux config declares no endpoints")
 	}
-	gated := map[string]bool{"POST /v1/admin": true}
-	inherited := map[string]bool{"GET /v1/metrics": true, "POST /v1/keystore": true}
+	nodeControl := map[string]bool{
+		"POST /v1/admin":    true,
+		"POST /v1/keystore": true,
+		"GET /v1/metrics":   true,
+	}
 
+	seen := map[string]bool{}
 	for _, ep := range cfg.Endpoints {
 		name := ep.Method + " " + ep.Endpoint
+		seen[name] = true
 		raw, stated := ep.ExtraConfig["auth/public"]
 		if !stated {
 			t.Errorf("%s states no policy; every route on this edge says which it is", name)
@@ -385,13 +388,15 @@ func TestLuxConfig(t *testing.T) {
 		json.Unmarshal(raw, &open)
 
 		switch {
-		case gated[name] && open:
-			t.Errorf("%s reaches a node's admin API and is declared public", name)
-		case !gated[name] && !open:
+		case nodeControl[name] && open:
+			t.Errorf("%s reaches the node itself and is declared public", name)
+		case !nodeControl[name] && !open:
 			t.Errorf("%s is not declared public; the Lux edge gated nothing before and would now 401", name)
 		}
-		if inherited[name] && open {
-			t.Logf("%s is public by inheritance, not by decision", name)
+	}
+	for name := range nodeControl {
+		if !seen[name] {
+			t.Errorf("%s is expected in the lux config and is absent", name)
 		}
 	}
 }
