@@ -18,11 +18,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// TestIsSentryIngestPath pins the byte-tight boundary of the Hanzo Sentry
-// DSN-ingest allow-rule: POST + /v1/sentinel/ prefix + envelope|store suffix ONLY.
-// It MUST NOT widen to a bare /v1/sentinel/ prefix (that would expose the Sentry
-// read APIs — issues/discover/projects — to tokenless callers).
-func TestIsSentryIngestPath(t *testing.T) {
+// TestIsIngestPath pins the byte-tight boundary of the tokenless DSN-ingest
+// allow-rule: POST + an ingest-root prefix + an envelope|store suffix ONLY. The
+// two roots — /v1/event/ (a minted DSN) and /v1/o11y/api/ (a stock Sentry SDK's
+// appended suffix) — go through one selector and must behave identically. It
+// MUST NOT widen to a bare root prefix (that would expose the error-plane read
+// APIs — issues/discover/projects — to tokenless callers).
+func TestIsIngestPath(t *testing.T) {
 	cases := []struct {
 		method string
 		path   string
@@ -32,14 +34,17 @@ func TestIsSentryIngestPath(t *testing.T) {
 		{http.MethodPost, "/v1/event/019f5339-28a4-78d1/store/", true},
 		{http.MethodPost, "/v1/event/acme/envelope", true}, // slash-less tolerated
 		{http.MethodPost, "/v1/event/acme/store", true},
+		{http.MethodPost, "/v1/o11y/api/acme/envelope/", true}, // the second root, same rule
+		{http.MethodPost, "/v1/o11y/api/acme/store", true},
 		{http.MethodGet, "/v1/event/acme/envelope/", false},           // ingest is POST-only
-		{http.MethodPost, "/v1/sentinel/issues", false},               // a READ API — must stay gated
-		{http.MethodPost, "/v1/sentinel/acme/issues", false},          // a READ API — must stay gated
-		{http.MethodGet, "/v1/sentinel/issues", false},                // read
-		{http.MethodPost, "/v1/sentinel/", false},                     // bare prefix — not ingest
-		{http.MethodPost, "/v1/sentinel", false},                      // bare, no trailing slash
-		{http.MethodPost, "/v1/sentryX/acme/envelope/", false},        // prefix boundary: needs the '/'
-		{http.MethodPost, "/v1/o11y/api/acme/envelope/", false},       // that is the sibling matcher, not this one
+		{http.MethodGet, "/v1/o11y/api/acme/envelope/", false},        // POST-only, both roots
+		{http.MethodPost, "/v1/event/acme/issues", false},             // a READ path — must stay gated
+		{http.MethodPost, "/v1/o11y/api/acme/issues", false},          // a READ path — must stay gated
+		{http.MethodPost, "/v1/event/", false},                        // bare root — not ingest
+		{http.MethodPost, "/v1/event", false},                         // bare, no trailing slash
+		{http.MethodPost, "/v1/o11y/api/", false},                     // bare root — not ingest
+		{http.MethodPost, "/v1/eventX/acme/envelope/", false},         // prefix boundary: needs the '/'
+		{http.MethodPost, "/v1/sentinel/acme/envelope/", false},       // not an ingest root
 		{http.MethodPost, "/v1/event/acme/envelope/../issues", false}, // suffix anchor defeats traversal
 	}
 	for _, c := range cases {
@@ -49,11 +54,11 @@ func TestIsSentryIngestPath(t *testing.T) {
 	}
 }
 
-// The security boundary end-to-end through the middleware: the Sentry ingest verbs
-// are reachable WITHOUT a token (DSN-authed downstream at cloud), but every Sentry
-// read still 401s without identity — the exact non-widening property RED requires
-// on a public tokenless edge.
-func TestAuthMiddleware_SentryIngestBypassButReadsRequireAuth(t *testing.T) {
+// The security boundary end-to-end through the middleware: the ingest verbs are
+// reachable WITHOUT a token (DSN-authed downstream at cloud), but a read on the
+// same root still 401s without identity — the exact non-widening property RED
+// requires on a public tokenless edge.
+func TestAuthMiddleware_IngestBypassButReadsRequireAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mw := NewAuthMiddleware(AuthConfig{Enabled: true, RequireAuth: true, JWKSURL: "http://127.0.0.1:0/jwks"})
 
@@ -68,27 +73,32 @@ func TestAuthMiddleware_SentryIngestBypassButReadsRequireAuth(t *testing.T) {
 		return rec.Code
 	}
 
-	// Tokenless ingest passes through (not 401) → reaches DSN auth at cloud.
-	if code := do(http.MethodPost, "/v1/event/019f5339/envelope/"); code == http.StatusUnauthorized {
-		t.Errorf("tokenless sentry envelope ingest was blocked (401); it must pass through to DSN auth")
-	}
-	if code := do(http.MethodPost, "/v1/event/019f5339/store/"); code == http.StatusUnauthorized {
-		t.Errorf("tokenless sentry store ingest was blocked (401); it must pass through to DSN auth")
+	// Tokenless ingest passes through (not 401) -> reaches DSN auth at cloud.
+	// Both roots, both verbs.
+	for _, path := range []string{
+		"/v1/event/019f5339/envelope/",
+		"/v1/event/019f5339/store/",
+		"/v1/o11y/api/019f5339/envelope/",
+	} {
+		if code := do(http.MethodPost, path); code == http.StatusUnauthorized {
+			t.Errorf("tokenless ingest %q was blocked (401); it must pass through to DSN auth", path)
+		}
 	}
 
-	// Tokenless READS are rejected — the allow-rule must NOT widen to reads.
-	if code := do(http.MethodGet, "/v1/sentinel/issues"); code != http.StatusUnauthorized {
-		t.Errorf("tokenless sentry issues read returned %d, want 401 — reads must stay JWT-gated", code)
+	// A read on the SAME root is not an ingest verb and stays JWT-gated — this is
+	// the property that must not widen.
+	if code := do(http.MethodPost, "/v1/event/019f5339/issues"); code != http.StatusUnauthorized {
+		t.Errorf("tokenless read under an ingest root returned %d, want 401 — reads must stay JWT-gated", code)
 	}
-	if code := do(http.MethodGet, "/v1/sentinel/019f5339/issues"); code != http.StatusUnauthorized {
-		t.Errorf("tokenless sentry project-issues read returned %d, want 401 — reads must stay JWT-gated", code)
+	if code := do(http.MethodGet, "/v1/o11y/api/019f5339/issues"); code != http.StatusUnauthorized {
+		t.Errorf("tokenless read under an ingest root returned %d, want 401 — reads must stay JWT-gated", code)
 	}
-	// A GET to the ingest path is not the ingest verb → still gated.
+	// A GET to the ingest path is not the ingest verb -> still gated.
 	if code := do(http.MethodGet, "/v1/event/019f5339/envelope/"); code != http.StatusUnauthorized {
-		t.Errorf("GET on the sentry ingest path returned %d, want 401 (ingest is POST-only)", code)
+		t.Errorf("GET on the ingest path returned %d, want 401 (ingest is POST-only)", code)
 	}
-	// The bare prefix is not ingest → gated.
-	if code := do(http.MethodPost, "/v1/sentinel/"); code != http.StatusUnauthorized {
-		t.Errorf("POST to the bare /v1/sentinel/ prefix returned %d, want 401 (not an ingest verb)", code)
+	// The bare root is not ingest -> gated.
+	if code := do(http.MethodPost, "/v1/event/"); code != http.StatusUnauthorized {
+		t.Errorf("POST to the bare /v1/event/ root returned %d, want 401 (not an ingest verb)", code)
 	}
 }
