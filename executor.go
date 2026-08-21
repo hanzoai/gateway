@@ -14,9 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/sync/errgroup"
 
-	bloomfilterreg "github.com/hanzoai/gateway/v2/internal/pkg/bloomfilter/register"
 	asyncamqp "github.com/hanzoai/gateway/v2/internal/plugin/amqp/async"
-	cel "github.com/hanzoai/gateway/v2/internal/plugin/cel"
 	cmd "github.com/hanzoai/gateway/v2/internal/plugin/cobra"
 	_ "github.com/hanzoai/gateway/v2/internal/plugin/cors/gin" // keep dep, CORS handled by hostProxyMiddleware
 	influxdb "github.com/hanzoai/gateway/v2/internal/plugin/influx"
@@ -72,12 +70,6 @@ type SubscriberFactoriesRegister interface {
 	Register(context.Context, config.ServiceConfig, logging.Logger) func(string, int)
 }
 
-// TokenRejecterFactory returns a jose.ChainedRejecterFactory containing all the required jose.RejecterFactory.
-// It also should setup and manage any service related to the management of the revocation process, if required.
-type TokenRejecterFactory interface {
-	NewTokenRejecter(context.Context, config.ServiceConfig, logging.Logger, func(string, int)) (jose.ChainedRejecterFactory, error)
-}
-
 // MetricsAndTracesRegister registers the defined observability components and returns a metrics collector,
 // if required.
 type MetricsAndTracesRegister interface {
@@ -101,7 +93,7 @@ type BackendFactory interface {
 
 // HandlerFactory returns a Gateway router handler factory, ready to be passed to the Gateway RouterFactory
 type HandlerFactory interface {
-	NewHandlerFactory(logging.Logger, *metrics.Metrics, jose.RejecterFactory) router.HandlerFactory
+	NewHandlerFactory(logging.Logger, *metrics.Metrics) router.HandlerFactory
 }
 
 // LoggerFactory returns a Gateway Logger factory, ready to be passed to the Gateway RouterFactory
@@ -135,7 +127,6 @@ type ExecutorBuilder struct {
 	PluginLoaderWithContext     PluginLoaderWithContext
 	LoggerFactory               LoggerFactory
 	SubscriberFactoriesRegister SubscriberFactoriesRegister
-	TokenRejecterFactory        TokenRejecterFactory
 	MetricsAndTracesRegister    MetricsAndTracesRegister
 	EngineFactory               EngineFactory
 
@@ -194,22 +185,14 @@ func (e *ExecutorBuilder) NewCmdExecutor(ctx context.Context) cmd.Executor {
 		if err := jose.SetGlobalCacher(logger, cfg.ExtraConfig); err != nil && err != jose.ErrNoValidatorCfg {
 			logger.Error("[SERVICE: JOSE]", err.Error())
 		}
-		tokenRejecterFactory, err := e.TokenRejecterFactory.NewTokenRejecter(
-			ctx,
-			cfg,
-			logger,
-			e.SubscriberFactoriesRegister.Register(ctx, cfg, logger),
-		)
-		if err != nil && err != bloomfilterreg.ErrNoConfig {
-			logger.Warning("[SERVICE: Bloomfilter]", err.Error())
-		}
+		e.SubscriberFactoriesRegister.Register(ctx, cfg, logger)
 
 		bpf := e.BackendFactory.NewBackendFactory(ctx, logger, metricCollector)
 		pf := e.ProxyFactory.NewProxyFactory(logger, bpf, metricCollector)
 
 		agentPing := make(chan string, len(cfg.AsyncAgents))
 
-		handlerF := e.HandlerFactory.NewHandlerFactory(logger, metricCollector, tokenRejecterFactory)
+		handlerF := e.HandlerFactory.NewHandlerFactory(logger, metricCollector)
 
 		runServerChain := serverhttp.RunServerWithLoggerFactory(logger)
 		runServerChain = router.RunServerFunc(e.RunServerFactory.NewRunServer(logger, runServerChain))
@@ -282,9 +265,6 @@ func (e *ExecutorBuilder) checkCollaborators() {
 	if e.SubscriberFactoriesRegister == nil {
 		e.SubscriberFactoriesRegister = new(registerSubscriberFactories)
 	}
-	if e.TokenRejecterFactory == nil {
-		e.TokenRejecterFactory = new(BloomFilterJWT)
-	}
 	if e.MetricsAndTracesRegister == nil {
 		e.MetricsAndTracesRegister = new(MetricsAndTraces)
 	}
@@ -356,27 +336,6 @@ func (LoggerBuilder) NewLogger(cfg config.ServiceConfig) (logging.Logger, error)
 		fallback.Error("[SERVICE: telemetry/logging] Unable to create the logger:", err.Error())
 	}
 	return fallback, nil
-}
-
-// BloomFilterJWT is the default TokenRejecterFactory implementation.
-type BloomFilterJWT struct{}
-
-// NewTokenRejecter registers the bloomfilter component and links it to a token rejecter. Then it returns a chained
-// rejecter factory with the created token rejecter and other based on the CEL component.
-func (BloomFilterJWT) NewTokenRejecter(ctx context.Context, cfg config.ServiceConfig, l logging.Logger, reg func(n string, p int)) (jose.ChainedRejecterFactory, error) {
-	rejecter, err := bloomfilterreg.Register(ctx, "krakend-bf", cfg, l, reg)
-
-	return jose.ChainedRejecterFactory([]jose.RejecterFactory{
-		jose.RejecterFactoryFunc(func(_ logging.Logger, _ *config.EndpointConfig) jose.Rejecter {
-			return jose.RejecterFunc(rejecter.RejectToken)
-		}),
-		jose.RejecterFactoryFunc(func(l logging.Logger, cfg *config.EndpointConfig) jose.Rejecter {
-			if r := cel.NewRejecter(l, cfg); r != nil {
-				return r
-			}
-			return jose.FixedRejecter(false)
-		}),
-	}), err
 }
 
 // MetricsAndTraces is the default implementation of the MetricsAndTracesRegister interface.

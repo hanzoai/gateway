@@ -12,7 +12,6 @@ import (
 	router "github.com/hanzoai/gateway/v2/internal/lura/router/gin"
 	"github.com/hanzoai/gateway/v2/internal/lura/transport/http/server"
 	botdetector "github.com/hanzoai/gateway/v2/internal/plugin/botdetector/gin"
-	jose "github.com/hanzoai/gateway/v2/internal/plugin/jose"
 	lua "github.com/hanzoai/gateway/v2/internal/plugin/lua/router/gin"
 	metrics "github.com/hanzoai/gateway/v2/internal/plugin/metrics/gin"
 	opencensus "github.com/hanzoai/gateway/v2/internal/plugin/opencensus/router/gin"
@@ -70,9 +69,7 @@ func NewHandlerFactory(logger logging.Logger, metricCollector *metrics.Metrics) 
 
 type handlerFactory struct{}
 
-// NewHandlerFactory satisfies the engine's HandlerFactory interface. The
-// rejecter it is handed is the token-revocation hook of the endpoint JWT
-// validator this gateway no longer runs, so nothing reads it.
-func (handlerFactory) NewHandlerFactory(l logging.Logger, m *metrics.Metrics, _ jose.RejecterFactory) router.HandlerFactory {
+// NewHandlerFactory satisfies the engine's HandlerFactory interface.
+func (handlerFactory) NewHandlerFactory(l logging.Logger, m *metrics.Metrics) router.HandlerFactory {
 	return NewHandlerFactory(l, m)
 }

@@ -428,28 +428,41 @@ intentionally left ungated — a Bearer-only edge validator would break their
 cookie-auth callers. `/v1/ai/providers/global` is 4 segments and the member
 route is 5, so the ungated param route can never shadow it.
 
-## Boot refuses a config that states no credential policy
+## Boot refuses a config that leaves a route unsaid
 
 `authpolicy.go` holds both halves of the policy: what a request must bring, and
 what the config declares. The config half is read once, in `NewCmdExecutor`,
 BEFORE anything listens.
 
 An endpoint requires an IAM identity unless it declares `"auth/public": true`.
-Absent means required, so the config is where the OPEN surface is named. A
-config that carries routes and names nothing — no open endpoint, no stated
-requirement anywhere in the `auth/` namespace — was written against a different
-contract, and under this one it puts every route behind an identity, including
-the routes meant to be reachable without one.
+Absent means required, so the config is where the OPEN surface is named — and
+the requirement is that EVERY route says which it is:
 
 ```go
-routes == 0 || open > 0 || gated > 0   // serve
-otherwise                              // log CRITICAL, exit 1
+routes == open + gated     // serve
+otherwise                  // log CRITICAL, exit 1
 ```
 
-Three shapes pass and each is a real deployment: no endpoints (no surface to
-state a policy about), every endpoint open (`configs/lux/gateway.json`, 14 of
-14), every endpoint gated. Only "routes, and not one word about credentials" is
-refused.
+`gated` is any route that states a requirement: `"auth/public": false`, or any
+other key in the `auth/` namespace. A config with no endpoints passes, because
+0 == 0+0.
+
+**Completeness, not presence.** Asking only whether the file mentions auth
+somewhere is satisfied by a config written against the older contract, which
+states a requirement on the routes it gated and says NOTHING on the routes it
+left open. That config boots, reports healthy, and every one of those open
+routes demands an identity nothing sends. Measured on canon's own hanzo config
+— 216 `auth/validator` keys and 21 routes unsaid — the presence check passes it
+and the 21 unsaid routes are the entire AI and catalog surface. The completeness
+check refuses it and names them:
+
+```
+[SERVICE: Auth] 21 of 237 endpoints state no credential policy: every route says
+whether it needs an IAM identity, with "auth/public" true or false, and this
+config leaves that unsaid on 21 of them.
+```
+
+One classified route out of sixty-three satisfied the presence check too.
 
 **The order is the whole control.** The readiness probe on the deployed gateway
 is a TCP connect to :8080 — it reads no status and no body, so a process that
@@ -457,22 +470,51 @@ has bound the port is Ready whatever it answers. Checked before the bind, a
 config the binary refuses stalls the rollout at one surged pod while the old
 ones keep serving. Checked after, the same config passes readiness and the
 rollout completes. `TestBootBindsNothingWithoutAPolicy` runs the shipping binary
-and connects to the port itself rather than asserting that a function returned
-an error.
+and POLLS the port while the process is alive — asking once, after it is gone,
+asks about a socket that is closed either way and answers "nothing is listening"
+for a binary that bound the port and then failed. `TestWatchCatchesATransientBind`
+holds the watcher to that.
 
 `tests/fixtures/policy/unstated.json` is a gateway.json in the shape that is
-mounted in production — KrakenD v2.7 schema, endpoints carrying
-`validation/cel` and `qos/ratelimit/router` extra_config, nothing in the auth
-namespace. The accept cases are derived from that same file, so the only
-difference between a refused config and a served one is the statement itself.
+mounted in production — KrakenD v2.7 schema, endpoints carrying `validation/cel`
+and `qos/ratelimit/router` extra_config, nothing in the auth namespace. The
+accept cases are derived from that same file, so the only difference between a
+refused config and a served one is the statement itself.
+
+### The shipped configs say what canon's validators said
+
+`configs/hanzo/gateway.json` is 21 open + 216 gated. The 216 are exactly the
+routes canon gated with `auth/validator`; the migration moved where that is
+written down, not which routes are which, and
+`TestShippedConfigMatchesTheGatingItReplaced` parses canon's copy through the
+same parser and compares route by route so the two cannot drift apart quietly.
+
+`configs/lux/gateway.json` is 13 open + 1 gated. The gated one is `POST
+/v1/admin`, which reaches a node's admin API and was open by omission on canon.
+Writing a route down turns an omission into a decision, and that one was not a
+decision anyone made.
+
+**Watch the polarity while classifying.** `true` is the answer that both makes
+the check pass and preserves whatever a route did before, so it is the answer
+the work pulls toward. It is also the answer that needs justifying: `false`
+costs a route nothing but a credential, `true` states that the route is meant to
+be reachable without one. Decide each route on what it reaches. Two more lux
+routes sit in the same class as `/v1/admin` and are still `true` — `POST
+/v1/keystore` (a node's key management) and `GET /v1/metrics` (node internals) —
+and neither has been decided, only inherited.
 
 ### Deploy pre-flight — the ConfigMap and the image go together
 
-The binary is only safe against a config that states a policy. The ConfigMap it
-reads is declared in the universe repo, not here, and the two have diverged:
-`configs/lux/gateway.json` has 14 endpoints to one backend, the declared
-ConfigMap has 63 to seven. **The repo config is not a drop-in replacement** —
-applying it would delete the exchange, explorer and indexer routes.
+**hanzo** ships them together already: `make apply-hanzo` creates the ConfigMap
+from `configs/hanzo/gateway.json`, applies `k8s/hanzo/`, and restarts the
+rollout, in that order, in one target. That config classifies all 237 routes, so
+it boots.
+
+**lux is the one that must be sequenced by hand.** Its ConfigMap is declared in
+the universe repo and the image tag is pinned there too, and the repo config is
+NOT a drop-in for it: `configs/lux/gateway.json` has 14 endpoints to one
+backend, the declared ConfigMap has 63 to seven, and applying the repo copy
+would delete the exchange, explorer and indexer routes.
 
 Before the image moves, a human classifies every endpoint in the declared
 ConfigMap, per namespace:
@@ -483,18 +525,18 @@ lux-testnet   61 endpoints   currently 0
 lux-devnet    36 endpoints   currently 0
 ```
 
-Each endpoint gets `"auth/public": true` in its `extra_config` when it is meant
-to be reachable without an IAM identity, and is left without it when it is not.
-With today's declarations the new binary REFUSES to boot — that is the check
-working — so the classification is a prerequisite and not a follow-up.
+Each route gets `"auth/public"` — `true` when it is meant to be reachable
+without an IAM identity, `false` when it is not. With today's declarations the
+new binary REFUSES to boot, so the classification is a prerequisite and not a
+follow-up.
 
-**One apply, one namespace at a time.** The ConfigMap change and the image tag
-land in the same change window: the old binary ignores `auth/public` entirely,
-so a ConfigMap applied ahead of the image is inert and safe, but an image
-applied ahead of the ConfigMap stalls the rollout. Rolling back the image
-without rolling back the ConfigMap is also safe, for the same reason. Verify by
-reading the pod log for `[SERVICE: Auth]` before the rollout is allowed to
-proceed to the next namespace.
+**One apply, one namespace at a time.** The old binary ignores `auth/public`
+entirely, so a ConfigMap applied ahead of the image is inert and safe, and
+rolling the image back without rolling the ConfigMap back is safe for the same
+reason. An image applied ahead of its ConfigMap stalls the rollout — verified
+against both shapes: an unclassified config and a partially classified one both
+exit 1 before binding. Verify by reading the pod log for `[SERVICE: Auth]`
+before the rollout is allowed to proceed to the next namespace.
 
 ## One ingress (`cmd/ingress` deleted)
 
