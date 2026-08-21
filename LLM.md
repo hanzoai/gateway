@@ -324,10 +324,11 @@ the edge's ANY-of). `X-Roles` was its last writer — a RETIRED header
 (`authz.Retired`) the gate strips and nothing writes — so it is also gone from
 every `input_headers` list.
 
-`configs/lux/gateway.json` declares all 14 of its endpoints `auth/public`: the
-Lux edge fronts blockchain RPC and gated nothing before. That includes `POST
-/v1/admin` and `GET /v1/metrics`, which reach luxd's admin and metrics APIs with
-no credential — preserved as-is, and now written down.
+`configs/lux/gateway.json` states all 14 of its endpoints: 11 public and 3
+gated. The Lux edge fronts blockchain RPC and gated nothing before, so the RPC
+routes are public. The three that reach the node itself — `POST /v1/admin`,
+`POST /v1/keystore`, `GET /v1/metrics` — were open by omission and now require
+an identity.
 
 `configs/hanzo/gateway.json` endpoints fall in three auth classes:
 
@@ -489,19 +490,18 @@ written down, not which routes are which, and
 `TestShippedConfigMatchesTheGatingItReplaced` parses canon's copy through the
 same parser and compares route by route so the two cannot drift apart quietly.
 
-`configs/lux/gateway.json` is 13 open + 1 gated. The gated one is `POST
-/v1/admin`, which reaches a node's admin API and was open by omission on canon.
-Writing a route down turns an omission into a decision, and that one was not a
-decision anyone made.
+`configs/lux/gateway.json` is 11 open + 3 gated. The gated three all reach the
+node rather than the chain — `POST /v1/admin` (admin API), `POST /v1/keystore`
+(key management), `GET /v1/metrics` (node internals) — and each was open by
+omission on canon. Writing a route down turns an omission into a decision, and
+none of the three was a decision anyone made: keystore is absent from every live
+ConfigMap, and nothing scrapes the gateway's routed `/v1/metrics`.
 
 **Watch the polarity while classifying.** `true` is the answer that both makes
 the check pass and preserves whatever a route did before, so it is the answer
 the work pulls toward. It is also the answer that needs justifying: `false`
 costs a route nothing but a credential, `true` states that the route is meant to
-be reachable without one. Decide each route on what it reaches. Two more lux
-routes sit in the same class as `/v1/admin` and are still `true` — `POST
-/v1/keystore` (a node's key management) and `GET /v1/metrics` (node internals) —
-and neither has been decided, only inherited.
+be reachable without one. Decide each route on what it reaches.
 
 ### Deploy pre-flight — the ConfigMap and the image go together
 
