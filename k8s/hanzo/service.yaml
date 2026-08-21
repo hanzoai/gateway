@@ -15,31 +15,20 @@ spec:
       targetPort: 9999
   type: ClusterIP
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: hanzo-ingress
-  namespace: hanzo
-  annotations:
-    service.beta.kubernetes.io/do-loadbalancer-disable-lets-encrypt-dns-records: "true"
-    service.beta.kubernetes.io/do-loadbalancer-name: hanzo-ingress
-    service.beta.kubernetes.io/do-loadbalancer-size-unit: "1"
-  labels:
-    app: hanzo-ingress
-spec:
-  selector:
-    app: gateway
-  ports:
-    - name: http
-      port: 80
-      targetPort: 8080
-      protocol: TCP
-    - name: https
-      port: 443
-      targetPort: 8080
-      protocol: TCP
-  type: LoadBalancer
-  externalTrafficPolicy: Local
+# There is no LoadBalancer for HTTP here on purpose.
+#
+# This file used to declare a second one, `hanzo-ingress`, selecting these same
+# gateway pods on :80 and :443. Two things were wrong with it. It named a
+# Kubernetes object and a DigitalOcean load balancer that hanzoai/ingress also
+# declares in this namespace, so whichever repo was applied last decided which
+# pods the estate's front door pointed at. And it answered :443 by forwarding
+# to a plaintext :8080 — a load balancer that terminates nothing in front of a
+# process that terminates nothing.
+#
+# HTTP reaches this gateway the one way it should: through the ingress, via
+# ingress.yaml in this directory (ingressClassName: ingress), which terminates
+# TLS and routes by host. ZAP keeps its own load balancer below because it is a
+# different protocol on a different port, not a second door to the same one.
 ---
 # Dedicated TCP LoadBalancer for ZAP binary protocol.
 # DNS: zap.hanzo.ai → this LB's external IP.

@@ -109,9 +109,15 @@ var aliases = map[string]string{
 	"github.com/devopsfaith/krakend-circuitbreaker/gobreaker": "qos/circuit-breaker",
 
 	"github.com/devopsfaith/krakend-oauth2-clientcredentials": "auth/client-credentials",
-	"github.com/devopsfaith/krakend-jose/validator":           "auth/validator",
-	"github.com/devopsfaith/krakend-jose/signer":              "auth/signer",
 	"github_com/devopsfaith/bloomfilter":                      "auth/revoker",
+
+	// auth/validator and auth/signer are deliberately absent. The endpoint
+	// pipeline validates no token: the ONE validator is the edge trust
+	// boundary the engine installs ahead of routing (authpolicy.go), and an
+	// endpoint declares whether it needs an identity with `auth/public`
+	// rather than by standing up a second one. This table is the list of
+	// namespaces the gateway actually honours, so a key it would silently
+	// ignore does not belong in it — and the embedded schema refuses it.
 
 	"github_com/devopsfaith/krakend-botdetector": "security/bot-detector",
 	"github_com/devopsfaith/krakend-httpsecure":  "security/http",

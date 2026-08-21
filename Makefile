@@ -48,11 +48,6 @@ build: ## Build the gateway binary (legacy HTTP edge; BUILD_TAGS=legacy)
 	-o ${BIN_NAME} ./cmd/gateway
 	@echo "You can now use ./${BIN_NAME}"
 
-build-ingress: ## Build the ingress binary
-	@echo "Building the ingress binary..."
-	@CGO_ENABLED=0 go build -ldflags="-w -s -X main.version=${VERSION}" -o ingress ./cmd/ingress
-	@echo "You can now use ./ingress"
-
 # ./... , not ./tests — the gate runs every package, tagged the way the binary is
 # built. Two ways to run zero tests were live here at once: the target passed no
 # ${BUILD_TAGS}, so the `legacy`-tagged fixture suite under tests/ was excluded
@@ -154,13 +149,6 @@ apply-hanzo: ## Apply hanzo gateway config to k8s
 	kubectl --context do-sfo3-hanzo-k8s -n hanzo create configmap gateway-config --from-file=gateway.json=configs/hanzo/gateway.json --dry-run=client -o yaml | kubectl --context do-sfo3-hanzo-k8s apply -f -
 	kubectl --context do-sfo3-hanzo-k8s apply -f k8s/hanzo/
 	kubectl --context do-sfo3-hanzo-k8s -n hanzo rollout restart deployment gateway
-
-apply-ingress-hanzo: ## Apply hanzo ingress to k8s
-	kubectl --context do-sfo3-hanzo-k8s -n hanzo create configmap ingress-config --from-file=ingress.json=configs/hanzo/ingress.json --dry-run=client -o yaml | kubectl --context do-sfo3-hanzo-k8s apply -f -
-	kubectl --context do-sfo3-hanzo-k8s apply -f k8s/hanzo-ingress/
-	kubectl --context do-sfo3-hanzo-k8s -n hanzo rollout restart deployment hanzo-ingress
-
-deploy-ingress-hanzo: apply-ingress-hanzo ## Deploy hanzo ingress (alias)
 
 deploy-hanzo: apply-hanzo ## Deploy hanzo gateway (alias for apply-hanzo)
 

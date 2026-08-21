@@ -159,7 +159,7 @@ this repo is de-branded; these four are behaviour, not branding:
 | `core.KrakendVersion`, `core.KrakendUserAgent` | `rebrand.go`, Makefile ldflags | exported lura symbols; renaming breaks the build. `rebrand.go` overwrites their *values* with the Hanzo brand — that is the correct seam |
 | `KRAKEND_` env prefix (e.g. `KRAKEND_PORT`) | `config_loader_test.go` | the koanf parser hardcodes the prefix as a const; not configurable |
 | `X-KRAKEND`, `X-Krakend-Completed` | `rebrand.go`, `production_headers_test.go` | compile-time consts in `lura/core`. `rebrand.go` **deletes** them off every response and the tests assert they never leak — the literal exists here in order to be removed |
-| `github.com/devopsfaith/krakend*` extra_config keys | the `aliases` map in `cmd/gateway/main_legacy.go` | these are the canonical namespaces each component registers under; `aliases` maps the friendly name (`auth/validator`) onto them via `config.ExtraConfigAlias`. Rename the canonical side and the component stops finding its config — silently. Note `configs/*/gateway.json` uses only the *friendly* names, so the configs themselves are already brand-free |
+| `github.com/devopsfaith/krakend*` extra_config keys | the `aliases` map in `cmd/gateway/main_legacy.go` | these are the canonical namespaces each component registers under; `aliases` maps the friendly name (`qos/ratelimit/router`) onto them via `config.ExtraConfigAlias`. Rename the canonical side and the component stops finding its config — silently. Note `configs/*/gateway.json` uses only the *friendly* names, so the configs themselves are already brand-free. `auth/validator` and `auth/signer` are deliberately NOT in the table — see "Edge Route Auth Classes" |
 
 Two entries that used to be on this list are gone because they were not
 actually pinned: the auth realm equivalent (`zaphttp_listener.go`'s listener
@@ -235,8 +235,8 @@ AI 401, user billing 401).
 - Single source of truth: hanzoai/authz/edge.DefaultAudiences` (the known user-facing
   client_ids + `https://api.hanzo.ai`) and `token.AudiencesFromEnv()`. Shared
   by the gin/Lura middleware (`auth_middleware.go`), the relay gate
-  (`gate.go`), the unified-binary mount (`mount.go`), and the ingress
-  (`cmd/ingress`). One implementation, four callers.
+  (`gate.go`) and the unified-binary mount (`mount.go`). One implementation,
+  three callers.
 - Override entirely with `GATEWAY_ALLOWED_AUDIENCES` (comma-separated). Legacy
   `AUTH_AUDIENCE` / `JWT_AUDIENCE`, when set, are folded IN (widen, never
   narrow — a live env pinned to `AUTH_AUDIENCE=https://api.hanzo.ai` keeps that
@@ -289,41 +289,82 @@ to grant Admin in commerce. See `auth_middleware_security_test.go` Test 21.
 
 ## Edge Route Auth Classes + Billing (must-gate hardening, 2026-06-27)
 
+**ONE validator (HIP-0110 Phase C, edge de-braid).** The endpoint pipeline used
+to carry 216 per-endpoint `auth/validator` blocks — a SECOND JWT validation, in
+a second crypto library (krakend-jose → go-jose v3), against a second key source
+(`http://iam.hanzo.svc.cluster.local/...`, cleartext, `disable_jwk_security:
+true`), running after `NewAuthMiddleware` had already validated the same token
+against `https://hanzo.id` over TLS. They are gone. What replaced them:
+
+- The one validator is the trust boundary the engine installs ahead of routing
+  (`authpolicy.go` → `authGate.admit`, shared by the gin edge, the zip mount and
+  the ZAP relay). It verifies the signature, the issuer and the ANY-of audience
+  allowlist, strips what the client claimed and writes what the token proved.
+- An endpoint says whether it NEEDS an identity with `"auth/public": true` in
+  its `extra_config`. Absent means required. `requireIdentity`
+  (`handler_factory.go`) reads the identity the gate wrote (`X-User-Id`) and
+  401s when there is none — no key, no parse, no second JWKS.
+- The polarity is fail-secure: an endpoint added to `gateway.json` without
+  thinking about auth is gated. Under the old shape, forgetting the validator
+  block silently opened the route.
+- The embedded schema (`cmd/gateway/schema/schema.json`) REFUSES `auth/validator`
+  and `auth/signer` at an endpoint, and the alias table in `main_legacy.go` no
+  longer maps them — so a re-introduced second validator fails validation rather
+  than being silently ignored.
+- Pins: `TestShippingConfig_NoEndpointValidator`,
+  `TestHanzoConfig_PublicSurfaceUnchanged` (the 21 public endpoints, by name),
+  `TestLuxConfig_AllPublic`, `TestRequireIdentity_EndToEnd`.
+
+Three divergences the second validator had, all resolved by deleting it:
+`propagate_claims` wrote `X-Org-Id` from the raw `owner` claim (the APPLICATION's
+org) over the effective org the gate had resolved against the token's signed
+membership; it 401'd `hk-`/`sk-` API keys the gate deliberately passes to the
+backend that owns them; and it could never carry an `audience` at all (ALL-of vs
+the edge's ANY-of). `X-Roles` was its last writer — a RETIRED header
+(`authz.Retired`) the gate strips and nothing writes — so it is also gone from
+every `input_headers` list.
+
+`configs/lux/gateway.json` declares all 14 of its endpoints `auth/public`: the
+Lux edge fronts blockchain RPC and gated nothing before. That includes `POST
+/v1/admin` and `GET /v1/metrics`, which reach luxd's admin and metrics APIs with
+no credential — preserved as-is, and now written down.
+
 `configs/hanzo/gateway.json` endpoints fall in three auth classes:
 
 - **PUBLIC** (13): health/discovery/catalog (`/`, `/health`, `/v1/*/health`,
   `GET /v1/ai/providers`, `GET /v1/ai/providers/{owner}/{name}`,
   `/v1/pricing-policy`, `/v1/models`, `/v1/analytics/heartbeat`,
-  `/v1/pubsub/healthz`, `/bot/health`). No `auth/validator`. The two provider
+  `/v1/pubsub/healthz`, `/bot/health`). The two provider
   reads self-protect at the backend (session auth); `GET
-  /v1/ai/providers/global` does NOT and is must-gate.
+  /v1/ai/providers/global` does NOT and is must-gate. These carry
+  `"auth/public": true`.
 - **AI / API-KEY** (8): `/v1/chat`, `/v1/chat/completions`, `/v1/completions`,
   `/v1/messages`, `/ai/{path}`, `/v1/ai/{path}`. NO IAM-JWT validator — these
-  use opaque API keys (sk-) and are billed per-token by cloud. Adding
-  an `auth/validator` here would 401 every API-key call.
+  use opaque API keys (hk-/sk-) and are billed per-token by cloud. These carry
+  `"auth/public": true`: the key is verified at the backend, so an IAM-identity
+  requirement at the edge would reject every API-key call.
 - **MUST-GATE** (29, IAM-JWT): `/cloud/{path}`, `/v1/cloud/{path}` (both
   GET/POST/PATCH/DELETE), `/v1/commerce/{path}`, `/v1/tasks/{path}`,
   `/v1/insights/{path}`, `/v1/o11y/{path}`, `/v1/mpc/{path}`,
   `/v1/evals/{path}`, `/v1/licensing/{path}`, `/v1/product/{path}`,
   `/v1/provisioning/{path}`, `/v1/ml/*`, `/v1/train/*`,
   `GET /v1/ai/providers/global`, `POST /v1/ai/providers`,
-  `PATCH /v1/ai/providers/{owner}/{name}`. Each carries the canonical `auth/validator` block
-  (RS256, `https://hanzo.id/v1/iam/.well-known/jwks`, `propagate_claims`
-  sub→X-User-Id / owner→X-Org-Id / roles→X-Roles) and `input_headers` = the VH
-  set. Result: **401 at the edge without a valid JWT**. Audience is NOT checked
-  here — krakend-jose ALL-semantics would 401 every single-aud user token; it is
-  enforced at the Go edge instead (see "Edge auth — landmines").
+  `PATCH /v1/ai/providers/{owner}/{name}`. These carry NO `auth/public` key,
+  which is the whole declaration: `requireIdentity` refuses them without the
+  identity the one gate wrote. Result: **401 at the edge without a valid JWT**.
 
-**GOTCHA — `hostProxyMiddleware` validator bypass**: for host `api.hanzo.ai`,
-any path whose prefix is in `apiHanzoAIEndpoints` (`routes.go`:
-`/v1/chat`, `/v1/completions`, `/v1/messages`, `/v1/models`, `/v1/embeddings`,
-`/v1/images`, `/v1/audio`, `/v1/zap`, `/zap`) is reverse-proxied straight to
-cloud and **the per-route `auth/validator` in gateway.json is never run**
-(cloud enforces the API key instead). So those AI routes' config validator
-is effectively inert. NEVER add a must-gate route under one of those prefixes —
-its edge validator would be silently bypassed. Matching is segment-boundaried
-(`matchesAPIEndpoint`: path `== prefix` or `prefix+"/"`), so `/v1/models` does
-NOT also capture `/v1/modelsX` / `/v1/models-internal`.
+**GOTCHA — `hostProxyMiddleware` reaches no endpoint at all**: `api.hanzo.ai`
+and `api.cloud.hanzo.ai` are in `apiCloudHosts` (`routes.go`), so
+`hostProxyMiddleware` reverse-proxies their WHOLE surface to cloud and aborts —
+the gin router never runs, and **no endpoint in `gateway.json` is reached on the
+canonical API host.** `NewAuthMiddleware` still runs (it is registered ahead of
+the host proxy), so identity is stripped and rewritten for those hosts; what
+does not run is the endpoint pipeline, including `requireIdentity`. Same for
+every host in the routes table whose prefix matches. The endpoint table is
+therefore the FALLBACK path — direct-to-service traffic and hosts the table does
+not claim — and the only place it decides anything. This is also why the 216
+`auth/validator` blocks were never the API's auth: on the one host that carries
+the API, they never executed.
 
 **Billing — path-scoped balance gate** (`auth_middleware.go`): the global
 `NewAuthMiddleware` enforces a commerce balance check ONLY when
@@ -360,15 +401,18 @@ and downgrades the running gateway — live is ahead of the manifest).
 
 ## Edge auth — landmines
 
-**Audience is enforced ONLY at the Go edge, NEVER in `gateway.json`.** The Go
-`NewAuthMiddleware` validates `aud` against an ANY-of allowlist
-(hanzoai/authz/edge.DefaultAudiences`, go-jose v4 `AnyAudience`): a token passes when its
-single `aud=<client_id>` matches ANY entry. The config-declared `auth/validator`
-(krakend-jose → go-auth0 → go-jose **v3**) validates audience with
-ALL-semantics — the token must carry EVERY configured `aud`. IAM stamps ONE
-`aud` per token, so a multi-entry `"audience"` on any `gateway.json` validator
-block 401s EVERY user JWT. `TestGatewayConfig_NoJWTAudience` guards this —
-keep `gateway.json` audience-free.
+**Audience is enforced ONLY at the Go edge, and there is nowhere else it could
+be.** `NewAuthMiddleware` validates `aud` against an ANY-of allowlist
+(hanzoai/authz/edge.DefaultAudiences`, go-jose v4 `AnyAudience`): a token passes
+when its single `aud=<client_id>` matches ANY entry. The config-declared
+`auth/validator` (krakend-jose → go-auth0 → go-jose **v3**) validated audience
+with ALL-semantics — the token had to carry EVERY configured `aud`, and IAM
+stamps ONE per token, so a multi-entry `"audience"` there 401'd EVERY user JWT.
+That is the landmine that made the second validator unfixable rather than merely
+redundant, and it is why the config could never state the audience it was
+supposedly enforcing. The validator is gone;
+`TestShippingConfig_NoEndpointValidator` keeps both it and any `"audience"` key
+out of every shipping config.
 
 **`X-Project-Id` is stripped at the edge** (`edge.Strip`): it
 is forgeable and written from no claim, so it can never reach a backend
@@ -377,12 +421,53 @@ one — same pattern as `X-Org-Id`.
 
 **`GET /v1/ai/providers/global` is must-gate.** It dumps the admin provider
 inventory (names, base URLs, masked secrets) and the backend does NOT
-self-protect it, so it carries the canonical `auth/validator` block. Its read
+self-protect it, so it carries no `auth/public` key and needs an IAM identity. Its read
 siblings `GET /v1/ai/providers` / `GET /v1/ai/providers/{owner}/{name}`
 self-protect at the backend ("Please sign in first") via session auth and are
 intentionally left ungated — a Bearer-only edge validator would break their
 cookie-auth callers. `/v1/ai/providers/global` is 4 segments and the member
 route is 5, so the ungated param route can never shadow it.
+
+## One ingress (`cmd/ingress` deleted)
+
+This repo used to ship a second reverse proxy: `cmd/ingress`, a hand-rolled
+host-based proxy built into the same image as a second binary, with its own
+94-host table (`configs/hanzo/ingress.json`) and its own IAM gate on one host.
+It has been removed, along with `k8s/hanzo-ingress/`, the `build-ingress` and
+`apply-ingress-hanzo` Make targets, and the Dockerfile lines that baked it in.
+
+Why, in order of how much it mattered:
+
+- **It collided with the real edge by name.** `hanzoai/ingress` (the Traefik
+  fork) declares `hanzo-ingress` in namespace `hanzo`; so did this repo, twice,
+  with two different selectors and a DigitalOcean load balancer of the same
+  name. `make apply-ingress-hanzo` also rewrote the ConfigMap `ingress-config`
+  — which in declared state holds the Traefik static config — so running it
+  replaced the live edge's configuration with a route table for a process that
+  was not running.
+- **It was never deployed.** Declared state runs `Deployment/ingress` on
+  `ghcr.io/hanzoai/ingress` (digest-pinned). Nothing in universe or operator
+  referenced `configs/hanzo/ingress.json`, `/usr/bin/ingress` or the
+  `hanzo-ingress` workload from this repo, and no CI built it.
+- **Two edges meant two auth surfaces.** Its gate was a second caller of
+  `hanzoai/authz/edge` with its own env, on a host nothing else knew about.
+
+`k8s/hanzo/service.yaml` also lost its `hanzo-ingress` LoadBalancer: it selected
+these gateway pods on :80/:443 and forwarded :443 to a plaintext :8080. HTTP
+reaches this gateway through the ingress (`k8s/hanzo/ingress.yaml`,
+`ingressClassName: ingress`). `zap-ingress` stays — different protocol, its own
+port, not a second door to the same one.
+
+Before merging, the routes that lived only in `configs/hanzo/ingress.json` have
+to land in `universe/infra/k8s/ingress/routes.yaml`. The set is small and
+specific: the blockscout explorer hosts (`explorer{,.testnet,.devnet}.lux.network`,
+`api-explore{,-test,-dev}.lux.network`, `explore-{test,dev}.lux.network`),
+`lux.exchange` with its `/api/v1` split, `mpc.lux.network` (a cert exists, no
+router), `luxstat.us`, `megastore.lol` + `www.`, `auth.lux.network`,
+`auth.pars.ai`, and `{oauth,sync,webhook}.platform.hanzo.ai`. `goproxy.hanzo.ai`
+was the one host it gated; declared state routes it nowhere and the standing
+decision for the Go module proxy is no public ingress at all, so that is a
+decision to confirm rather than a route to port.
 
 ## Upstream Kinds
 

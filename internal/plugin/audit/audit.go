@@ -89,7 +89,7 @@ var ruleSet = []Rule{
 	   Section 2: Service level recommendations
 	*/
 	NewRule("2.1.1", SeverityHigh, "Only allow secure connections (avoid insecure_connections).", hasInsecureConnections),
-	NewRule("2.1.2", SeverityHigh, "Enable TLS or use a terminator in front of KrakenD.", hasNoTLS),
+	NewRule("2.1.2", SeverityHigh, "Enable TLS or use a terminator in front of the gateway.", hasNoTLS),
 	NewRule("2.1.3", SeverityCritical, "TLS is configured but its disable flag prevents from using it.", hasTLSDisabled),
 	NewRule("2.1.7", SeverityHigh, "Enable HTTP security header checks (security/http).", hasNoHTTPSecure),
 	NewRule("2.1.8", SeverityHigh, "Avoid clear text communication (h2c).", hasH2C),
@@ -143,23 +143,23 @@ var ruleSet = []Rule{
 	   Section 7: Deprecations
 	*/
 	// 7.1 Plugin Deprecations:
-	NewRule("7.1.1", SeverityHigh, "Avoid using deprecated plugin virtualhost. Please visit https://www.krakend.io/docs/enterprise/service-settings/virtual-hosts/#upgrading-from-the-old-plugin-before-v24 to upgrade to the new virtualhost.", hasDeprecatedServerPlugin("virtualhost")),
-	NewRule("7.1.2", SeverityHigh, "Avoid using deprecated plugin static-filesystem. Please visit https://www.krakend.io/docs/enterprise/endpoints/serve-static-content/#upgrading-from-the-old-plugin-before-v24 to upgrade to the new static-filesystem.", hasDeprecatedServerPlugin("static-filesystem")),
-	NewRule("7.1.3", SeverityHigh, "Avoid using deprecated plugin basic-auth. Please move your configuration to the namespace auth/basic to use the new component. See: https://www.krakend.io/docs/enterprise/authentication/basic-authentication/ .", hasDeprecatedServerPlugin("basic-auth")),
-	NewRule("7.1.4", SeverityHigh, "Avoid using deprecated plugin wildcard. Please visit https://www.krakend.io/docs/enterprise/endpoints/wildcard/#upgrading-from-the-old-wildcard-plugin-before-v23 to upgrade to the new Wildcard.", hasDeprecatedServerPlugin("wildcard")),
+	NewRule("7.1.1", SeverityHigh, "Avoid using deprecated plugin virtualhost. Upgrade to the new virtualhost.", hasDeprecatedServerPlugin("virtualhost")),
+	NewRule("7.1.2", SeverityHigh, "Avoid using deprecated plugin static-filesystem. Upgrade to the new static-filesystem.", hasDeprecatedServerPlugin("static-filesystem")),
+	NewRule("7.1.3", SeverityHigh, "Avoid using deprecated plugin basic-auth. Move your configuration to the namespace auth/basic to use the new component.", hasDeprecatedServerPlugin("basic-auth")),
+	NewRule("7.1.4", SeverityHigh, "Avoid using deprecated plugin wildcard. Upgrade to the new Wildcard.", hasDeprecatedServerPlugin("wildcard")),
 
-	NewRule("7.1.5", SeverityHigh, "Avoid using deprecated plugin http-proxy. Please visit https://www.krakend.io/docs/enterprise/backends/http-proxy/#migration-from-old-plugin to upgrade to the new options.", hasDeprecatedClientPlugin("http-proxy")),
-	NewRule("7.1.6", SeverityHigh, "Avoid using deprecated plugin static-filesystem. Please visit https://www.krakend.io/docs/enterprise/endpoints/serve-static-content/#upgrading-from-the-old-plugin-before-v24 to upgrade to the new static-filesystem.", hasDeprecatedClientPlugin("static-filesystem")),
-	NewRule("7.1.7", SeverityHigh, "Avoid using deprecated plugin no-redirect. Please visit https://www.krakend.io/docs/enterprise/backends/client-redirect/#migration-from-old-plugin to upgrade to the new options.", hasDeprecatedClientPlugin("no-redirect")),
+	NewRule("7.1.5", SeverityHigh, "Avoid using deprecated plugin http-proxy. Upgrade to the new options.", hasDeprecatedClientPlugin("http-proxy")),
+	NewRule("7.1.6", SeverityHigh, "Avoid using deprecated plugin static-filesystem. Upgrade to the new static-filesystem.", hasDeprecatedClientPlugin("static-filesystem")),
+	NewRule("7.1.7", SeverityHigh, "Avoid using deprecated plugin no-redirect. Upgrade to the new options.", hasDeprecatedClientPlugin("no-redirect")),
 
-	NewRule("7.1.8", SeverityHigh, "Avoid using deprecated plugin content-replacer. Please visit https://www.krakend.io/docs/enterprise/endpoints/content-replacer/#migration-from-old-plugin to upgrade to the new options.", hasDeprecatedReqRespPlugin("content-replacer")),
-	NewRule("7.1.9", SeverityHigh, "Avoid using deprecated plugin response-schema-validator. Please visit https://www.krakend.io/docs/enterprise/endpoints/response-schema-validator/#migration-from-old-plugin to upgrade to the new options.", hasDeprecatedReqRespPlugin("response-schema-validator")),
+	NewRule("7.1.8", SeverityHigh, "Avoid using deprecated plugin content-replacer. Upgrade to the new options.", hasDeprecatedReqRespPlugin("content-replacer")),
+	NewRule("7.1.9", SeverityHigh, "Avoid using deprecated plugin response-schema-validator. Upgrade to the new options.", hasDeprecatedReqRespPlugin("response-schema-validator")),
 
 	// 7.2 Component Deprecations
-	NewRule("7.2.1", SeverityHigh, "Avoid using deprecated component telemetry/ganalytics. Please visit https://www.krakend.io/docs/telemetry/opentelemetry/ to upgrade to OpenTelemetry", hasDeprecatedGanalytics),
-	NewRule("7.2.2", SeverityHigh, "Avoid using deprecated component telemetry/instana. Please visit https://www.krakend.io/docs/telemetry/opentelemetry/ to upgrade to OpenTelemetry", hasDeprecatedInstana),
-	NewRule("7.2.3", SeverityHigh, "Avoid using deprecated component telemetry/opencensus. Please visit https://www.krakend.io/docs/telemetry/opencensus/#transition-from-opencensus to upgrade to OpenTelemetry", hasDeprecatedOpenCensus),
-	NewRule("7.2.4", SeverityHigh, "Avoid using deprecated component telemetry/influx. Please visit https://www.krakend.io/docs/telemetry/influxdb/ to upgrade to OpenTelemetry", hasDeprecatedInflux),
+	NewRule("7.2.1", SeverityHigh, "Avoid using deprecated component telemetry/ganalytics. Upgrade to OpenTelemetry.", hasDeprecatedGanalytics),
+	NewRule("7.2.2", SeverityHigh, "Avoid using deprecated component telemetry/instana. Upgrade to OpenTelemetry.", hasDeprecatedInstana),
+	NewRule("7.2.3", SeverityHigh, "Avoid using deprecated component telemetry/opencensus. Upgrade to OpenTelemetry.", hasDeprecatedOpenCensus),
+	NewRule("7.2.4", SeverityHigh, "Avoid using deprecated component telemetry/influx. Upgrade to OpenTelemetry.", hasDeprecatedInflux),
 
 	// 7.3 Config field deprectaions
 	NewRule("7.3.1", SeverityMedium, "Avoid using 'private_key' and 'public_key' and use the 'keys' array.", hasDeprecatedTLSPrivPubKey),
