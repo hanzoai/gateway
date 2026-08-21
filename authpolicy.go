@@ -33,6 +33,7 @@
 package gateway
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -40,6 +41,7 @@ import (
 
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/internal/lura/config"
 )
 
 // authEnabled reports whether the edge enforces this policy, from AUTH_ENABLED.
@@ -328,4 +330,97 @@ func hostOnly(host string) string {
 		return host[:i]
 	}
 	return host
+}
+
+// ─── What the CONFIG states ─────────────────────────────────────────────────
+//
+// The request half above answers "does this credential pass?". This half
+// answers "does this route need one?", and it is answered by the service
+// config rather than by code, because the answer differs per endpoint and per
+// estate. Both halves live here so the two cannot drift into two policies.
+
+// authPublic is the endpoint key that says a route is reachable without a
+// credential — the AI surface (which carries an API key the backend owns),
+// the health probes and the public catalogs.
+//
+// It is a DECLARATION, not a module: the endpoint pipeline runs no JWT
+// validator of its own. The one validator is the trust boundary the engine
+// installs ahead of routing, which verifies the IAM token against hanzo.id
+// over TLS, enforces the issuer and the audience allowlist, strips what the
+// client claimed and writes what the token proved. This key only says whether
+// THIS route needs that to have happened.
+//
+// The polarity is deliberate: absent means REQUIRED. An endpoint added to the
+// config without thinking about auth is gated, not open.
+const authPublic = "auth/public"
+
+// authNamespace prefixes every key an endpoint may use to state something
+// about credentials — authPublic, and the credential modules the schema still
+// admits (auth/client-credentials, auth/revoker).
+const authNamespace = "auth/"
+
+// public reports whether cfg declares the endpoint reachable without a
+// credential. Anything but an explicit `true` is a gated route.
+func public(cfg *config.EndpointConfig) bool {
+	open, _ := cfg.ExtraConfig[authPublic].(bool)
+	return open
+}
+
+// policy is what a service config STATES about credentials, counted over its
+// endpoints.
+type policy struct {
+	routes int // endpoints the config declares
+	open   int // endpoints declared reachable without a credential
+	gated  int // endpoints that state a credential requirement
+}
+
+// readPolicy counts what cfg states. An endpoint states something when it
+// carries any key in the auth namespace: `auth/public: true` opens it, and
+// `auth/public: false` — like every other auth key — states a requirement.
+func readPolicy(cfg config.ServiceConfig) policy {
+	p := policy{routes: len(cfg.Endpoints)}
+	for _, e := range cfg.Endpoints {
+		switch {
+		case public(e):
+			p.open++
+		case stated(e):
+			p.gated++
+		}
+	}
+	return p
+}
+
+// stated reports whether the endpoint declares anything in the auth namespace.
+func stated(e *config.EndpointConfig) bool {
+	for k := range e.ExtraConfig {
+		if strings.HasPrefix(k, authNamespace) {
+			return true
+		}
+	}
+	return false
+}
+
+// check reports whether this config is one the binary can serve.
+//
+// A route requires an IAM identity unless it declares authPublic, so the
+// config is where the open surface is NAMED. A config that carries routes and
+// names nothing — no open endpoint, no stated requirement — was written
+// against a different contract, and under this one it puts every route behind
+// an identity, including the ones meant to be reachable without one.
+//
+// Boot is the only place that difference is observable: the probes are a
+// process check and read no endpoint, so a process that starts reports healthy
+// whatever this config says. So the answer is to not start.
+//
+// Three configs pass and each is a real deployment. No endpoints at all: there
+// is no surface to state a policy about. Every endpoint open: an estate that
+// fronts a public API. Every endpoint gated: an estate with no public surface.
+// Only "routes, and not one word about credentials" is refused.
+func (p policy) check() error {
+	if p.routes == 0 || p.open > 0 || p.gated > 0 {
+		return nil
+	}
+	return fmt.Errorf("config declares %d endpoints and states no credential policy on any of them: "+
+		"a route reachable without an IAM identity carries %q, and this config names none. "+
+		"Classify every endpoint in the mounted config, then start", p.routes, authPublic)
 }
