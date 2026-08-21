@@ -35,11 +35,26 @@ package gateway
 import (
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/authz/edge"
 )
+
+// authEnabled reports whether the edge enforces this policy, from AUTH_ENABLED.
+//
+// One reader, for every transport. The switch has exactly one off position:
+// the policy is enforced unless AUTH_ENABLED says "false", so a value that says
+// neither — "0", "no", "off", a typo, a stray space — leaves it in force. Case
+// and surrounding space are trimmed, because "False" from a chart value and
+// "false" from a ConfigMap are the same intent and should not be two answers.
+//
+// Two transports reading this differently is two policies: whichever reader is
+// looser decides, and it decides on a string nobody looked at twice.
+func authEnabled() bool {
+	return !strings.EqualFold(strings.TrimSpace(os.Getenv("AUTH_ENABLED")), "false")
+}
 
 // refusal is a gate decision to STOP the request: the status to answer with and
 // the JSON body to answer it with. nil means allow.

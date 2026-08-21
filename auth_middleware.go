@@ -260,10 +260,7 @@ func billingPathMatch(path string, prefixes []string) bool {
 
 // DefaultAuthConfig returns the default auth configuration from environment variables.
 func DefaultAuthConfig() AuthConfig {
-	enabled := true
-	if os.Getenv("AUTH_ENABLED") == "false" {
-		enabled = false
-	}
+	enabled := authEnabled()
 
 	jwksURL := os.Getenv("AUTH_JWKS_URL")
 	if jwksURL == "" {
