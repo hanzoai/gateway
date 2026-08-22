@@ -121,10 +121,13 @@ func BuildApp(deps RouterDeps) (*zip.App, error) {
 		DisableStartupMessage: true,
 		AppName:               "gateway",
 	})
+	// No request logger here: an app reports because it serves. zip installs the
+	// report at build, outermost, so it observes the requests that match no route
+	// and the ones a later middleware refuses — which a Use() call in this list
+	// could not, and which is why the standalone middleware went away.
 	app.Use(
 		middleware.Recover(),
 		middleware.RequestID(),
-		middleware.Logger(deps.Logger),
 	)
 	// The one probe declaration (probes.go), shared with the k8s health
 	// listener and with the HIP-0106 mount. This app carries no other route:

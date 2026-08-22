@@ -13,7 +13,7 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
-	github.com/zap-proto/http v0.3.1
+	github.com/zap-proto/http v0.3.5
 	golang.org/x/sync v0.22.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -42,6 +42,7 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/zap-proto/fiber/v3 v3.2.1 // indirect
 	github.com/zap-proto/go v1.3.0 // indirect
+	github.com/zap-proto/mcp v1.0.5 // indirect
 	go.opentelemetry.io/otel/log v0.20.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.44.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.20.0 // indirect
@@ -177,7 +178,7 @@ require (
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/luxfi/mdns v0.1.1 // indirect
-	github.com/luxfi/metric v1.9.0
+	github.com/luxfi/metric v1.10.0
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.22
 	github.com/miekg/dns v1.1.72 // indirect
@@ -229,7 +230,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.24.2
+	github.com/zap-proto/zip v1.34.1
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
