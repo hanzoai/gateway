@@ -6041,7 +6041,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/api/heartbeat",
+          "url_pattern": "/v1/analytics/heartbeat",
           "host": [
             "http://analytics.hanzo.svc.cluster.local:80"
           ],
@@ -6897,7 +6897,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/api/{path}",
+          "url_pattern": "/v1/mpc/{path}",
           "host": [
             "http://hanzo-mpc.hanzo.svc.cluster.local:8080"
           ],
@@ -6930,7 +6930,7 @@
       "output_encoding": "no-op",
       "backend": [
         {
-          "url_pattern": "/api/{path}",
+          "url_pattern": "/v1/mpc/{path}",
           "host": [
             "http://hanzo-mpc.hanzo.svc.cluster.local:8080"
           ],
