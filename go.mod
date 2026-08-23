@@ -230,7 +230,7 @@ require (
 	github.com/valyala/fasthttp v1.72.0
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
-	github.com/zap-proto/zip v1.34.1
+	github.com/zap-proto/zip v1.34.2
 	go.mongodb.org/mongo-driver/v2 v2.5.0 // indirect
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
