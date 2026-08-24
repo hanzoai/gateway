@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hanzoai/gateway/v2/iam"
 )
 
 // aggregator is the write side: it pulls every product's identity, usage and
@@ -73,66 +75,150 @@ func (a *aggregator) iamHeaders() map[string]string {
 }
 
 func (a *aggregator) syncIAM(ctx context.Context) []string {
-	var orgNames []string
-
-	// Organizations.
-	var orgEnv struct {
-		Data []struct {
-			Name        string `json:"name"`
-			DisplayName string `json:"displayName"`
-			CreatedTime string `json:"createdTime"`
-		} `json:"data"`
-	}
-	err := httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/get-organizations?pageSize=1000&p=1", a.iamHeaders(), &orgEnv)
+	orgs, err := a.iamOrgs(ctx)
 	if err != nil {
 		a.store.recordSync(ctx, "iam:orgs", false, 0, err.Error())
+		// Without the tenant list there is nothing to read people out of, so the
+		// user sync has no input rather than an empty answer. Say so.
+		a.store.recordSync(ctx, "iam:users", false, 0, "organizations unavailable: "+err.Error())
+		return nil
+	}
+	orgNames := make([]string, 0, len(orgs))
+	rows := make([]orgRow, 0, len(orgs))
+	for _, o := range orgs {
+		orgNames = append(orgNames, o.Name)
+		rows = append(rows, orgRow{Org: o.Name, Display: nz(o.DisplayName, o.Name), Source: "iam", Created: parseTime(o.CreatedTime)})
+	}
+	if err := a.store.upsertOrgs(ctx, rows); err != nil {
+		a.store.recordSync(ctx, "iam:orgs", false, 0, err.Error())
 	} else {
-		rows := make([]orgRow, 0, len(orgEnv.Data))
-		for _, o := range orgEnv.Data {
-			orgNames = append(orgNames, o.Name)
-			rows = append(rows, orgRow{Org: o.Name, Display: nz(o.DisplayName, o.Name), Source: "iam", Created: parseTime(o.CreatedTime)})
-		}
-		if err := a.store.upsertOrgs(ctx, rows); err != nil {
-			a.store.recordSync(ctx, "iam:orgs", false, 0, err.Error())
-		} else {
-			a.store.recordSync(ctx, "iam:orgs", true, len(rows), "")
-		}
+		a.store.recordSync(ctx, "iam:orgs", true, len(rows), "")
 	}
 
-	// Users across all orgs.
-	var userEnv struct {
-		Data []struct {
-			Owner          string `json:"owner"`
-			Name           string `json:"name"`
-			Email          string `json:"email"`
-			DisplayName    string `json:"displayName"`
-			IsAdmin        bool   `json:"isAdmin"`
-			Tag            string `json:"tag"`
-			IsForbidden    bool   `json:"isForbidden"`
-			CreatedTime    string `json:"createdTime"`
-			LastSigninTime string `json:"lastSigninTime"`
-		} `json:"data"`
+	a.syncUsers(ctx, orgNames)
+	return orgNames
+}
+
+// iamOrg is the slice of an organization this dashboard shows.
+type iamOrg struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName"`
+	CreatedTime string `json:"createdTime"`
+}
+
+// iamOrgs reads every organization the credential may see.
+//
+// The collection is cursor-paged and caps a page at 100, so one request is a
+// PAGE and never the registry: this follows the cursor until the answer stops
+// carrying one. Reading only the first page would silently shrink the dashboard
+// to its first hundred tenants, which looks exactly like a small estate.
+func (a *aggregator) iamOrgs(ctx context.Context) ([]iamOrg, error) {
+	const page = 100 // the collection's own ceiling; asking for more yields 100
+	var out []iamOrg
+	cursor := ""
+	for {
+		q := url.Values{"limit": {fmt.Sprint(page)}}
+		if cursor != "" {
+			q.Set("cursor", cursor)
+		}
+		var body struct {
+			Organizations []iamOrg `json:"organizations"`
+			Cursor        string   `json:"cursor"`
+		}
+		if err := httpGetJSON(ctx, a.cfg.iamInternal+iam.Organizations+"?"+q.Encode(), a.iamHeaders(), &body); err != nil {
+			return nil, err
+		}
+		out = append(out, body.Organizations...)
+		if body.Cursor == "" || body.Cursor == cursor {
+			return out, nil
+		}
+		cursor = body.Cursor
 	}
-	err = httpGetJSON(ctx, a.cfg.iamInternal+"/v1/iam/get-global-users?pageSize=5000&p=1", a.iamHeaders(), &userEnv)
-	if err != nil {
-		a.store.recordSync(ctx, "iam:users", false, 0, err.Error())
-		return orgNames
-	}
-	rows := make([]userRow, 0, len(userEnv.Data))
-	for _, u := range userEnv.Data {
-		rows = append(rows, userRow{
-			Org: u.Owner, Name: u.Name, Email: u.Email, Display: nz(u.DisplayName, u.Name),
-			IsAdmin: b2u(u.IsAdmin), IsGlobalAdmin: b2u(u.Owner == a.cfg.adminOrg),
-			Tag: u.Tag, Forbidden: b2u(u.IsForbidden),
-			Created: parseTime(u.CreatedTime), LastSignin: parseTime(u.LastSigninTime),
-		})
+}
+
+// iamUser is the slice of a person this dashboard shows.
+type iamUser struct {
+	Owner          string `json:"owner"`
+	Name           string `json:"name"`
+	Email          string `json:"email"`
+	DisplayName    string `json:"displayName"`
+	IsAdmin        bool   `json:"isAdmin"`
+	Tag            string `json:"tag"`
+	IsForbidden    bool   `json:"isForbidden"`
+	CreatedTime    string `json:"createdTime"`
+	LastSigninTime string `json:"lastSigninTime"`
+}
+
+// syncUsers reads the people in each organization.
+//
+// The user collection is owner-scoped and has no ownerless listing, so "everyone"
+// is the tenant list walked one org at a time. A tenant that refuses or errors is
+// COUNTED and named in the sync record rather than dropped: an aggregator that
+// swallowed a refusal would show a shrunken estate as a healthy one, and this
+// table is what an operator reads to decide whether they are looking at
+// everything.
+func (a *aggregator) syncUsers(ctx context.Context, orgs []string) {
+	rows := make([]userRow, 0, len(orgs)*8)
+	var failed []string
+	for _, org := range orgs {
+		people, err := a.iamUsers(ctx, org)
+		if err != nil {
+			failed = append(failed, org)
+			continue
+		}
+		for _, u := range people {
+			rows = append(rows, userRow{
+				Org: u.Owner, Name: u.Name, Email: u.Email, Display: nz(u.DisplayName, u.Name),
+				IsAdmin: b2u(u.IsAdmin), IsGlobalAdmin: b2u(u.Owner == a.cfg.adminOrg),
+				Tag: u.Tag, Forbidden: b2u(u.IsForbidden),
+				Created: parseTime(u.CreatedTime), LastSignin: parseTime(u.LastSigninTime),
+			})
+		}
 	}
 	if err := a.store.upsertUsers(ctx, rows); err != nil {
 		a.store.recordSync(ctx, "iam:users", false, 0, err.Error())
-	} else {
-		a.store.recordSync(ctx, "iam:users", true, len(rows), "")
+		return
 	}
-	return orgNames
+	if len(failed) > 0 {
+		a.store.recordSync(ctx, "iam:users", false, len(rows),
+			fmt.Sprintf("%d of %d organizations unread: %s", len(failed), len(orgs), strings.Join(clip(failed, 10), ", ")))
+		return
+	}
+	a.store.recordSync(ctx, "iam:users", true, len(rows), "")
+}
+
+// iamUsers reads one organization's people, following `offset` until the page
+// stops advancing on the total the collection reports.
+func (a *aggregator) iamUsers(ctx context.Context, org string) ([]iamUser, error) {
+	const page = 500
+	var out []iamUser
+	for {
+		q := url.Values{
+			"owner":  {org},
+			"limit":  {fmt.Sprint(page)},
+			"offset": {fmt.Sprint(len(out))},
+		}
+		var body struct {
+			Users []iamUser `json:"users"`
+			Total int       `json:"total"`
+		}
+		if err := httpGetJSON(ctx, a.cfg.iamInternal+iam.Users+"?"+q.Encode(), a.iamHeaders(), &body); err != nil {
+			return nil, err
+		}
+		out = append(out, body.Users...)
+		if len(body.Users) == 0 || len(out) >= body.Total {
+			return out, nil
+		}
+	}
+}
+
+// clip returns at most n of xs, so one bad sync cannot write an unbounded
+// sentence into the sync record.
+func clip(xs []string, n int) []string {
+	if len(xs) <= n {
+		return xs
+	}
+	return append(xs[:n:n], "…")
 }
 
 // ---- platform: deployed apps + clusters ----------------------------------
@@ -259,70 +345,64 @@ func (a *aggregator) syncCommerce(ctx context.Context, orgs []string) {
 // iamList is IAM's list envelope. The count is total; data2 is the legacy
 // untyped slot the rename vacates — read second only until IAM's rename is
 // deployed everywhere, then the fallback is deleted.
-type iamList struct {
-	Data  []map[string]any `json:"data"`
-	Total json.Number      `json:"total"`
-	Data2 json.Number      `json:"data2"`
-}
-
-// count prefers the named total, falls back to legacy data2, then to the
-// page length.
-func (l *iamList) count() int {
-	for _, n := range []json.Number{l.Total, l.Data2} {
-		if v, err := n.Int64(); err == nil && v > 0 {
-			return int(v)
-		}
-	}
-	return len(l.Data)
-}
-
-// liveList fetches one IAM list endpoint on demand (not stored — always
-// fresh) and returns the page plus its total.
-func (a *aggregator) liveList(ctx context.Context, u string) ([]map[string]any, int, error) {
-	var env iamList
-	if err := httpGetJSON(ctx, u, a.iamHeaders(), &env); err != nil {
-		return nil, 0, err
-	}
-	return env.Data, env.count(), nil
-}
-
-// liveAudit fetches recent IAM audit records on demand. Returns the
-// casibase records slice.
-func (a *aggregator) liveAudit(ctx context.Context, org string, pageSize int) ([]map[string]any, int, error) {
-	if org == "" {
-		org = a.cfg.adminOrg
-	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-records?owner=%s&pageSize=%d&p=1&sortField=createdTime&sortOrder=descend",
-		a.cfg.iamInternal, url.QueryEscape(org), pageSize))
-}
-
-// liveApplications fetches IAM OAuth applications on demand (not stored —
-// always fresh). IAM redacts secrets server-side (GetMaskedApplications) and
-// the caller is gated to a superadmin upstream, so this is a god-mode read of
-// the global application registry. owner defaults to the AdminOrg, which owns
-// the platform applications.
-func (a *aggregator) liveApplications(ctx context.Context, owner string, pageSize int) ([]map[string]any, int, error) {
+// liveList fetches one owner-scoped IAM collection on demand (not stored —
+// always fresh) and returns the rows plus the total.
+//
+// The collection answers the list ITSELF, under a key named for the resource,
+// with `total` beside it where the resource counts — nothing is wrapped, and a
+// refusal is a real 4xx that httpGetJSON turns into an error. key is that name,
+// which is the only thing that varies between these reads.
+func (a *aggregator) liveList(ctx context.Context, path, owner, key string, size int) ([]map[string]any, int, error) {
 	if owner == "" {
 		owner = a.cfg.adminOrg
 	}
-	if pageSize <= 0 {
-		pageSize = 100
+	u := a.cfg.iamInternal + path + "?owner=" + url.QueryEscape(owner)
+	var body map[string]json.RawMessage
+	if err := httpGetJSON(ctx, u, a.iamHeaders(), &body); err != nil {
+		return nil, 0, err
 	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-applications?owner=%s&pageSize=%d&p=1",
-		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
+	var rows []map[string]any
+	if raw, ok := body[key]; ok {
+		if err := json.Unmarshal(raw, &rows); err != nil {
+			return nil, 0, fmt.Errorf("decode %s: %w", key, err)
+		}
+	}
+	total := len(rows)
+	if raw, ok := body["total"]; ok {
+		var n json.Number
+		if json.Unmarshal(raw, &n) == nil {
+			if v, err := n.Int64(); err == nil && int(v) > total {
+				total = int(v)
+			}
+		}
+	}
+	// These collections answer an owner WHOLE — an org's audit trail is every
+	// entry it has, newest first — so the caller's page is applied HERE, the only
+	// place that now holds one. The total stays the count of everything, because
+	// that is what it is.
+	if size > 0 && len(rows) > size {
+		rows = rows[:size]
+	}
+	return rows, total, nil
+}
+
+// liveAudit fetches an org's IAM audit trail on demand, newest first.
+func (a *aggregator) liveAudit(ctx context.Context, org string, size int) ([]map[string]any, int, error) {
+	return a.liveList(ctx, iam.AuditLogs, org, "auditLogs", size)
+}
+
+// liveApplications fetches IAM OAuth applications on demand (not stored —
+// always fresh). IAM redacts secrets server-side and the caller is gated to a
+// superadmin upstream, so this is a god-mode read of the application registry.
+// owner defaults to the AdminOrg, which owns the platform applications.
+func (a *aggregator) liveApplications(ctx context.Context, owner string, size int) ([]map[string]any, int, error) {
+	return a.liveList(ctx, iam.Applications, owner, "applications", size)
 }
 
 // liveRoles fetches IAM roles for an org on demand (not stored — always fresh).
 // owner defaults to the AdminOrg. Gated to a superadmin upstream.
-func (a *aggregator) liveRoles(ctx context.Context, owner string, pageSize int) ([]map[string]any, int, error) {
-	if owner == "" {
-		owner = a.cfg.adminOrg
-	}
-	if pageSize <= 0 {
-		pageSize = 100
-	}
-	return a.liveList(ctx, fmt.Sprintf("%s/v1/iam/get-roles?owner=%s&pageSize=%d&p=1",
-		a.cfg.iamInternal, url.QueryEscape(owner), pageSize))
+func (a *aggregator) liveRoles(ctx context.Context, owner string, size int) ([]map[string]any, int, error) {
+	return a.liveList(ctx, iam.Roles, owner, "roles", size)
 }
 
 // ---- http + parsing helpers ----------------------------------------------

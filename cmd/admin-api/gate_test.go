@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/hanzoai/gateway/v2/iam"
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -25,23 +25,32 @@ func fakeCloudAPI(t *testing.T, account map[string]any) *httptest.Server {
 }
 
 // fakeIAM stands in for the in-cluster IAM the aggregator fans out to.
+//
+// It answers the RESOURCE addresses and the shape they really carry: the body is
+// the list itself, under a key named for the resource, and nothing is wrapped.
+// Any other address is a test failure rather than a 404 — a fixture that quietly
+// served whatever it was asked is how a client kept agreeing with a fixture while
+// production answered 410.
 func fakeIAM(t *testing.T) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.HasPrefix(r.URL.Path, "/v1/iam/get-applications"):
+		switch r.URL.Path {
+		case iam.Applications:
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "ok",
-				"data":   []map[string]any{{"owner": "admin", "name": "hanzo-cloud", "clientId": "abc123"}},
-				"total":  1,
+				"applications": []map[string]any{{"owner": "admin", "name": "hanzo-cloud", "clientId": "abc123"}},
 			})
-		case strings.HasPrefix(r.URL.Path, "/v1/iam/get-roles"):
+		case iam.Roles:
 			_ = json.NewEncoder(w).Encode(map[string]any{
-				"status": "ok",
-				"data":   []map[string]any{{"owner": "admin", "name": "operators"}},
-				"total":  1,
+				"roles": []map[string]any{{"owner": "admin", "name": "operators"}},
+				"total": 1,
+			})
+		case iam.AuditLogs:
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"auditLogs": []map[string]any{{"owner": "admin", "action": "login"}},
+				"total":     1,
 			})
 		default:
+			t.Errorf("aggregator asked IAM for %s, which IAM does not serve", r.URL.Path)
 			http.NotFound(w, r)
 		}
 	}))
@@ -73,9 +82,9 @@ func gatedGet(srv *server, h http.HandlerFunc, path string) *httptest.ResponseRe
 func TestGate_DeniesTenantOrgAdmin(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "acme", "name": "dave", "isAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	for _, path := range []string{"/v1/admin/applications", "/v1/admin/roles", "/v1/admin/overview"} {
 		rec := gatedGet(srv, srv.handleApplications, path)
@@ -92,9 +101,9 @@ func TestGate_DeniesTenantOrgAdmin(t *testing.T) {
 func TestGate_DeniesHanzoTenantOrg(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "hanzo", "name": "dave", "isAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	rec := gatedGet(srv, srv.handleApplications, "/v1/admin/applications")
 	if rec.Code != http.StatusForbidden {
@@ -105,9 +114,9 @@ func TestGate_DeniesHanzoTenantOrg(t *testing.T) {
 func TestGate_DeniesAnonymous(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "type": "anonymous-user"})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	rec := gatedGet(srv, srv.handleApplications, "/v1/admin/applications")
 	if rec.Code != http.StatusForbidden {
@@ -118,9 +127,9 @@ func TestGate_DeniesAnonymous(t *testing.T) {
 func TestGate_DeniesNoCookie(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "isAdmin": true})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	req := httptest.NewRequest(http.MethodGet, "/v1/admin/applications", nil)
 	rec := httptest.NewRecorder()
@@ -136,9 +145,9 @@ func TestGate_DeniesNoCookie(t *testing.T) {
 func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	rec := gatedGet(srv, srv.handleApplications, "/v1/admin/applications")
 	if rec.Code != http.StatusOK {
@@ -160,9 +169,9 @@ func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
 func TestGate_AllowsGlobalAdmin_Roles(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
-	iam := fakeIAM(t)
-	defer iam.Close()
-	srv := newTestServer(cloud.URL, iam.URL)
+	idp := fakeIAM(t)
+	defer idp.Close()
+	srv := newTestServer(cloud.URL, idp.URL)
 
 	rec := gatedGet(srv, srv.handleRoles, "/v1/admin/roles")
 	if rec.Code != http.StatusOK {

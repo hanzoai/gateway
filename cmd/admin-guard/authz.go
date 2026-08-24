@@ -29,7 +29,7 @@ import (
 
 // principal is the resolved, TRUSTED identity the guard authorizes. It is the
 // SAME shape regardless of source (guard session cookie, Bearer/Basic JWT, IAM
-// get-account), so authorization is a pure function of a principal + a host.
+// the account read), so authorization is a pure function of a principal + a host.
 //
 //   - owner   : the subject's HOME org slug (IAM `owner`) — identity anchor.
 //   - isAdmin : the subject is an org-level admin/owner of its HOME org
@@ -37,7 +37,7 @@ import (
 //     adminOrg); it is the per-org owner flag, so it authorizes ONLY the home
 //     org's own tenant surface.
 //   - orgs    : the full org-membership set with per-org roles. Populated ONLY on
-//     the JWT path (the token carries it); nil on the cookie / get-account paths,
+//     the JWT path (the token carries it); nil on the cookie / account paths,
 //     which therefore authorize a HOME-org admin only. Fail-closed: a nil set
 //     never widens access, it only ever fails to recognize a non-home admin.
 //   - uid     : WHO, as opposed to WHICH TENANT — the IAM subject (`sub`). It
