@@ -22,7 +22,7 @@
 //     the browser fast path, shared across *.hanzo.ai via a parent-domain cookie;
 //  2. a Bearer / Basic JWT validated through the edge (the API path) — the JWT
 //     already carries `owner`, so no IAM round-trip is needed;
-//  3. an IAM session cookie, resolved by calling IAM get-account server-side
+//  3. an IAM session cookie, resolved by reading the IAM account server-side
 //     (the path for a browser that has an IAM session but no guard cookie yet).
 //
 // The login flow is standard OAuth2 Authorization-Code + PKCE against IAM
@@ -47,6 +47,7 @@ import (
 
 	"github.com/hanzoai/authz"
 	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/iam"
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -249,7 +250,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request) {
 		// Browser with a bad/expired bearer — fall through to interactive login.
 	}
 
-	// (3) IAM session cookie — resolve owner + approval via IAM get-account.
+	// (3) IAM session cookie — resolve owner + approval via the IAM account read.
 	switch owner, approved, outcome := c.iamSessionApproval(r); outcome {
 	case iamOK:
 		c.decide(w, r, owner, approved, orig)
@@ -361,19 +362,19 @@ func (c *config) clearSession(w http.ResponseWriter) {
 }
 
 // ----------------------------------------------------------------------------
-// Identity source (3): IAM session cookie → get-account
+// Identity source (3): IAM session cookie → the account read
 // ----------------------------------------------------------------------------
 
-// iamSessionApproval forwards the inbound cookies to IAM get-account and reads
-// the authenticated user's `owner` AND approval status in one round-trip. This
-// covers a browser that holds an IAM SSO session but has not yet been issued a
-// guard cookie.
+// iamSessionApproval forwards the inbound cookies to IAM's account read and
+// takes the authenticated user's `owner` AND approval status from it in one
+// round-trip. This covers a browser that holds an IAM SSO session but has not
+// yet been issued a guard cookie.
 func (c *config) iamSessionApproval(r *http.Request) (owner string, approved bool, outcome iamOutcome) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
 		return "", false, iamDenied // no session to resolve
 	}
-	body, oc := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", cookie)
+	body, oc := c.iamGet(r, strings.TrimRight(c.iamInternal, "/")+iam.Account, cookie)
 	if oc != iamOK {
 		return "", false, oc
 	}
@@ -384,15 +385,20 @@ func (c *config) iamSessionApproval(r *http.Request) (owner string, approved boo
 	return o, a, iamOK
 }
 
-// iamUserApproved resolves a specific user's approval via IAM get-user (the JWT
-// path — the token is validated but its embedded claims may lag a live approval).
-// Returns the approval AND the IAM outcome so the caller can fail-OPEN on an IAM
-// outage (iamUnavailable) while failing CLOSED on a definitive negative (iamDenied).
+// iamUserApproved resolves a specific user's approval from their IAM record (the
+// JWT path — the token is validated but its embedded claims may lag a live
+// approval). Returns the approval AND the IAM outcome so the caller can fail-OPEN
+// on an IAM outage (iamUnavailable) while failing CLOSED on a definitive negative
+// (iamDenied).
 func (c *config) iamUserApproved(r *http.Request, id string) (approved bool, outcome iamOutcome) {
-	if id == "" || id == "/" {
+	// An id that does not name exactly one person yields no address, and no
+	// address is a denial — never a request to the collection, which answers 200
+	// with a list this reader would take the first entry of.
+	path := iam.User(id)
+	if path == "" {
 		return false, iamDenied
 	}
-	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/get-user?id=" + url.QueryEscape(id)
+	u := strings.TrimRight(c.iamInternal, "/") + path
 	body, oc := c.iamGet(r, u, r.Header.Get("Cookie"))
 	if oc != iamOK {
 		return false, oc
@@ -407,7 +413,7 @@ func (c *config) iamUserApproved(r *http.Request, id string) (approved bool, out
 // iamGet performs a server-side GET to IAM, forwarding the caller's cookies, and
 // classifies the result: iamOK (200 + body), iamUnavailable (transport error or
 // 5xx — IAM is down), or iamDenied (4xx / unreadable). The bounded read + timeout
-// mirror the admin-guard get-account call.
+// mirror the admin-guard account call.
 func (c *config) iamGet(r *http.Request, urlStr, cookie string) ([]byte, iamOutcome) {
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
@@ -438,8 +444,9 @@ func (c *config) iamGet(r *http.Request, urlStr, cookie string) ([]byte, iamOutc
 	}
 }
 
-// approvalFromAccount extracts (owner, approved) from an IAM get-account /
-// get-user response. The user object is at the top level or under `data`. A user
+// approvalFromAccount extracts (owner, approved) from an IAM account or user
+// response. The account read answers the envelope and the user read answers the
+// record itself, so the user object is at the top level or under `data`. A user
 // is APPROVED unless properties.approvalStatus == "pending" — fail-OPEN so
 // existing users (no property) pass — OR the user is an admin (owner==adminOrg or
 // isAdmin). An error/unsigned response (status:"error", no owner) → not-ok.
@@ -572,7 +579,7 @@ func (c *config) handleCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 // exchange swaps the auth code for tokens and resolves (owner, user, approved)
-// from the validated ID/access token claims + an authoritative IAM get-user
+// from the validated ID/access token claims + an authoritative IAM user
 // lookup. Admins (owner==adminOrg or isAdmin) are approved without the lookup.
 // The user name is returned so the session cookie can be bound to the identity.
 func (c *config) exchange(ctx context.Context, code, verifier, redirectURI string) (string, string, bool, error) {
@@ -633,7 +640,7 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	}
 
 	// Admins are always approved. Otherwise resolve the authoritative approval
-	// property from IAM get-user (Bearer the freshly-minted access token).
+	// property from the IAM user record (Bearer the freshly-minted access token).
 	if owner == c.adminOrg || isAdmin {
 		return owner, name, true, nil
 	}
@@ -641,13 +648,15 @@ func (c *config) exchange(ctx context.Context, code, verifier, redirectURI strin
 	return owner, name, approved, nil
 }
 
-// getUserApprovedBearer reads a user's approval from IAM get-user authenticated
-// with a Bearer access token. Fail-closed (false) on any error.
+// getUserApprovedBearer reads a user's approval from their IAM record,
+// authenticated with a Bearer access token. Fail-closed (false) on any error,
+// including an id that names no single person.
 func (c *config) getUserApprovedBearer(ctx context.Context, id, accessToken string) bool {
-	if id == "" || id == "/" || accessToken == "" {
+	path := iam.User(id)
+	if path == "" || accessToken == "" {
 		return false
 	}
-	u := strings.TrimRight(c.iamInternal, "/") + "/v1/iam/get-user?id=" + url.QueryEscape(id)
+	u := strings.TrimRight(c.iamInternal, "/") + path
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return false

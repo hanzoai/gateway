@@ -35,7 +35,7 @@
 //     registrable domain;
 //  2. a Bearer / Basic JWT validated through the edge (the API path) — carries
 //     owner, isAdmin, and the full org-membership set, so no IAM round-trip;
-//  3. an IAM session cookie, resolved by calling IAM get-account server-side
+//  3. an IAM session cookie, resolved by reading the IAM account server-side
 //     (the path for a browser that has an IAM session but no guard cookie yet).
 //
 // The login flow is standard OAuth2 Authorization-Code + PKCE against IAM
@@ -59,6 +59,7 @@ import (
 	"time"
 
 	"github.com/hanzoai/authz/edge"
+	"github.com/hanzoai/gateway/v2/iam"
 	"github.com/hanzoai/gateway/v2/token"
 )
 
@@ -266,7 +267,7 @@ func (c *config) handleVerify(w http.ResponseWriter, r *http.Request, pol policy
 		// Browser with a bad/expired bearer — fall through to interactive login.
 	}
 
-	// (3) IAM session cookie — resolve via IAM get-account server-side.
+	// (3) IAM session cookie — resolve via the IAM account read server-side.
 	if p, ok := c.iamSessionPrincipal(r); ok {
 		c.decide(w, r, p, orig, pol)
 		return
@@ -421,11 +422,11 @@ func (c *config) clearSession(w http.ResponseWriter, r *http.Request) {
 }
 
 // ----------------------------------------------------------------------------
-// Identity source (3): IAM session cookie → get-account
+// Identity source (3): IAM session cookie → the account read
 // ----------------------------------------------------------------------------
 
 const (
-	// iamLookupTimeout caps one pre-auth IAM get-account. It is an in-cluster
+	// iamLookupTimeout caps one pre-auth IAM account read. It is an in-cluster
 	// call; 2s is already far beyond its normal latency, and the number that
 	// matters is how long an ANONYMOUS request can hold a guard goroutine.
 	iamLookupTimeout = 2 * time.Second
@@ -465,10 +466,11 @@ func (g *inFlightGate) enter() bool {
 
 func (g *inFlightGate) leave() { <-g.slots }
 
-// iamSessionPrincipal forwards the inbound cookies to IAM get-account and reads
-// the authenticated user's principal (owner + isAdmin). This covers a browser
-// that holds an IAM SSO session but has not yet been issued a guard cookie. The
-// membership set is not read here, so this path authorizes a HOME-org admin only.
+// iamSessionPrincipal forwards the inbound cookies to IAM /v1/iam/account and
+// reads the authenticated user's principal (owner + isAdmin). This covers a
+// browser that holds an IAM SSO session but has not yet been issued a guard
+// cookie. The membership set is not read here, so this path authorizes a
+// HOME-org admin only.
 func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	cookie := r.Header.Get("Cookie")
 	if cookie == "" {
@@ -487,7 +489,7 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	//
 	// It used to be an 8s timeout with no bound, so a volume of anonymous requests
 	// carrying any cookie could hold a goroutine and an IAM connection each, for
-	// eight seconds each, and load IAM's get-account 1:1 while doing it.
+	// eight seconds each, and load the account read 1:1 while doing it.
 	if !iamGate.enter() {
 		return principal{}, false
 	}
@@ -497,7 +499,7 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		strings.TrimRight(c.iamInternal, "/")+"/v1/iam/get-account", nil)
+		strings.TrimRight(c.iamInternal, "/")+iam.Account, nil)
 	if err != nil {
 		return principal{}, false
 	}
@@ -520,7 +522,7 @@ func (c *config) iamSessionPrincipal(r *http.Request) (principal, bool) {
 }
 
 // principalFromAccount extracts the user's principal (org + org-admin bit) from
-// an IAM get-account response. IAM get-account returns the User object
+// an IAM account response. The account read returns the User object
 // either at the top level or wrapped under `data`; the org slug is `owner` and
 // the org-admin flag is `isAdmin`. An error/unsigned response has status:"error"
 // and no owner → not a principal (fail closed).
@@ -810,7 +812,7 @@ func (c *config) userinfoPrincipal(ctx context.Context, accessToken string) (pri
 		return principal{}, false
 	}
 	// OIDC userinfo names the subject `sub`. Same precedence as the JWT and
-	// get-account paths, so all three sources resolve one person to one uid.
+	// account paths, so all three sources resolve one person to one uid.
 	return principal{owner: ui.Owner, isAdmin: ui.IsAdmin, uid: firstNonEmpty(ui.Sub, ui.PreferredUsername), email: ui.Email}, ui.Owner != ""
 }
 
