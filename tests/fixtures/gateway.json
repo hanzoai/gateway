@@ -5,78 +5,112 @@
     "port": 8080,
     "cache_ttl": "3600s",
     "timeout": "3s",
-    "read_header_timeout":"200ms",
+    "read_header_timeout": "200ms",
     "extra_config": {
-      "router":{
-        "return_error_msg":true
-      },
-      "telemetry/logging": {
-        "level":  "DEBUG",
-        "prefix": "[GATEWAY]",
-        "syslog": false,
-        "stdout": true
-      },
-      "telemetry/metrics": {
-        "collection_time": "60s",
-        "listen_address": ":8090"
-      },
-      "security/cors": {
-        "allow_origins": [ "*" ],
-        "allow_methods": [ "POST", "GET" ],
-        "allow_headers": [ "Origin", "Authorization", "Content-Type" ],
-        "expose_headers": [ "Content-Length" ],
-        "max_age": "12h"
-      },
-      "security/bot-detector": {
-        "deny": ["a", "b"],
-        "allow": ["c", "Pingdom.com_bot_version_1.1"],
-        "patterns": [
-            "(Pingdom.com_bot_version_).*",
-            "(facebookexternalhit)/.*"
-        ]
-      }
+        "router": {
+            "return_error_msg": true
+        },
+        "telemetry/logging": {
+            "level": "DEBUG",
+            "prefix": "[GATEWAY]",
+            "syslog": false,
+            "stdout": true
+        },
+        "telemetry/metrics": {
+            "collection_time": "60s",
+            "listen_address": ":8090"
+        },
+        "security/cors": {
+            "allow_origins": [
+                "*"
+            ],
+            "allow_methods": [
+                "POST",
+                "GET"
+            ],
+            "allow_headers": [
+                "Origin",
+                "Authorization",
+                "Content-Type"
+            ],
+            "expose_headers": [
+                "Content-Length"
+            ],
+            "max_age": "12h"
+        },
+        "security/bot-detector": {
+            "deny": [
+                "a",
+                "b"
+            ],
+            "allow": [
+                "c",
+                "Pingdom.com_bot_version_1.1"
+            ],
+            "patterns": [
+                "(Pingdom.com_bot_version_).*",
+                "(facebookexternalhit)/.*"
+            ]
+        }
     },
     "endpoints": [
         {
-          "endpoint": "/",
-          "backend": [
-            {
-              "url_pattern": "/__debug/",
-              "host": [ "http://127.0.0.1:8080" ]
+            "endpoint": "/",
+            "backend": [
+                {
+                    "url_pattern": "/__debug/",
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ]
+                }
+            ],
+            "extra_config": {
+                "auth/public": true
             }
-          ]
         },
         {
             "endpoint": "/crash",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/unknown"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
-          "endpoint": "/timeout2/{param}",
-          "extra_config": {
-            "proxy": {
-              "sequential": true
-            }
-          },
-          "timeout": "150us",
-          "backend": [
-            {
-              "url_pattern": "/__debug/{param}",
-              "host": [ "http://127.0.0.1:8080" ],
-              "timeout": "30us",
-              "allow": [ "message" ]
+            "endpoint": "/timeout2/{param}",
+            "extra_config": {
+                "proxy": {
+                    "sequential": true
+                },
+                "auth/public": true
             },
-            {
-              "url_pattern": "/__debug/{param}/{resp0_message}",
-              "timeout": "30us",
-              "host": [ "http://127.0.0.1:8080" ],
-              "group": "second"
-            }
-          ]
+            "timeout": "150us",
+            "backend": [
+                {
+                    "url_pattern": "/__debug/{param}",
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
+                    "timeout": "30us",
+                    "allow": [
+                        "message"
+                    ]
+                },
+                {
+                    "url_pattern": "/__debug/{param}/{resp0_message}",
+                    "timeout": "30us",
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
+                    "group": "second"
+                }
+            ]
         },
         {
             "endpoint": "/no-op/ok",
@@ -85,10 +119,15 @@
             "backend": [
                 {
                     "encoding": "no-op",
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/no-op/ko",
@@ -97,31 +136,46 @@
             "backend": [
                 {
                     "encoding": "no-op",
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/unknown"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/xml/xml",
             "output_encoding": "xml",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/xml",
                     "encoding": "xml"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/xml/json",
             "output_encoding": "xml",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/negotiate",
@@ -129,19 +183,28 @@
             "output_encoding": "negotiate",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/xml",
                     "encoding": "xml"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/static",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/__debug",
-                    "deny": ["message"]
+                    "deny": [
+                        "message"
+                    ]
                 }
             ],
             "extra_config": {
@@ -153,18 +216,23 @@
                             "bar": "foobar"
                         }
                     }
-                }
+                },
+                "auth/public": true
             }
         },
         {
             "endpoint": "/static/merge",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/unknown"
                 },
                 {
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/not-really-a-url"
                 }
             ],
@@ -177,18 +245,23 @@
                             "bar": "foobar"
                         }
                     }
-                }
+                },
+                "auth/public": true
             }
         },
         {
             "endpoint": "/cel/req-resp/{id}",
-            "input_headers": ["X-Header"],
+            "input_headers": [
+                "X-Header"
+            ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/__debug/1/{id}",
                     "group": "backend1",
-                    "extra_config":{
+                    "extra_config": {
                         "validation/cel": [
                             {
                                 "check_expr": "int(req_params.Id) % 3 == 0"
@@ -197,10 +270,12 @@
                     }
                 },
                 {
-                    "host": [ "http://127.0.0.1:8080" ],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/__debug/2/{id}",
                     "group": "backend2",
-                    "extra_config":{
+                    "extra_config": {
                         "validation/cel": [
                             {
                                 "check_expr": "int(req_params.Id) % 5 == 0"
@@ -209,7 +284,7 @@
                     }
                 }
             ],
-            "extra_config":{
+            "extra_config": {
                 "validation/cel": [
                     {
                         "check_expr": "'something' in req_headers['X-Header']"
@@ -217,7 +292,8 @@
                     {
                         "check_expr": "int(req_params.Id) % 2 == 0"
                     }
-                ]
+                ],
+                "auth/public": true
             }
         },
         {
@@ -228,10 +304,15 @@
             ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{bar}?foo={foo}"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/param_forwarding/some/{foo}/{bar}",
@@ -242,142 +323,202 @@
             ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{bar}?foo={foo}&dump_body=1"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/param_forwarding/all/{foo}/{bar}",
-            "input_headers": [ "*" ],
+            "input_headers": [
+                "*"
+            ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{bar}?foo={foo}"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/query_forwarding/all/{name}",
-            "input_query_strings": [ "*" ],
+            "input_query_strings": [
+                "*"
+            ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{name}"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/query_forwarding/some/{name}",
-            "input_query_strings": [ "a" ],
+            "input_query_strings": [
+                "a"
+            ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{name}"
+                }
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
+        },
+        {
+            "endpoint": "/sequential/ok/{param}",
+            "extra_config": {
+                "proxy": {
+                    "sequential": true
+                },
+                "auth/public": true
+            },
+            "backend": [
+                {
+                    "url_pattern": "/param_forwarding/{param}",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
+                    "allow": [
+                        "foo"
+                    ]
+                },
+                {
+                    "url_pattern": "/param_forwarding/{resp0_foo}",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ]
                 }
             ]
         },
         {
-          "endpoint": "/sequential/ok/{param}",
-          "extra_config": {
-            "proxy": {
-              "sequential": true
-            }
-          },
-          "backend": [
-            {
-              "url_pattern": "/param_forwarding/{param}",
-              "host": [ "http://127.0.0.1:8081" ],
-              "allow": [ "foo" ]
+            "endpoint": "/sequential/propagate",
+            "extra_config": {
+                "proxy": {
+                    "sequential": true,
+                    "sequential_propagated_params": [
+                        "resp0_first.foo"
+                    ]
+                },
+                "auth/public": true
             },
-            {
-              "url_pattern": "/param_forwarding/{resp0_foo}",
-              "host": [ "http://127.0.0.1:8081" ]
-            }
-          ]
-        },
-        {
-          "endpoint": "/sequential/propagate",
-          "extra_config": {
-            "proxy": {
-              "sequential": true,
-              "sequential_propagated_params": ["resp0_first.foo"]
-            }
-          },
-          "backend": [
-            {
-              "url_pattern": "/param_forwarding/1",
-              "host": [ "http://127.0.0.1:8081" ],
-              "group": "first",
-              "allow": [ "foo" ]
-            },
-            {
-              "url_pattern": "/param_forwarding/",
-              "host": [ "http://127.0.0.1:8081" ],
-              "group": "second",
-              "allow": [ "path" ],
-              "extra_config": {
-                "modifier/lua-backend": {
-                  "pre": "local req = request.load(); local foo = req:params(\"Resp0_first.foo\"); req:url(req:url() .. foo)"
+            "backend": [
+                {
+                    "url_pattern": "/param_forwarding/1",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
+                    "group": "first",
+                    "allow": [
+                        "foo"
+                    ]
+                },
+                {
+                    "url_pattern": "/param_forwarding/",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
+                    "group": "second",
+                    "allow": [
+                        "path"
+                    ],
+                    "extra_config": {
+                        "modifier/lua-backend": {
+                            "pre": "local req = request.load(); local foo = req:params(\"Resp0_first.foo\"); req:url(req:url() .. foo)"
+                        }
+                    }
                 }
-              }
-            }
-          ]
+            ]
         },
         {
-          "endpoint": "/sequential/propagate-full",
-          "extra_config": {
-            "proxy": {
-              "sequential": true,
-              "sequential_propagated_params": ["resp0"]
-            }
-          },
-          "backend": [
-            {
-              "encoding": "no-op",
-              "url_pattern": "/__debug/",
-              "host": [ "http://localhost:8080" ]
+            "endpoint": "/sequential/propagate-full",
+            "extra_config": {
+                "proxy": {
+                    "sequential": true,
+                    "sequential_propagated_params": [
+                        "resp0"
+                    ]
+                },
+                "auth/public": true
             },
-            {
-              "url_pattern": "/param_forwarding/",
-              "host": [ "http://127.0.0.1:8081" ],
-              "extra_config": {
-                "modifier/lua-backend": {
-                  "allow_open_libs": true,
-                  "sources": [
-                    "fixtures/lua/base64.lua"
-                  ],
-                  "pre": "local req = request.load(); local m = req:params(\"Resp0\"); req:url(req:url() .. to_base64(m))"
+            "backend": [
+                {
+                    "encoding": "no-op",
+                    "url_pattern": "/__debug/",
+                    "host": [
+                        "http://localhost:8080"
+                    ]
+                },
+                {
+                    "url_pattern": "/param_forwarding/",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
+                    "extra_config": {
+                        "modifier/lua-backend": {
+                            "allow_open_libs": true,
+                            "sources": [
+                                "fixtures/lua/base64.lua"
+                            ],
+                            "pre": "local req = request.load(); local m = req:params(\"Resp0\"); req:url(req:url() .. to_base64(m))"
+                        }
+                    }
                 }
-              }
-            }
-          ]
+            ]
         },
         {
-          "endpoint": "/sequential/incomplete/{param}",
-          "extra_config": {
-            "proxy": {
-              "sequential": true
-            }
-          },
-          "backend": [
-            {
-              "url_pattern": "/param_forwarding/{param}",
-              "host": [ "http://127.0.0.1:8081" ],
-              "allow": [ "foo" ]
+            "endpoint": "/sequential/incomplete/{param}",
+            "extra_config": {
+                "proxy": {
+                    "sequential": true
+                },
+                "auth/public": true
             },
-            {
-              "url_pattern": "/{resp0_foo}",
-              "host": [ "http://127.0.0.1:8081" ]
-            }
-          ]
+            "backend": [
+                {
+                    "url_pattern": "/param_forwarding/{param}",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
+                    "allow": [
+                        "foo"
+                    ]
+                },
+                {
+                    "url_pattern": "/{resp0_foo}",
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ]
+                }
+            ]
         },
         {
             "endpoint": "/flatmap/{id}",
             "method": "GET",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/collection/{id}",
                     "is_collection": true,
                     "extra_config": {
@@ -385,28 +526,41 @@
                             "flatmap_filter": [
                                 {
                                     "type": "move",
-                                    "args": ["collection", "paths"]
+                                    "args": [
+                                        "collection",
+                                        "paths"
+                                    ]
                                 },
                                 {
                                     "type": "del",
-                                    "args": ["paths.*.i"]
+                                    "args": [
+                                        "paths.*.i"
+                                    ]
                                 },
                                 {
                                     "type": "move",
-                                    "args": ["paths.*.path", "paths.*.url"]
+                                    "args": [
+                                        "paths.*.path",
+                                        "paths.*.url"
+                                    ]
                                 }
                             ]
                         }
                     }
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/combination/{id}",
             "method": "GET",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/collection/{id}",
                     "is_collection": true,
                     "mapping": {
@@ -414,11 +568,18 @@
                     }
                 },
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/{id}",
-                    "allow": [ "foo" ]
+                    "allow": [
+                        "foo"
+                    ]
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/show/{id}",
@@ -430,7 +591,9 @@
                     "url_pattern": "/rss/schedule/{id}",
                     "encoding": "rss",
                     "group": "schedule",
-                    "allow": ["title"],
+                    "allow": [
+                        "title"
+                    ],
                     "extra_config": {
                         "qos/circuit-breaker": {
                             "interval": 60,
@@ -447,7 +610,9 @@
                     "url_pattern": "/rss/user/{id}",
                     "encoding": "rss",
                     "group": "available",
-                    "allow": ["title"],
+                    "allow": [
+                        "title"
+                    ],
                     "extra_config": {
                         "qos/circuit-breaker": {
                             "interval": 60,
@@ -457,29 +622,41 @@
                         "qos/http-cache": {}
                     }
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/timeout",
             "timeout": "100ms",
             "backend": [
                 {
-                    "host": ["http://127.0.0.1:8081"],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/123",
                     "group": "first"
                 },
                 {
-                    "host": ["http://127.0.0.1:8081"],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/delayed/",
                     "group": "second"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/detail_error",
             "backend": [
                 {
-                    "host": ["http://127.0.0.1:8081"],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/param_forwarding/",
                     "extra_config": {
                         "backend/http": {
@@ -488,7 +665,9 @@
                     }
                 },
                 {
-                    "host": ["http://127.0.0.1:8081"],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/",
                     "extra_config": {
                         "backend/http": {
@@ -496,22 +675,32 @@
                         }
                     }
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/redirect/{code}",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/redirect/?status={code}"
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/lua/custom_error",
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/collection/",
                     "is_collection": true,
                     "extra_config": {
@@ -523,14 +712,21 @@
                         }
                     }
                 }
-            ]
+            ],
+            "extra_config": {
+                "auth/public": true
+            }
         },
         {
             "endpoint": "/lua/collection",
-            "input_headers": ["*"],
+            "input_headers": [
+                "*"
+            ],
             "backend": [
                 {
-                    "host": [ "http://127.0.0.1:8081" ],
+                    "host": [
+                        "http://127.0.0.1:8081"
+                    ],
                     "url_pattern": "/collection/",
                     "is_collection": true,
                     "extra_config": {
@@ -556,14 +752,17 @@
                     "post": "post_proxy(response.load())",
                     "live": true,
                     "allow_open_libs": true
-                }
+                },
+                "auth/public": true
             }
         },
         {
             "endpoint": "/lua/modify_response/fail",
             "backend": [
                 {
-                    "host": [ "http://www.mocky.io" ],
+                    "host": [
+                        "http://www.mocky.io"
+                    ],
                     "url_pattern": "/v2/5d765eb4320000925b297af6",
                     "group": "source_result"
                 }
@@ -575,14 +774,17 @@
                     ],
                     "post": "post_proxy_decorator(response.load())",
                     "allow_open_libs": true
-                }
+                },
+                "auth/public": true
             }
         },
         {
             "endpoint": "/lua/modify_response/success",
             "backend": [
                 {
-                    "host": [ "http://www.mocky.io" ],
+                    "host": [
+                        "http://www.mocky.io"
+                    ],
                     "url_pattern": "/v2/5d765f653200004f25297afd",
                     "group": "source_result"
                 }
@@ -594,7 +796,8 @@
                     ],
                     "post": "post_proxy_decorator(response.load())",
                     "allow_open_libs": true
-                }
+                },
+                "auth/public": true
             }
         },
         {
@@ -602,12 +805,17 @@
             "method": "POST",
             "backend": [
                 {
-                    "host": ["http://127.0.0.1:8080"],
+                    "host": [
+                        "http://127.0.0.1:8080"
+                    ],
                     "url_pattern": "/__debug/"
                 }
             ],
-            "extra_config":{
-                "validation/json-schema": {"type": "number"}
+            "extra_config": {
+                "validation/json-schema": {
+                    "type": "number"
+                },
+                "auth/public": true
             }
         }
     ]
