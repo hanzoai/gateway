@@ -1,12 +1,18 @@
 // Copyright © 2026 Hanzo AI. MIT License.
 
-// Package hanzolog backs the engine's logging.Logger with hanzoai/log, the one
+// Package hanzolog backs the engine's logging.Logger with luxfi/log, the one
 // logging library every Hanzo Go service uses.
+//
+// It used to name a fork of that library instead (hanzoai/log), so this binary
+// linked BOTH: the fork here, luxfi/log everywhere else in the module. Two
+// logging libraries in one process is two answers to what a log line looks
+// like, and the fork was a stale copy of the other — same package, same API,
+// missing the wire that carries a line off the box.
 //
 // It replaces three vendored upstream components that each shipped their own
 // logging stack — gologging (op/go-logging backend), logstash (a JSON pattern
 // over gologging) and gelf (a Graylog UDP/TCP sink). Structured JSON with
-// levels and timestamps is what hanzoai/log emits natively, which is precisely
+// levels and timestamps is what luxfi/log emits natively, which is precisely
 // what logstash's pattern existed to fake, so collapsing the three into one
 // adapter loses no capability we use and drops two third-party dependencies
 // (op/go-logging, Graylog2/go-gelf) from the edge binary.
@@ -24,7 +30,7 @@ import (
 	"os"
 	"strings"
 
-	hlog "github.com/hanzoai/log"
+	hlog "github.com/luxfi/log"
 
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
@@ -51,7 +57,7 @@ type Config struct {
 	Format string
 }
 
-// levels maps the engine's log-level vocabulary onto hanzoai/log's.
+// levels maps the engine's log-level vocabulary onto luxfi/log's.
 //
 // This table is why the mapping is explicit rather than a pass-through to
 // hlog.ParseLevel: that function does not know the words "WARNING" or
@@ -96,7 +102,7 @@ func ConfigGetter(e config.ExtraConfig) (Config, bool) {
 	return cfg, true
 }
 
-// NewLogger returns a logging.Logger backed by hanzoai/log.
+// NewLogger returns a logging.Logger backed by luxfi/log.
 //
 // Unsupported settings are refused LOUDLY rather than ignored: a deployment
 // that asks for syslog delivery or a custom text format and silently gets
@@ -113,7 +119,7 @@ func NewLogger(cfg config.ExtraConfig, ws ...io.Writer) (logging.Logger, error) 
 	}
 	switch strings.ToLower(c.Format) {
 	case "", "default", "logstash", "json":
-		// hanzoai/log always emits structured JSON, which satisfies all of these.
+		// luxfi/log always emits structured JSON, which satisfies all of these.
 	default:
 		return nil, fmt.Errorf(
 			"telemetry/logging: format %q is not supported; output is structured JSON", c.Format)
@@ -146,7 +152,7 @@ func NewLogger(cfg config.ExtraConfig, ws ...io.Writer) (logging.Logger, error) 
 	return Logger{l}, nil
 }
 
-// Logger adapts hanzoai/log onto the engine's logging.Logger interface.
+// Logger adapts luxfi/log onto the engine's logging.Logger interface.
 type Logger struct{ l hlog.Logger }
 
 // msg joins variadic operands the way the engine's own logger does
@@ -170,7 +176,7 @@ func (g Logger) Error(v ...interface{}) { g.l.Log(hlog.ErrorLevel, msg(v...)) }
 
 // Critical implements logging.Logger.
 //
-// It logs and RETURNS. hanzoai/log's own Crit() delegates to Fatal(), which
+// It logs and RETURNS. The library's own Crit() delegates to Fatal(), which
 // calls os.Exit(1) — but the engine's Critical is an ordinary severity that
 // many components emit on recoverable errors, and only Fatal is defined to
 // terminate. Routing Critical to Crit would kill the edge on the first
