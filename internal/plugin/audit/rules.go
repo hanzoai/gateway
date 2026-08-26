@@ -373,7 +373,7 @@ func hasDeprecatedTLSPrivPubKey(s *Service) bool {
 // hasNoLogging reports a service with no WORKING logging configured.
 //
 // It used to accept any of three namespaces. Only telemetry/logging is wired
-// now — logging goes through hanzoai/log — so a config carrying just the old
+// now — logging goes through luxfi/log — so a config carrying just the old
 // gelf or logstash block genuinely has no logging and is correctly flagged.
 func hasNoLogging(s *Service) bool {
 	_, ok := s.Components[hanzolog.Namespace]

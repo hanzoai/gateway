@@ -136,7 +136,7 @@ var aliases = map[string]string{
 	"github.com/devopsfaith/krakend/http":                          "backend/http",
 
 	// telemetry/gelf and telemetry/logstash are deliberately absent: logging
-	// goes through hanzoai/log (internal/hanzolog) and neither the Graylog
+	// goes through luxfi/log (internal/hanzolog) and neither the Graylog
 	// sink nor the logstash text pattern is built in any more. This table is
 	// the list of extra_config namespaces the gateway actually honours, so a
 	// key it cannot serve does not belong in it.

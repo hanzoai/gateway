@@ -6,7 +6,6 @@ require (
 	github.com/clbanning/mxj/v2 v2.7.0
 	github.com/gin-gonic/gin v1.12.0
 	github.com/hanzoai/authz v1.10.29
-	github.com/hanzoai/log v0.1.0
 	github.com/luxfi/log v1.6.0
 	github.com/luxfi/zap v1.2.7
 	github.com/prometheus/client_golang v1.23.2
