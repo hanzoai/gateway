@@ -316,7 +316,7 @@ type LoggerBuilder struct{}
 
 // NewLogger sets up the service logger from the configuration.
 //
-// One backend: hanzoai/log, via internal/hanzolog. When the config carries no
+// One backend: luxfi/log, via internal/hanzolog. When the config carries no
 // usable telemetry/logging block we fall back to the engine's own basic logger
 // at DEBUG on stdout, which is what the previous chain did.
 func (LoggerBuilder) NewLogger(cfg config.ServiceConfig) (logging.Logger, error) {

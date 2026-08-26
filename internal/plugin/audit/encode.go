@@ -75,7 +75,7 @@ var componentAlias = map[string]string{
 	httpsecure.Namespace:     "q",
 	hanzolog.Namespace:       "r",
 	// The gelf and logstash sinks are no longer built into the gateway
-	// (logging goes through hanzoai/log), but their namespaces stay in this
+	// (logging goes through luxfi/log), but their namespaces stay in this
 	// table as literals: it is the audit encoding's stable alphabet, and
 	// dropping two entries would renumber nothing but WOULD stop the linter
 	// recognising these keys in a config that still carries them.
