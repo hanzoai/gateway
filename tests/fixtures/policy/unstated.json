@@ -252,7 +252,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/P"
+          "url_pattern": "/v1/chain/P"
         }
       ]
     },
@@ -266,7 +266,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/X"
+          "url_pattern": "/v1/chain/X"
         }
       ]
     },
@@ -866,7 +866,7 @@
       ]
     },
     {
-      "endpoint": "/v1/bc/{chain}",
+      "endpoint": "/v1/chain/{chain}",
       "method": "POST",
       "output_encoding": "no-op",
       "backend": [
@@ -875,7 +875,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}",
+          "url_pattern": "/v1/chain/{chain}",
           "timeout": "60s"
         }
       ],
@@ -889,7 +889,7 @@
       }
     },
     {
-      "endpoint": "/v1/bc/{chain}",
+      "endpoint": "/v1/chain/{chain}",
       "method": "GET",
       "output_encoding": "no-op",
       "backend": [
@@ -898,7 +898,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}",
+          "url_pattern": "/v1/chain/{chain}",
           "timeout": "60s"
         }
       ],
@@ -912,7 +912,7 @@
       }
     },
     {
-      "endpoint": "/v1/bc/{chain}/{p1}",
+      "endpoint": "/v1/chain/{chain}/{p1}",
       "method": "POST",
       "output_encoding": "no-op",
       "backend": [
@@ -921,7 +921,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}/{p1}",
+          "url_pattern": "/v1/chain/{chain}/{p1}",
           "timeout": "60s"
         }
       ],
@@ -935,7 +935,7 @@
       }
     },
     {
-      "endpoint": "/v1/bc/{chain}/{p1}",
+      "endpoint": "/v1/chain/{chain}/{p1}",
       "method": "GET",
       "output_encoding": "no-op",
       "backend": [
@@ -944,7 +944,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}/{p1}",
+          "url_pattern": "/v1/chain/{chain}/{p1}",
           "timeout": "60s"
         }
       ],
@@ -958,7 +958,7 @@
       }
     },
     {
-      "endpoint": "/v1/bc/{chain}/{p1}/{p2}",
+      "endpoint": "/v1/chain/{chain}/{p1}/{p2}",
       "method": "POST",
       "output_encoding": "no-op",
       "backend": [
@@ -967,7 +967,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}/{p1}/{p2}",
+          "url_pattern": "/v1/chain/{chain}/{p1}/{p2}",
           "timeout": "60s"
         }
       ],
@@ -981,7 +981,7 @@
       }
     },
     {
-      "endpoint": "/v1/bc/{chain}/{p1}/{p2}",
+      "endpoint": "/v1/chain/{chain}/{p1}/{p2}",
       "method": "GET",
       "output_encoding": "no-op",
       "backend": [
@@ -990,7 +990,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/bc/{chain}/{p1}/{p2}",
+          "url_pattern": "/v1/chain/{chain}/{p1}/{p2}",
           "timeout": "60s"
         }
       ],
