@@ -650,8 +650,8 @@ oauth are left ungated. K8s secrets: `admin-guard-secrets`
 (GUARD_HMAC_KEY + IAM_CLIENT_SECRET).
 
 Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
-expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
-NOT GHA.
+expiry). Build via in-cluster BuildKit Job (Dockerfile
+`cmd/admin-guard/Dockerfile`).
 
 ## waitlist-guard — approval forward-auth gate (cmd/waitlist-guard)
 
@@ -690,8 +690,8 @@ Config adds over admin-guard: `WAITLIST_URL`, `GUARD_FAIL_OPEN_ON_IAM_ERROR`,
 pin the gated services (paas:3000 etc) to ingress-only so the guard can't be
 bypassed by hitting a Service ClusterIP directly. Tests:
 `cmd/waitlist-guard/main_test.go` (fail-open tri-state, inbound strip, host
-allowlist, no-org-pin, session forgery, approval predicate). Build via arcd
-BuildKit Job (`cmd/waitlist-guard/Dockerfile`), NOT GHA. **Not wired to prod** —
+allowlist, no-org-pin, session forgery, approval predicate). Build via in-cluster
+BuildKit Job (`cmd/waitlist-guard/Dockerfile`). **Not wired to prod** —
 cutover is a supervised one-host canary (see universe waitlist-guard docs).
 
 ## Test workflow green (fix/gateway-test-ci)
