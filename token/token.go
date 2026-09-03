@@ -47,6 +47,7 @@ var DefaultAudiences = []string{
 	"hanzo-app",
 	"hanzo-console",
 	"hanzo-chat",
+	"hanzo-ai",
 	"hanzo-id",
 	"hanzo-admin-guard",
 	"admin-console",
