@@ -13,6 +13,11 @@ RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git
 COPY . /app
 WORKDIR /app
 
+# The account files the scratch stage copies. Written here because scratch has no
+# adduser, and named .gateway so they cannot be confused with the builder's own.
+RUN printf 'gateway:x:1000:1000::/etc/gateway:/sbin/nologin\n' > /etc/passwd.gateway && \
+    printf 'gateway:x:1000:\n' > /etc/group.gateway
+
 # Per SCALE_STANDARD.md §2 — every Go production Dockerfile at the
 # gateway edge or in any JSON-emitting subsystem builds with
 # GOEXPERIMENT=jsonv2. Verified −12% time / −23% allocs on the edge
@@ -61,30 +66,46 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOEXPERIMENT=jsonv2 GOOS=${TARGETOS} GOARCH=${TARGETARCH} make build
 
 # Stage 2: Runtime image
-FROM alpine:${ALPINE_VERSION}
+# THE IMAGE IS THE BINARY.
+#
+# The gateway is one statically linked Go binary — CGO_ENABLED=0 above, so it
+# takes nothing from a host at run time. Everything the Alpine base was supplying
+# was either INERT DATA the binary reads (the trust bundle, the zone database) or
+# a file the kernel reads to answer "who is this uid" (/etc/passwd), and all of
+# those copy. What is left of a distribution — musl, busybox, the dynamic linker,
+# apk — was never executed by anything here, and each carries its own upstream and
+# its own CVE feed.
+#
+# The one thing that genuinely needed an executable was the HEALTHCHECK, which
+# shelled out to wget. It is gone rather than replaced: every deployment of this
+# image runs under Kubernetes, whose readinessProbe and livenessProbe do the same
+# job from outside the container (universe charts/app workload.yaml), and nothing
+# in this repository declares a compose dependency on service_healthy. Keeping a
+# shell so the image can ask itself a question the orchestrator already asks is
+# the whole distroless trade, made backwards.
+FROM scratch
 
 LABEL maintainer="dev@hanzo.ai"
 
-RUN apk upgrade --no-cache --no-interactive && \
-    apk add --no-cache ca-certificates tzdata && \
-    adduser -u 1000 -S -D -H gateway && \
-    mkdir /etc/gateway && \
-    echo '{ "version": 3 }' > /etc/gateway/gateway.json
+# The trust bundle and the zone database: data, read by the binary, executed by
+# nothing. tzdata is copied rather than embedded with time/tzdata so the image
+# stays a build concern and the source does not change.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+
+# The account the process runs as. There is no adduser on scratch, so the two
+# files it would have written are written here instead — the uid is what the
+# kernel enforces, and /etc/passwd only lets something later put a name to it.
+COPY --from=builder /etc/passwd.gateway /etc/passwd
+COPY --from=builder /etc/group.gateway /etc/group
 
 COPY --from=builder /app/gateway /usr/bin/gateway
 
-# Bake in configs for the target cluster
 ARG CONFIG=hanzo
 COPY configs/${CONFIG}/gateway.json /etc/gateway/gateway.json
 
-USER 1000
-
+USER 1000:1000
 WORKDIR /etc/gateway
-
 ENTRYPOINT [ "/usr/bin/gateway" ]
 CMD [ "run", "-c", "/etc/gateway/gateway.json" ]
-
 EXPOSE 8080 8090
-
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:8080/healthz || exit 1
