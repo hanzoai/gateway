@@ -252,7 +252,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/chain/P"
+          "url_pattern": "/v1/chain/p"
         }
       ]
     },
@@ -266,7 +266,7 @@
           "host": [
             "http://luxd-rpc.lux-mainnet.svc:9630"
           ],
-          "url_pattern": "/v1/chain/X"
+          "url_pattern": "/v1/chain/x"
         }
       ]
     },

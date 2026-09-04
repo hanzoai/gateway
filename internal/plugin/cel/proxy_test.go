@@ -154,7 +154,7 @@ func TestOversizeBody_RejectedNotTruncated(t *testing.T) {
 func TestNoRule_BodyUntouched(t *testing.T) {
 	var seen string
 	p, err := ProxyFactory(logging.NoOp, echoFactory(&seen)).New(&config.EndpointConfig{
-		Endpoint: "/v1/chain/C/rpc",
+		Endpoint: "/v1/chain/c",
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
