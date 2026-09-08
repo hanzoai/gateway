@@ -25,7 +25,7 @@ name: CI/CD
 #    from v2 on; v1 is the older layout and is untouched.
 #
 # The runner label is unchanged because it was already right: hanzoai/ci
-# defaults `runner` to ["hanzo-build-linux-amd64"], which the git-runners
+# defaults `runner` to ["linux-amd64"], which the git-runners
 # actually advertise. A label nothing advertises does not fail a job, it queues
 # it until the 24h timeout — silence, not an error.
 
