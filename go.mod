@@ -1,6 +1,6 @@
 module github.com/hanzoai/gateway/v2
 
-go 1.26.5
+go 1.26.8
 
 require (
 	github.com/clbanning/mxj/v2 v2.7.0
