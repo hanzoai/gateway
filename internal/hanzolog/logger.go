@@ -79,7 +79,7 @@ func ConfigGetter(e config.ExtraConfig) (Config, bool) {
 	if !ok {
 		return Config{}, false
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return Config{}, false
 	}
@@ -158,21 +158,21 @@ type Logger struct{ l hlog.Logger }
 // msg joins variadic operands the way the engine's own logger does
 // (fmt.Println semantics: single space between every pair), so call sites that
 // read `logger.Error("[SERVICE: X]", err)` render unchanged.
-func msg(v ...interface{}) string {
+func msg(v ...any) string {
 	return strings.TrimSuffix(fmt.Sprintln(v...), "\n")
 }
 
 // Debug implements logging.Logger.
-func (g Logger) Debug(v ...interface{}) { g.l.Log(hlog.DebugLevel, msg(v...)) }
+func (g Logger) Debug(v ...any) { g.l.Log(hlog.DebugLevel, msg(v...)) }
 
 // Info implements logging.Logger.
-func (g Logger) Info(v ...interface{}) { g.l.Log(hlog.InfoLevel, msg(v...)) }
+func (g Logger) Info(v ...any) { g.l.Log(hlog.InfoLevel, msg(v...)) }
 
 // Warning implements logging.Logger.
-func (g Logger) Warning(v ...interface{}) { g.l.Log(hlog.WarnLevel, msg(v...)) }
+func (g Logger) Warning(v ...any) { g.l.Log(hlog.WarnLevel, msg(v...)) }
 
 // Error implements logging.Logger.
-func (g Logger) Error(v ...interface{}) { g.l.Log(hlog.ErrorLevel, msg(v...)) }
+func (g Logger) Error(v ...any) { g.l.Log(hlog.ErrorLevel, msg(v...)) }
 
 // Critical implements logging.Logger.
 //
@@ -181,10 +181,10 @@ func (g Logger) Error(v ...interface{}) { g.l.Log(hlog.ErrorLevel, msg(v...)) }
 // many components emit on recoverable errors, and only Fatal is defined to
 // terminate. Routing Critical to Crit would kill the edge on the first
 // critical line. Log() takes no exit hook, so it is the correct seam.
-func (g Logger) Critical(v ...interface{}) { g.l.Log(hlog.FatalLevel, msg(v...)) }
+func (g Logger) Critical(v ...any) { g.l.Log(hlog.FatalLevel, msg(v...)) }
 
 // Fatal implements logging.Logger: it logs and then exits, per the interface.
-func (g Logger) Fatal(v ...interface{}) { g.l.Fatal(msg(v...)) }
+func (g Logger) Fatal(v ...any) { g.l.Fatal(msg(v...)) }
 
 // Ensure interface compliance.
 var _ logging.Logger = Logger{}

@@ -10,7 +10,7 @@ import (
 func RegisterLuaList(b *binder.Binder) {
 	list := b.Table("luaList")
 	list.Static("new", func(c *binder.Context) error {
-		c.Push().Data(&lua.List{Data: []interface{}{}}, "luaList")
+		c.Push().Data(&lua.List{Data: []any{}}, "luaList")
 		return nil
 	})
 	list.Dynamic("get", listGet)
@@ -57,9 +57,9 @@ func listGet(c *binder.Context) error {
 		c.Push().Number(t)
 	case bool:
 		c.Push().Bool(t)
-	case []interface{}:
+	case []any:
 		c.Push().Data(&lua.List{Data: t}, "luaList")
-	case map[string]interface{}:
+	case map[string]any:
 		c.Push().Data(&lua.Table{Data: t}, "luaTable")
 	}
 
@@ -84,7 +84,7 @@ func listSet(c *binder.Context) error {
 				tab.Data = append(tab.Data, nil)
 			}
 		} else {
-			newData := make([]interface{}, key+1)
+			newData := make([]any, key+1)
 			copy(newData, tab.Data)
 			tab.Data = newData
 		}
@@ -97,7 +97,7 @@ func listSet(c *binder.Context) error {
 	case lua.NativeBool:
 		tab.Data[key] = c.Arg(3).Bool()
 	case *lua.NativeTable:
-		res := map[string]interface{}{}
+		res := map[string]any{}
 		t.ForEach(func(k, v lua.NativeValue) {
 			lua.ParseToTable(k, v, res)
 		})

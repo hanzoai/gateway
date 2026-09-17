@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	opencensus.RegisterExporterFactories(func(ctx context.Context, cfg opencensus.Config) (interface{}, error) {
+	opencensus.RegisterExporterFactories(func(ctx context.Context, cfg opencensus.Config) (any, error) {
 		return Exporter(ctx, cfg)
 	})
 }

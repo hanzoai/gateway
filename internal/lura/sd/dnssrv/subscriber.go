@@ -160,7 +160,7 @@ func (s subscriber) resolve() ([]string, error) {
 
 	instances := make([]string, 0, len(ws))
 	for i, times := range compact(ws) {
-		for j := uint16(0); j < times; j++ {
+		for range times {
 			instances = append(instances, host[i])
 		}
 	}

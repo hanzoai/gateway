@@ -1,7 +1,7 @@
 package binder
 
 import (
-	"io/ioutil"
+	"os"
 
 	lua "github.com/yuin/gopher-lua"
 )
@@ -39,7 +39,7 @@ func (b *Binder) DoString(s string) error {
 func (b *Binder) DoFile(f string) error {
 	b.load()
 	return b.do(b.state.DoFile(f), func(problem int) *source {
-		s, _ := ioutil.ReadFile(f)
+		s, _ := os.ReadFile(f)
 		return newSource(string(s), problem)
 	})
 }

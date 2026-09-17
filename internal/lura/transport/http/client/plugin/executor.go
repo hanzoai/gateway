@@ -33,7 +33,7 @@ func HTTPRequestExecutorWithContext(
 		if !ok {
 			return next(cfg)
 		}
-		extra, ok := v.(map[string]interface{})
+		extra, ok := v.(map[string]any)
 		if !ok {
 			logger.Debug(logPrefix, "["+Namespace+"]", "Wrong extra config type for backend")
 			return next(cfg)
@@ -58,7 +58,7 @@ func HTTPRequestExecutorWithContext(
 			return next(cfg)
 		}
 
-		hf, ok := rawHf.(func(context.Context, map[string]interface{}) (http.Handler, error))
+		hf, ok := rawHf.(func(context.Context, map[string]any) (http.Handler, error))
 		if !ok {
 			logger.Warning(logPrefix, "Wrong plugin handler type:", name)
 			return next(cfg)

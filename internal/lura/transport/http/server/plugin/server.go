@@ -22,7 +22,7 @@ func New(logger logging.Logger, next RunServer) RunServer {
 		if !ok {
 			return next(ctx, cfg, handler)
 		}
-		extra, ok := v.(map[string]interface{})
+		extra, ok := v.(map[string]any)
 		if !ok {
 			logger.Debug(logPrefix, "Wrong extra_config type")
 			return next(ctx, cfg, handler)
@@ -36,7 +36,7 @@ func New(logger logging.Logger, next RunServer) RunServer {
 		}
 
 		name, nameOk := extra["name"].(string)
-		fifoRaw, fifoOk := extra["name"].([]interface{})
+		fifoRaw, fifoOk := extra["name"].([]any)
 		if !nameOk && !fifoOk {
 			logger.Debug(logPrefix, "No plugins required in the extra config")
 			return next(ctx, cfg, handler)
@@ -60,7 +60,7 @@ func New(logger logging.Logger, next RunServer) RunServer {
 				continue
 			}
 
-			hf, ok := rawHf.(func(context.Context, map[string]interface{}, http.Handler) (http.Handler, error))
+			hf, ok := rawHf.(func(context.Context, map[string]any, http.Handler) (http.Handler, error))
 			if !ok {
 				logger.Error(logPrefix, "Wrong plugin handler type:", name)
 				continue

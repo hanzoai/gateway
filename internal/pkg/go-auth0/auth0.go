@@ -12,21 +12,21 @@ import (
 // SecretProvider will provide everything
 // needed retrieve the secret.
 type SecretProvider interface {
-	GetSecret(r *http.Request) (interface{}, error)
+	GetSecret(r *http.Request) (any, error)
 }
 
 // SecretProviderFunc simple wrappers to provide
 // secret with functions.
-type SecretProviderFunc func(*http.Request) (interface{}, error)
+type SecretProviderFunc func(*http.Request) (any, error)
 
 // GetSecret implements the SecretProvider interface.
-func (f SecretProviderFunc) GetSecret(r *http.Request) (interface{}, error) {
+func (f SecretProviderFunc) GetSecret(r *http.Request) (any, error) {
 	return f(r)
 }
 
 // NewKeyProvider provide a simple passphrase key provider.
-func NewKeyProvider(key interface{}) SecretProvider {
-	return SecretProviderFunc(func(_ *http.Request) (interface{}, error) {
+func NewKeyProvider(key any) SecretProvider {
+	return SecretProviderFunc(func(_ *http.Request) (any, error) {
 		return key, nil
 	})
 }
@@ -42,12 +42,12 @@ var (
 // TokenSecertProvider allows to extract the key ID from a JSONWebToken
 // directly, and get the secret from it
 type TokenSecretProvider interface {
-	SecretFromToken(token *jwt.JSONWebToken) (interface{}, error)
+	SecretFromToken(token *jwt.JSONWebToken) (any, error)
 }
 
 type nopTokenSecretProvider struct{}
 
-func (p *nopTokenSecretProvider) SecretFromToken(token *jwt.JSONWebToken) (interface{}, error) {
+func (p *nopTokenSecretProvider) SecretFromToken(token *jwt.JSONWebToken) (any, error) {
 	return nil, ErrJWTFromTokenNotImplemented
 }
 
@@ -134,7 +134,7 @@ func (v *JWTValidator) ValidateTokenHeaders(token *jwt.JSONWebToken) error {
 }
 
 // Validate validates a jwt.JSONWebToken
-func (v *JWTValidator) ValidateTokenClaims(token *jwt.JSONWebToken, secretKey interface{}) (*jwt.JSONWebToken, error) {
+func (v *JWTValidator) ValidateTokenClaims(token *jwt.JSONWebToken, secretKey any) (*jwt.JSONWebToken, error) {
 	claims := jwt.Claims{}
 	if err := token.Claims(secretKey, &claims); err != nil {
 		return nil, err
@@ -187,7 +187,7 @@ func (v *JWTValidator) ValidateRequest(r *http.Request) (*jwt.JSONWebToken, erro
 }
 
 // Claims unmarshall the claims of the provided token
-func (v *JWTValidator) Claims(r *http.Request, token *jwt.JSONWebToken, values ...interface{}) error {
+func (v *JWTValidator) Claims(r *http.Request, token *jwt.JSONWebToken, values ...any) error {
 	key, err := v.config.secretProvider.GetSecret(r)
 	if err != nil {
 		return err
@@ -196,7 +196,7 @@ func (v *JWTValidator) Claims(r *http.Request, token *jwt.JSONWebToken, values .
 }
 
 // ClaimsFromToken unmarshall the claims of the provided token
-func (v *JWTValidator) ClaimsFromToken(token *jwt.JSONWebToken, values ...interface{}) error {
+func (v *JWTValidator) ClaimsFromToken(token *jwt.JSONWebToken, values ...any) error {
 	key, err := v.config.tokenSecretProvider.SecretFromToken(token)
 	if err != nil {
 		return err

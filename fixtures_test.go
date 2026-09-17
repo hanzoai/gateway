@@ -17,6 +17,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"encoding/json"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
@@ -120,13 +121,11 @@ func signAs(t *testing.T, key *rsa.PrivateKey, kid string, claims any) string {
 func validClaims(issuer, audience string) authz.Claims {
 	now := time.Now()
 	return authz.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    issuer,
-			Subject:   "alice",
-			Audience:  jwt.ClaimStrings{audience},
-			IssuedAt:  jwt.NewNumericDate(now.Add(-1 * time.Minute)),
-			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
-		},
+		Issuer:    issuer,
+		Subject:   "alice",
+		Audience:  jwt.ClaimStrings{audience},
+		IssuedAt:  jwt.NewNumericDate(now.Add(-1 * time.Minute)),
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 		// Owner is the APP's org, which is what IAM stamps there. The MEMBERSHIP SET is
 		// the subject's own org and the only thing that confers authority — every user
 		// token IAM signs carries it, home first (store.MemberOrgRefs), so a fixture
@@ -149,9 +148,7 @@ func iamToken(owner string, extra map[string]any) map[string]any {
 		"iat": now.Add(-time.Minute).Unix(), "exp": now.Add(10 * time.Minute).Unix(),
 		"owner": owner, "email": "alice@hanzo.ai", "preferred_username": "alice",
 	}
-	for k, v := range extra {
-		c[k] = v
-	}
+	maps.Copy(c, extra)
 	return c
 }
 

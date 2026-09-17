@@ -81,7 +81,7 @@ func (bs *Bloomfilter) Check(elem []byte) bool {
 // Take care that false positive probability P,
 // number of elements being filtered N and
 // hashfunctions are the same
-func (bs *Bloomfilter) Union(that interface{}) (float64, error) {
+func (bs *Bloomfilter) Union(that any) (float64, error) {
 	bs.mutex.RLock()
 	defer bs.mutex.RUnlock()
 

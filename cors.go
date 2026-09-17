@@ -105,7 +105,7 @@ const (
 // CRLF into a response header.
 func corsAllowHeaders(ask string) string {
 	names := make([]string, 0, 8)
-	for _, name := range strings.Split(ask, ",") {
+	for name := range strings.SplitSeq(ask, ",") {
 		if name = strings.TrimSpace(name); headerToken(name) {
 			names = append(names, name)
 		}
@@ -140,7 +140,7 @@ func newCORSOriginAllower() func(origin string) bool {
 		"http://localhost:5173": true, "http://localhost:8080": true, "http://127.0.0.1:3000": true,
 	}
 	if extra := os.Getenv("GATEWAY_CORS_ORIGINS"); extra != "" {
-		for _, o := range strings.Split(extra, ",") {
+		for o := range strings.SplitSeq(extra, ",") {
 			if o = strings.TrimSpace(o); o != "" {
 				origins[o] = true
 			}

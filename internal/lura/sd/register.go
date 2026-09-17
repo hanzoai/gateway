@@ -12,8 +12,8 @@ func GetRegister() *Register {
 }
 
 type untypedRegister interface {
-	Register(name string, v interface{})
-	Get(name string) (interface{}, bool)
+	Register(name string, v any)
+	Get(name string) (any, bool)
 }
 
 // Register is a SD register, mapping different SD subscriber factories

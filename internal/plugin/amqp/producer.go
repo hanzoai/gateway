@@ -84,7 +84,7 @@ func (f backendFactory) initProducer(ctx context.Context, remote *config.Backend
 		contentType := ""
 		headers := amqp.Table{}
 		for k, vs := range r.Headers {
-			headerValues := make([]interface{}, len(vs))
+			headerValues := make([]any, len(vs))
 			for k, v := range vs {
 				headerValues[k] = v
 			}

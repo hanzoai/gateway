@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -123,13 +124,13 @@ func sequentialMergerConfig(cfg *config.EndpointConfig) (bool, [][]sequentialBac
 	var propagatedParams []string
 
 	if v, ok := cfg.ExtraConfig[Namespace]; ok {
-		if e, ok := v.(map[string]interface{}); ok {
+		if e, ok := v.(map[string]any); ok {
 			if v, ok := e[isSequentialKey]; ok {
 				c, ok := v.(bool)
 				enabled = ok && c
 			}
 			if v, ok := e[sequentialPropagateKey]; ok {
-				if a, ok := v.([]interface{}); ok {
+				if a, ok := v.([]any); ok {
 					for _, p := range a {
 						propagatedParams = append(propagatedParams, p.(string))
 					}
@@ -267,7 +268,7 @@ func sequentialMerge( // skipcq: GO-R1005
 						continue
 					}
 
-					var v interface{}
+					var v any
 					var ok bool
 
 					data := parts[r.backendIndex].Data
@@ -277,7 +278,7 @@ func sequentialMerge( // skipcq: GO-R1005
 							if !ok {
 								break
 							}
-							clean, ok := v.(map[string]interface{})
+							clean, ok := v.(map[string]any)
 							if !ok {
 								break
 							}
@@ -311,7 +312,7 @@ func sequentialMerge( // skipcq: GO-R1005
 					var param string
 
 					switch clean := v.(type) {
-					case []interface{}:
+					case []any:
 						if len(clean) == 0 {
 							request.Params[r.destination] = ""
 							break
@@ -339,7 +340,7 @@ func sequentialMerge( // skipcq: GO-R1005
 			}
 
 			if (i < filterCount) && (filters[i] != nil) && !filters[i](request) {
-				parts[i] = &Response{IsComplete: true, Data: make(map[string]interface{})}
+				parts[i] = &Response{IsComplete: true, Data: make(map[string]any)}
 				acc.pending--
 				continue
 			}
@@ -505,7 +506,7 @@ func initResponseCombiners() *combinerRegister {
 
 func getResponseCombinerName(extra config.ExtraConfig) string {
 	if v, ok := extra[Namespace]; ok {
-		if e, ok := v.(map[string]interface{}); ok {
+		if e, ok := v.(map[string]any); ok {
 			if v, ok := e[mergeKey]; ok {
 				if _, ok := responseCombiners.GetResponseCombiner(v.(string)); ok {
 					return v.(string)
@@ -535,14 +536,12 @@ func combineData(total int, parts []*Response) *Response {
 			retResponse = &Response{Data: part.Data, IsComplete: isComplete}
 			continue
 		}
-		for k, v := range part.Data {
-			retResponse.Data[k] = v
-		}
+		maps.Copy(retResponse.Data, part.Data)
 	}
 
 	if nil == retResponse {
 		// do not allow nil data in the response:
-		return &Response{Data: make(map[string]interface{}), IsComplete: isComplete}
+		return &Response{Data: make(map[string]any), IsComplete: isComplete}
 	}
 	retResponse.IsComplete = isComplete
 	return retResponse

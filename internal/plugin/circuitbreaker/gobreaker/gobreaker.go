@@ -49,12 +49,12 @@ var ZeroCfg = Config{}
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
 // gobreaker adapter and returns a ZeroCfg if something goes wrong.
-func ConfigGetter(e config.ExtraConfig) interface{} {
+func ConfigGetter(e config.ExtraConfig) any {
 	v, ok := e[Namespace]
 	if !ok {
 		return ZeroCfg
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return ZeroCfg
 	}
@@ -95,10 +95,10 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 }
 
 type CircuitBreaker struct {
-	cb *gobreaker.CircuitBreaker[interface{}]
+	cb *gobreaker.CircuitBreaker[any]
 }
 
-func (c *CircuitBreaker) Execute(req func() (interface{}, error)) (interface{}, error) {
+func (c *CircuitBreaker) Execute(req func() (any, error)) (any, error) {
 	return c.cb.Execute(req)
 }
 
@@ -122,5 +122,5 @@ func NewCircuitBreaker(cfg Config, logger logging.Logger) CircuitBreaker {
 		}
 	}
 
-	return CircuitBreaker{cb: gobreaker.NewCircuitBreaker[interface{}](settings)}
+	return CircuitBreaker{cb: gobreaker.NewCircuitBreaker[any](settings)}
 }

@@ -24,11 +24,11 @@ func (a *Argument) Bool() bool {
 }
 
 // Any returns function argument as interface{}
-func (a *Argument) Any() interface{} {
+func (a *Argument) Any() any {
 	return a.state.CheckAny(a.number)
 }
 
 // Data checks if function argument is UserData and return it
-func (a *Argument) Data() interface{} {
+func (a *Argument) Data() any {
 	return a.state.CheckUserData(a.number).Value
 }

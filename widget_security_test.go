@@ -81,7 +81,7 @@ func TestWidgetRateLimiterPerIP(t *testing.T) {
 	rl := newWidgetRateLimiter(cfg)
 
 	// First 3 requests should be allowed
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if !rl.allow("192.168.1.1") {
 			t.Errorf("request %d should be allowed", i+1)
 		}
@@ -108,7 +108,7 @@ func TestWidgetRateLimiterGlobal(t *testing.T) {
 	rl := newWidgetRateLimiter(cfg)
 
 	// Use different IPs to hit global limit
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		ip := fmt.Sprintf("10.0.0.%d", i)
 		if !rl.allow(ip) {
 			t.Errorf("request %d from %s should be allowed", i+1, ip)
@@ -206,7 +206,7 @@ func TestWidgetGate_RateLimit(t *testing.T) {
 		"Authorization": "Bearer hz_widget_public",
 		"Origin":        "https://docs.hanzo.ai",
 	}
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		if code := widgetRequest(t, gate, hdr); code != http.StatusOK {
 			t.Errorf("request %d should succeed, got %d", i+1, code)
 		}

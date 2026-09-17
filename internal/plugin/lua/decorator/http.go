@@ -127,7 +127,7 @@ func httpHeaderList(c *binder.Context) error {
 	}
 
 	headers := resp.Headers(c.Arg(2).String())
-	d := make([]interface{}, len(headers))
+	d := make([]any, len(headers))
 	for i := range headers {
 		d[i] = headers[i]
 	}

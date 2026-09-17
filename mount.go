@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/hanzoai/authz/edge"
@@ -280,10 +281,8 @@ func splitCSV(s string) []string {
 
 // appendUniqueAud appends v to the audience list unless already present.
 func appendUniqueAud(list []string, v string) []string {
-	for _, e := range list {
-		if e == v {
-			return list
-		}
+	if slices.Contains(list, v) {
+		return list
 	}
 	return append(list, v)
 }

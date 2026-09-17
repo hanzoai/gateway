@@ -21,7 +21,7 @@ func NewLimiterStore(maxRate float64, capacity int, backend Backend) LimiterStor
 
 // LimiterBuilderFn defines the function that will be called when there
 // is no entry in the backend for a given token.
-type LimiterBuilderFn func() interface{}
+type LimiterBuilderFn func() any
 
 // NewLimiterFromBackendAndBuilder creates a LimiterStore that uses limiterBuilder to
 // creat new token buckets.

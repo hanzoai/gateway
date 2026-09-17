@@ -26,7 +26,7 @@ func (p *Push) Bool(b bool) {
 }
 
 // Data pushes UserData function result
-func (p *Push) Data(d interface{}, t string) {
+func (p *Push) Data(d any, t string) {
 	ud := p.context.state.NewUserData()
 	ud.Value = d
 

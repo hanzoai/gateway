@@ -49,7 +49,7 @@ func auditFunc(cmd *cobra.Command, _ []string) {
 			os.Exit(1) // skipcq: RVV-A0003
 			return
 		}
-		for _, line := range strings.Split(strings.ReplaceAll(string(b), " ", ""), "\n") {
+		for line := range strings.SplitSeq(strings.ReplaceAll(string(b), " ", ""), "\n") {
 			if line == "" {
 				continue
 			}
@@ -69,7 +69,7 @@ func auditFunc(cmd *cobra.Command, _ []string) {
 	}
 
 	funcMap := template.FuncMap{
-		"marshal": func(v interface{}) string {
+		"marshal": func(v any) string {
 			a, _ := json.Marshal(v)
 			return string(a)
 		},

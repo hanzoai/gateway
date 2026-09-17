@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 
 	"gocloud.dev/pubsub"
 	_ "gocloud.dev/pubsub/awssnssqs"
@@ -84,7 +83,7 @@ func (f *BackendFactory) initPublisher(ctx context.Context, remote *config.Backe
 	}()
 
 	return func(ctx context.Context, r *proxy.Request) (*proxy.Response, error) {
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +142,7 @@ func (f *BackendFactory) initSubscriber(ctx context.Context, remote *config.Back
 			return nil, err
 		}
 
-		var data map[string]interface{}
+		var data map[string]any
 		if err := remote.Decoder(bytes.NewBuffer(msg.Body), &data); err != nil && err != io.EOF {
 			// TODO: figure out how to Nack if possible
 			// msg.Nack()
@@ -166,7 +165,7 @@ type subscriberCfg struct {
 	SubscriptionURL string `json:"subscription_url"`
 }
 
-func getConfig(remote *config.Backend, namespace string, v interface{}) error {
+func getConfig(remote *config.Backend, namespace string, v any) error {
 	cfg, ok := remote.ExtraConfig[namespace]
 	if !ok {
 		return &NamespaceNotFoundErr{

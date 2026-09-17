@@ -41,11 +41,11 @@ func (b *ShardedMemoryBackend) shard(key string) uint64 {
 }
 
 // Load implements the Backend interface
-func (b *ShardedMemoryBackend) Load(key string, f func() interface{}) interface{} {
+func (b *ShardedMemoryBackend) Load(key string, f func() any) any {
 	return b.shards[b.shard(key)].Load(key, f)
 }
 
 // Store implements the Backend interface
-func (b *ShardedMemoryBackend) Store(key string, v interface{}) error {
+func (b *ShardedMemoryBackend) Store(key string, v any) error {
 	return b.shards[b.shard(key)].Store(key, v)
 }

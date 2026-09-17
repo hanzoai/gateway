@@ -9,7 +9,7 @@ import (
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 )
 
-func extra(m map[string]interface{}) config.ExtraConfig {
+func extra(m map[string]any) config.ExtraConfig {
 	return config.ExtraConfig{Namespace: m}
 }
 
@@ -21,7 +21,7 @@ func extra(m map[string]interface{}) config.ExtraConfig {
 // and the message where a reader looks for them.
 func TestALineIsTheStructuredJsonTheEstateReads(t *testing.T) {
 	var buf bytes.Buffer
-	l, err := NewLogger(extra(map[string]interface{}{"level": "INFO", "prefix": "[EDGE]"}), &buf)
+	l, err := NewLogger(extra(map[string]any{"level": "INFO", "prefix": "[EDGE]"}), &buf)
 	if err != nil {
 		t.Fatalf("NewLogger: %v", err)
 	}
@@ -49,7 +49,7 @@ func TestALineIsTheStructuredJsonTheEstateReads(t *testing.T) {
 // ERROR and still gets INFO is paying for volume it asked not to have.
 func TestTheConfiguredLevelIsAFloor(t *testing.T) {
 	var buf bytes.Buffer
-	l, err := NewLogger(extra(map[string]interface{}{"level": "ERROR"}), &buf)
+	l, err := NewLogger(extra(map[string]any{"level": "ERROR"}), &buf)
 	if err != nil {
 		t.Fatalf("NewLogger: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestTheConfiguredLevelIsAFloor(t *testing.T) {
 // survives this call IS the assertion.
 func TestCriticalLogsAndReturns(t *testing.T) {
 	var buf bytes.Buffer
-	l, err := NewLogger(extra(map[string]interface{}{"level": "DEBUG"}), &buf)
+	l, err := NewLogger(extra(map[string]any{"level": "DEBUG"}), &buf)
 	if err != nil {
 		t.Fatalf("NewLogger: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestCriticalLogsAndReturns(t *testing.T) {
 // deployment that asked for syslog and silently got stdout has a delivery it
 // believes in and does not have.
 func TestUnsupportedSettingsAreRefused(t *testing.T) {
-	for name, cfg := range map[string]map[string]interface{}{
+	for name, cfg := range map[string]map[string]any{
 		"syslog":        {"level": "INFO", "syslog": true},
 		"text format":   {"level": "INFO", "format": "custom"},
 		"unknown level": {"level": "LOUD"},

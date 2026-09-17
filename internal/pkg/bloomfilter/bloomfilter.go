@@ -11,7 +11,7 @@ import "math"
 type Bloomfilter interface {
 	Add([]byte)
 	Check([]byte) bool
-	Union(interface{}) (float64, error)
+	Union(any) (float64, error)
 }
 
 // Config for bloomfilter defining the parameters:
@@ -49,4 +49,4 @@ func (EmptySet) Check(_ []byte) bool { return false }
 func (EmptySet) Add(_ []byte) {}
 
 // Union implementation for EmptySet
-func (EmptySet) Union(interface{}) (float64, error) { return -1, nil }
+func (EmptySet) Union(any) (float64, error) { return -1, nil }

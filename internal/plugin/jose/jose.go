@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -70,7 +71,7 @@ func NewValidator(signatureConfig *SignatureConfig, cookieEf, headerEf Extractor
 	), nil
 }
 
-func CanAccessNested(roleKey string, claims map[string]interface{}, required []string) bool {
+func CanAccessNested(roleKey string, claims map[string]any, required []string) bool {
 	if len(required) == 0 {
 		return true
 	}
@@ -83,7 +84,7 @@ func CanAccessNested(roleKey string, claims map[string]interface{}, required []s
 		if !ok {
 			return false
 		}
-		tmp, ok = v.(map[string]interface{})
+		tmp, ok = v.(map[string]any)
 		if !ok {
 			return false
 		}
@@ -91,7 +92,7 @@ func CanAccessNested(roleKey string, claims map[string]interface{}, required []s
 	return CanAccess(keys[len(keys)-1], tmp, required)
 }
 
-func CanAccess(roleKey string, claims map[string]interface{}, required []string) bool {
+func CanAccess(roleKey string, claims map[string]any, required []string) bool {
 	if len(required) == 0 {
 		return true
 	}
@@ -101,7 +102,7 @@ func CanAccess(roleKey string, claims map[string]interface{}, required []string)
 		return false
 	}
 
-	roles, ok := tmp.([]interface{})
+	roles, ok := tmp.([]any)
 	if ok {
 		for _, role := range required {
 			for _, r := range roles {
@@ -120,16 +121,14 @@ func CanAccess(roleKey string, claims map[string]interface{}, required []string)
 	roless := strings.Split(roleString, " ")
 
 	for _, role := range required {
-		for _, r := range roless {
-			if r == role {
-				return true
-			}
+		if slices.Contains(roless, role) {
+			return true
 		}
 	}
 	return false
 }
 
-func getNestedClaim(nestedKey string, claims map[string]interface{}) (string, map[string]interface{}) {
+func getNestedClaim(nestedKey string, claims map[string]any) (string, map[string]any) {
 	tmp := claims
 	keys := strings.Split(nestedKey, ".")
 
@@ -138,7 +137,7 @@ func getNestedClaim(nestedKey string, claims map[string]interface{}) (string, ma
 		if !ok {
 			return nestedKey, nil
 		}
-		tmp, ok = v.(map[string]interface{})
+		tmp, ok = v.(map[string]any)
 		if !ok {
 			return nestedKey, nil
 		}
@@ -147,7 +146,7 @@ func getNestedClaim(nestedKey string, claims map[string]interface{}) (string, ma
 	return keys[len(keys)-1], tmp
 }
 
-func ScopesAllMatcher(scopesKey string, claims map[string]interface{}, requiredScopes []string) bool {
+func ScopesAllMatcher(scopesKey string, claims map[string]any, requiredScopes []string) bool {
 	if len(requiredScopes) == 0 {
 		return true
 	}
@@ -180,7 +179,7 @@ func ScopesAllMatcher(scopesKey string, claims map[string]interface{}, requiredS
 		return true
 	}
 
-	scopes, ok := tmp.([]interface{})
+	scopes, ok := tmp.([]any)
 	if ok {
 		if len(scopes) > 0 {
 			return matchAll(requiredScopes, convertToStringSlice(scopes))
@@ -200,11 +199,11 @@ func ScopesAllMatcher(scopesKey string, claims map[string]interface{}, requiredS
 	return false
 }
 
-func ScopesDefaultMatcher(_ string, _ map[string]interface{}, _ []string) bool {
+func ScopesDefaultMatcher(_ string, _ map[string]any, _ []string) bool {
 	return true
 }
 
-func ScopesAnyMatcher(scopesKey string, claims map[string]interface{}, requiredScopes []string) bool {
+func ScopesAnyMatcher(scopesKey string, claims map[string]any, requiredScopes []string) bool {
 	if len(requiredScopes) == 0 {
 		return true
 	}
@@ -223,10 +222,8 @@ func ScopesAnyMatcher(scopesKey string, claims map[string]interface{}, requiredS
 
 	matchAny := func(required []string, given []string) bool {
 		for _, rScope := range required {
-			for _, pScope := range given {
-				if rScope == pScope {
-					return true // found any of the required scopes --> return
-				}
+			if slices.Contains(given, rScope) {
+				return true // found any of the required scopes --> return
 			}
 		}
 
@@ -234,7 +231,7 @@ func ScopesAnyMatcher(scopesKey string, claims map[string]interface{}, requiredS
 		return false
 	}
 
-	scopes, ok := tmp.([]interface{})
+	scopes, ok := tmp.([]any)
 	if ok {
 		if len(scopes) > 0 {
 			return matchAny(requiredScopes, convertToStringSlice(scopes))
@@ -260,7 +257,7 @@ func SignFields(keys []string, signer Signer, response *proxy.Response) error {
 		if !ok {
 			continue
 		}
-		data, ok := tmp.(map[string]interface{})
+		data, ok := tmp.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -273,7 +270,7 @@ func SignFields(keys []string, signer Signer, response *proxy.Response) error {
 	return nil
 }
 
-type Claims map[string]interface{}
+type Claims map[string]any
 
 const epsilon = 1e-6
 
@@ -295,7 +292,7 @@ func (c Claims) Get(name string) (string, bool) {
 			return fmt.Sprintf("%d", int(r)), ok
 		}
 		normalized = fmt.Sprintf("%f", v)
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			normalized = fmt.Sprintf("%v", v[0])
 			for _, elem := range v[1:] {
@@ -329,7 +326,7 @@ func (c Claims) List(name string) ([]string, bool) {
 			return []string{fmt.Sprintf("%d", int(r))}, ok
 		}
 		normalized = []string{fmt.Sprintf("%f", v)}
-	case []interface{}:
+	case []any:
 		if len(v) > 0 {
 			for _, elem := range v {
 				normalized = append(normalized, fmt.Sprintf("%v", elem))
@@ -343,7 +340,7 @@ func (c Claims) List(name string) ([]string, bool) {
 	return normalized, ok
 }
 
-func CalculateHeadersToPropagate(propagationCfg [][]string, claims map[string]interface{}) (map[string]string, error) {
+func CalculateHeadersToPropagate(propagationCfg [][]string, claims map[string]any) (map[string]string, error) {
 	if len(propagationCfg) == 0 {
 		return nil, ErrNoHeadersToPropagate
 	}
@@ -366,7 +363,7 @@ func CalculateHeadersToPropagate(propagationCfg [][]string, claims map[string]in
 	return propagated, err
 }
 
-func CalculateArrayHeadersToPropagate(propagationCfg [][]string, claims map[string]interface{}) (map[string][]string, error) {
+func CalculateArrayHeadersToPropagate(propagationCfg [][]string, claims map[string]any) (map[string][]string, error) {
 	if len(propagationCfg) == 0 {
 		return nil, ErrNoHeadersToPropagate
 	}
@@ -389,7 +386,7 @@ func CalculateArrayHeadersToPropagate(propagationCfg [][]string, claims map[stri
 	return propagated, err
 }
 
-func parsePropagationTuple(tuple []string, claims map[string]interface{}) (c Claims, fromClaim, toHeader string, err error) {
+func parsePropagationTuple(tuple []string, claims map[string]any) (c Claims, fromClaim, toHeader string, err error) {
 	if len(tuple) != 2 {
 		err = fmt.Errorf("invalid number of claims to propagate: %+v", tuple)
 		return
@@ -400,7 +397,7 @@ func parsePropagationTuple(tuple []string, claims map[string]interface{}) (c Cla
 
 	c = Claims(claims)
 	if strings.Contains(fromClaim, ".") && (len(fromClaim) < 4 || fromClaim[:4] != "http") {
-		var claimsMap map[string]interface{}
+		var claimsMap map[string]any
 		fromClaim, claimsMap = getNestedClaim(fromClaim, claims)
 		c = Claims(claimsMap)
 	}
@@ -428,7 +425,7 @@ func SupportedAlgorithm(s string) (jose.SignatureAlgorithm, bool) {
 	return a, ok
 }
 
-func convertToStringSlice(input []interface{}) []string {
+func convertToStringSlice(input []any) []string {
 	result := make([]string, len(input))
 
 	for i, v := range input {

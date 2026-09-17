@@ -79,16 +79,14 @@ func (gs *guardSigner) signPrincipal(t *testing.T, owner string, isAdmin bool, o
 	t.Helper()
 	now := time.Now()
 	claims := authz.Claims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    guardTestIssuer,
-			Subject:   owner + "/z",
-			Audience:  jwt.ClaimStrings{"hanzo-admin-guard"},
-			IssuedAt:  jwt.NewNumericDate(now.Add(-time.Minute)),
-			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
-		},
-		Owner:   owner,
-		IsAdmin: isAdmin,
-		Orgs:    orgs,
+		Issuer:    guardTestIssuer,
+		Subject:   owner + "/z",
+		Audience:  jwt.ClaimStrings{"hanzo-admin-guard"},
+		IssuedAt:  jwt.NewNumericDate(now.Add(-time.Minute)),
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+		Owner:     owner,
+		IsAdmin:   isAdmin,
+		Orgs:      orgs,
 	}
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	tok.Header["kid"] = gs.keyID

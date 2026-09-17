@@ -7,20 +7,20 @@ import (
 
 // Rejecter defines the interface for the components responsible for rejecting tokens.
 type Rejecter interface {
-	Reject(map[string]interface{}) bool
+	Reject(map[string]any) bool
 }
 
 // RejecterFunc is an adapter to use functions as rejecters
-type RejecterFunc func(map[string]interface{}) bool
+type RejecterFunc func(map[string]any) bool
 
 // Reject calls r(v)
-func (r RejecterFunc) Reject(v map[string]interface{}) bool { return r(v) }
+func (r RejecterFunc) Reject(v map[string]any) bool { return r(v) }
 
 // FixedRejecter is a rejecter that always returns the same bool response
 type FixedRejecter bool
 
 // Reject returns f
-func (f FixedRejecter) Reject(_ map[string]interface{}) bool { return bool(f) }
+func (f FixedRejecter) Reject(_ map[string]any) bool { return bool(f) }
 
 // RejecterFactory is a builder for rejecters
 type RejecterFactory interface {
@@ -53,7 +53,7 @@ func (c ChainedRejecterFactory) New(l logging.Logger, cfg *config.EndpointConfig
 	for _, rf := range c {
 		rejecters = append(rejecters, rf.New(l, cfg))
 	}
-	return RejecterFunc(func(v map[string]interface{}) bool {
+	return RejecterFunc(func(v map[string]any) bool {
 		for _, r := range rejecters {
 			if r.Reject(v) {
 				return true

@@ -74,34 +74,34 @@ func (e entityFormatter) Format(entity Response) Response {
 		}
 	}
 	if e.Prefix != "" {
-		entity.Data = map[string]interface{}{e.Prefix: entity.Data}
+		entity.Data = map[string]any{e.Prefix: entity.Data}
 	}
 	return entity
 }
 
 func extractTarget(target string, entity *Response) {
-	for _, part := range strings.Split(target, ".") {
+	for part := range strings.SplitSeq(target, ".") {
 		if tmp, ok := entity.Data[part]; ok {
-			entity.Data, ok = tmp.(map[string]interface{})
+			entity.Data, ok = tmp.(map[string]any)
 			if !ok {
-				entity.Data = map[string]interface{}{}
+				entity.Data = map[string]any{}
 				return
 			}
 		} else {
-			entity.Data = map[string]interface{}{}
+			entity.Data = map[string]any{}
 			return
 		}
 	}
 }
 
-func AllowlistPrune(wlDict, inDict map[string]interface{}) bool {
+func AllowlistPrune(wlDict, inDict map[string]any) bool {
 	canDelete := true
 	var deleteSibling bool
 	for k, v := range inDict {
 		deleteSibling = true
 		if subWl, ok := wlDict[k]; ok {
-			if subWlDict, okk := subWl.(map[string]interface{}); okk {
-				if subInDict, isDict := v.(map[string]interface{}); isDict && !AllowlistPrune(subWlDict, subInDict) {
+			if subWlDict, okk := subWl.(map[string]any); okk {
+				if subInDict, isDict := v.(map[string]any); isDict && !AllowlistPrune(subWlDict, subInDict) {
 					deleteSibling = false
 				}
 			} else {
@@ -119,7 +119,7 @@ func AllowlistPrune(wlDict, inDict map[string]interface{}) bool {
 }
 
 func newAllowlistingFilter(Allowlist []string) propertyFilter {
-	wlDict := make(map[string]interface{})
+	wlDict := make(map[string]any)
 	for _, k := range Allowlist {
 		wlFields := strings.Split(k, ".")
 		d := buildDictPath(wlDict, wlFields[:len(wlFields)-1])
@@ -135,27 +135,27 @@ func newAllowlistingFilter(Allowlist []string) propertyFilter {
 	}
 }
 
-func buildDictPath(accumulator map[string]interface{}, fields []string) map[string]interface{} {
+func buildDictPath(accumulator map[string]any, fields []string) map[string]any {
 	var ok bool
-	var c map[string]interface{}
+	var c map[string]any
 	var fIdx int
 	fEnd := len(fields)
 	p := accumulator
 	for fIdx = 0; fIdx < fEnd; fIdx++ {
-		if c, ok = p[fields[fIdx]].(map[string]interface{}); !ok {
+		if c, ok = p[fields[fIdx]].(map[string]any); !ok {
 			break
 		}
 		p = c
 	}
 	for ; fIdx < fEnd; fIdx++ {
-		c = make(map[string]interface{})
+		c = make(map[string]any)
 		p[fields[fIdx]] = c
 		p = c
 	}
 	return p
 }
 
-func buildDenyTree(path []string, tree map[string]interface{}) {
+func buildDenyTree(path []string, tree map[string]any) {
 	if len(path) == 0 {
 		return
 	}
@@ -175,7 +175,7 @@ func buildDenyTree(path []string, tree map[string]interface{}) {
 			// everything will be deleted
 			return
 		}
-		childTree, ok := k.(map[string]interface{})
+		childTree, ok := k.(map[string]any)
 		if !ok {
 			// this should never happen if this algorithm is correct
 			tree[n] = nil
@@ -188,13 +188,13 @@ func buildDenyTree(path []string, tree map[string]interface{}) {
 	// it the key does not exist, we need to keep building the children,
 	// and at this point we know that path is at least len = 2, and that
 	// tree[n] does not exist
-	childTree := make(map[string]interface{}, 1)
+	childTree := make(map[string]any, 1)
 	tree[n] = childTree
 	buildDenyTree(path[1:], childTree)
 }
 
-func recDelete(ref map[string]interface{}, v interface{}) {
-	m, ok := v.(map[string]interface{})
+func recDelete(ref map[string]any, v any) {
+	m, ok := v.(map[string]any)
 	if !ok || m == nil {
 		return
 	}
@@ -208,12 +208,12 @@ func recDelete(ref map[string]interface{}, v interface{}) {
 			delete(m, rk)
 			continue
 		}
-		recDelete(rv.(map[string]interface{}), dv)
+		recDelete(rv.(map[string]any), dv)
 	}
 }
 
 func newDenylistingFilter(blacklist []string) propertyFilter {
-	bl := make(map[string]interface{}, len(blacklist))
+	bl := make(map[string]any, len(blacklist))
 	for _, key := range blacklist {
 		keys := strings.Split(key, ".")
 		buildDenyTree(keys, bl)
@@ -246,7 +246,7 @@ func (e flatmapFormatter) Format(entity Response) Response {
 	e.processOps(&entity)
 
 	if e.Prefix != "" {
-		entity.Data = map[string]interface{}{e.Prefix: entity.Data}
+		entity.Data = map[string]any{e.Prefix: entity.Data}
 	}
 	return entity
 }
@@ -270,19 +270,19 @@ func (e flatmapFormatter) processOps(entity *Response) {
 		}
 	}
 
-	entity.Data, _ = flatten.Get([]string{}).(map[string]interface{})
+	entity.Data, _ = flatten.Get([]string{}).(map[string]any)
 }
 
 func newFlatmapFormatter(cfg config.ExtraConfig, target, group string) *flatmapFormatter {
 	if v, ok := cfg[Namespace]; ok {
-		if e, ok := v.(map[string]interface{}); ok {
-			if vs, ok := e[flatmapKey].([]interface{}); ok {
+		if e, ok := v.(map[string]any); ok {
+			if vs, ok := e[flatmapKey].([]any); ok {
 				if len(vs) == 0 {
 					return nil
 				}
 				var ops []flatmapOp
 				for _, v := range vs {
-					m, ok := v.(map[string]interface{})
+					m, ok := v.(map[string]any)
 					if !ok {
 						continue
 					}
@@ -292,7 +292,7 @@ func newFlatmapFormatter(cfg config.ExtraConfig, target, group string) *flatmapF
 					} else {
 						continue
 					}
-					if args, ok := m["args"].([]interface{}); ok {
+					if args, ok := m["args"].([]any); ok {
 						op.Args = make([][]string, len(args))
 						for k, arg := range args {
 							if t, ok := arg.(string); ok {

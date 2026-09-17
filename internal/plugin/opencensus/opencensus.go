@@ -17,7 +17,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type ExporterFactory func(context.Context, Config) (interface{}, error)
+type ExporterFactory func(context.Context, Config) (any, error)
 
 func RegisterExporterFactories(ef ExporterFactory) {
 	mu.Lock()
@@ -225,13 +225,13 @@ type OcagentConfig struct {
 }
 
 type DataDogConfig struct {
-	Namespace              string                 `json:"namespace"`
-	Service                string                 `json:"service"`
-	TraceAddr              string                 `json:"trace_address"`
-	StatsAddr              string                 `json:"stats_address"`
-	Tags                   []string               `json:"tags"`
-	GlobalTags             map[string]interface{} `json:"global_tags"`
-	DisableCountPerBuckets bool                   `json:"disable_count_per_buckets"`
+	Namespace              string         `json:"namespace"`
+	Service                string         `json:"service"`
+	TraceAddr              string         `json:"trace_address"`
+	StatsAddr              string         `json:"stats_address"`
+	Tags                   []string       `json:"tags"`
+	GlobalTags             map[string]any `json:"global_tags"`
+	DisableCountPerBuckets bool           `json:"disable_count_per_buckets"`
 }
 
 const (

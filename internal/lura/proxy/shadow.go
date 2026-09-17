@@ -130,7 +130,7 @@ func isShadowBackend(c *config.Backend) (time.Duration, bool) {
 		return duration, false
 	}
 
-	e, ok := v.(map[string]interface{})
+	e, ok := v.(map[string]any)
 	if !ok {
 		return duration, false
 	}
@@ -161,7 +161,7 @@ type contextWrapper struct {
 	data context.Context
 }
 
-func (c contextWrapper) Value(key interface{}) interface{} {
+func (c contextWrapper) Value(key any) any {
 	return c.data.Value(key)
 }
 

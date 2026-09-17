@@ -64,13 +64,13 @@ type Config struct {
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
 // collectors and returns a defaultCfg if something goes wrong.
-func ConfigGetter(e config.ExtraConfig) interface{} {
+func ConfigGetter(e config.ExtraConfig) any {
 	v, ok := e[Namespace]
 	if !ok {
 		return nil
 	}
 
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -96,7 +96,7 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 	return userCfg
 }
 
-func getBool(data map[string]interface{}, name string) bool {
+func getBool(data map[string]any, name string) bool {
 	if flag, ok := data[name]; ok {
 		if v, ok := flag.(bool); ok {
 			return v
@@ -127,7 +127,7 @@ func (m *Metrics) Snapshot() Stats {
 func (m *Metrics) TakeSnapshot() Stats {
 	tmp := NewStats()
 
-	(*m.Registry).Each(func(k string, v interface{}) {
+	(*m.Registry).Each(func(k string, v any) {
 		switch metric := v.(type) {
 		case metrics.Counter:
 			tmp.Counters[k] = metric.Count()
@@ -179,23 +179,23 @@ type logger struct {
 	logger logging.Logger
 }
 
-func (l logger) Printf(format string, v ...interface{}) {
+func (l logger) Printf(format string, v ...any) {
 	l.logger.Debug(strings.TrimRight(fmt.Sprintf(format, v...), "\n"))
 }
 
 // DummyRegistry implements the rcrowley/go-metrics.Registry interface
 type DummyRegistry struct{}
 
-func (DummyRegistry) Each(_ func(string, interface{})) {}
-func (DummyRegistry) Get(_ string) interface{}         { return nil }
-func (DummyRegistry) GetAll() map[string]map[string]interface{} {
-	return map[string]map[string]interface{}{}
+func (DummyRegistry) Each(_ func(string, any)) {}
+func (DummyRegistry) Get(_ string) any         { return nil }
+func (DummyRegistry) GetAll() map[string]map[string]any {
+	return map[string]map[string]any{}
 }
-func (DummyRegistry) GetOrRegister(_ string, i interface{}) interface{} { return i }
-func (DummyRegistry) Register(_ string, _ interface{}) error            { return nil }
-func (DummyRegistry) RunHealthchecks()                                  {}
-func (DummyRegistry) Unregister(_ string)                               {}
-func (DummyRegistry) UnregisterAll()                                    {}
+func (DummyRegistry) GetOrRegister(_ string, i any) any { return i }
+func (DummyRegistry) Register(_ string, _ any) error    { return nil }
+func (DummyRegistry) RunHealthchecks()                  {}
+func (DummyRegistry) Unregister(_ string)               {}
+func (DummyRegistry) UnregisterAll()                    {}
 
 func NewDummyRegistry() metrics.Registry {
 	return DummyRegistry{}

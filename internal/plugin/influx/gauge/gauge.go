@@ -10,7 +10,7 @@ import (
 func Points(hostname string, now time.Time, counters map[string]int64, logger logging.Logger) []*client.Point {
 	res := make([]*client.Point, 4)
 
-	in := map[string]interface{}{
+	in := map[string]any{
 		"gauge": int(counters["krakend.router.connected-gauge"]),
 	}
 	incoming, err := client.NewPoint("router", map[string]string{"host": hostname, "direction": "in"}, in, now)
@@ -20,7 +20,7 @@ func Points(hostname string, now time.Time, counters map[string]int64, logger lo
 	}
 	res[0] = incoming
 
-	out := map[string]interface{}{
+	out := map[string]any{
 		"gauge": int(counters["krakend.router.disconnected-gauge"]),
 	}
 	outgoing, err := client.NewPoint("router", map[string]string{"host": hostname, "direction": "out"}, out, now)
@@ -30,8 +30,8 @@ func Points(hostname string, now time.Time, counters map[string]int64, logger lo
 	}
 	res[1] = outgoing
 
-	debug := map[string]interface{}{}
-	runtime := map[string]interface{}{}
+	debug := map[string]any{}
+	runtime := map[string]any{}
 
 	for k, v := range counters {
 		if k == "krakend.router.connected-gauge" || k == "krakend.router.disconnected-gauge" {

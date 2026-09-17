@@ -2,6 +2,7 @@ package audit
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 
@@ -126,17 +127,11 @@ func parseEndpoints(es []*config.EndpointConfig) []Endpoint {
 			wildcards = wildcards | (1 << BitEndpointCatchAll)
 		}
 
-		for _, s := range e.QueryString {
-			if s == "*" {
-				wildcards = wildcards | 2
-				break
-			}
+		if slices.Contains(e.QueryString, "*") {
+			wildcards = wildcards | 2
 		}
-		for _, s := range e.HeadersToPass {
-			if s == "*" {
-				wildcards = wildcards | 4
-				break
-			}
+		if slices.Contains(e.HeadersToPass, "*") {
+			wildcards = wildcards | 4
 		}
 
 		numUnsafeMethods := 0
@@ -227,7 +222,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 	for c, v := range cfg {
 		switch c {
 		case server.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -237,7 +232,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				continue
 			}
 
-			if ns, ok := cfg["name"].([]interface{}); ok {
+			if ns, ok := cfg["name"].([]any); ok {
 				vs := 0
 				for _, raw := range ns {
 					n, ok := raw.(string)
@@ -251,7 +246,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 
 		case client.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -263,12 +258,12 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = []int{parseClientPlugin(n)}
 
 		case plugin.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
 
-			ns, ok := cfg["name"].([]interface{})
+			ns, ok := cfg["name"].([]any)
 			if !ok {
 				continue
 			}
@@ -283,7 +278,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = []int{vs}
 
 		case proxy.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -291,7 +286,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = []int{parseProxy(cfg)}
 
 		case router.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -299,7 +294,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = []int{parseRouter(cfg)}
 
 		case bf.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -308,7 +303,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			if hn, ok := cfg["hash_name"].(string); ok && hn == "optimal" {
 				res[0] = 1
 			}
-			if ks, ok := cfg["token_keys"].([]interface{}); ok {
+			if ks, ok := cfg["token_keys"].([]any); ok {
 				res[1] = len(ks)
 			}
 			if s, ok := cfg["revoke_server_ping_url"].(string); ok && s != "" {
@@ -317,19 +312,19 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = res
 
 		case botdetector.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
 
 			res := make([]int, 4)
-			if ks, ok := cfg["allow"].([]interface{}); ok {
+			if ks, ok := cfg["allow"].([]any); ok {
 				res[0] = len(ks)
 			}
-			if ks, ok := cfg["deny"].([]interface{}); ok {
+			if ks, ok := cfg["deny"].([]any); ok {
 				res[1] = len(ks)
 			}
-			if ks, ok := cfg["patterns"].([]interface{}); ok {
+			if ks, ok := cfg["patterns"].([]any); ok {
 				res[2] = len(ks)
 			}
 			if s, ok := cfg["cache_size"].(float64); ok {
@@ -338,12 +333,12 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = res
 
 		case opencensus.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
 
-			exp, ok := cfg["exporters"].(map[string]interface{})
+			exp, ok := cfg["exporters"].(map[string]any)
 			if !ok {
 				continue
 			}
@@ -380,7 +375,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			components[c] = []int{v1}
 
 		case ratelimit.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -403,13 +398,13 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 
 			components[c] = []int{v1}
 		case "backend/http/client":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
 			}
 			v1 := 1
-			if clientTLS, ok := cfg["client_tls"].(map[string]interface{}); ok {
+			if clientTLS, ok := cfg["client_tls"].(map[string]any); ok {
 				var cTLS config.ClientTLS
 				err := mapstructure.Decode(clientTLS, &cTLS)
 				if err == nil {
@@ -425,7 +420,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = []int{v1}
 		case "telemetry/moesif":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -435,7 +430,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			timerWakeupSecs, _ := cfg["timer_wake_up_seconds"].(int)
 			components[c] = []int{eventQueueSize, batchSize, timerWakeupSecs}
 		case "telemetry/opentelemetry":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -453,19 +448,19 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			numOTLPMetrics := 0
 			numOTLPTraces := 0
 			numPrometheus := 0
-			if exporters, ok := cfg["exporters"].(map[string]interface{}); ok {
-				if prom, ok := exporters["prometheus"].([]interface{}); ok {
+			if exporters, ok := cfg["exporters"].(map[string]any); ok {
+				if prom, ok := exporters["prometheus"].([]any); ok {
 					for _, p := range prom {
-						if po, ok := p.(map[string]interface{}); ok {
+						if po, ok := p.(map[string]any); ok {
 							if b, ok := po["disable_metrics"].(bool); !ok || !b {
 								numPrometheus += 1
 							}
 						}
 					}
 				}
-				if otlp, ok := exporters["otlp"].([]interface{}); ok {
+				if otlp, ok := exporters["otlp"].([]any); ok {
 					for _, o := range otlp {
-						if oo, ok := o.(map[string]interface{}); ok {
+						if oo, ok := o.(map[string]any); ok {
 							if b, ok := oo["disable_metrics"].(bool); !ok || !b {
 								numOTLPMetrics += 1
 							}
@@ -484,17 +479,17 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				numPrometheus,          // to check if we do not have metrics
 			}
 		case "grpc":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
 			}
 			// we need to know if we are using a server and check if we
 			// are also using h2c
-			server, serverOk := cfg["server"].(map[string]interface{})
+			server, serverOk := cfg["server"].(map[string]any)
 			if serverOk {
 				numServices := 0
-				svcs, ok := server["services"].([]interface{})
+				svcs, ok := server["services"].([]any)
 				if ok {
 					numServices = len(svcs)
 				}
@@ -504,18 +499,18 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 
 		case "validation/response-json-schema":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
 			}
 			p := make([]int, 4)
-			schemaCfg, schemaCfgOk := cfg["schema"].(map[string]interface{})
+			schemaCfg, schemaCfgOk := cfg["schema"].(map[string]any)
 			if schemaCfgOk {
 				schemaStr, _ := json.Marshal(schemaCfg)
 				p[0] = len(schemaStr)
 			}
-			errorCfg, errorCfgOk := cfg["error"].(map[string]interface{})
+			errorCfg, errorCfgOk := cfg["error"].(map[string]any)
 			if errorCfgOk {
 				customError, customErrorOk := errorCfg["body"].(string)
 				if customErrorOk && customError != "" {
@@ -532,18 +527,18 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = p
 		case "modifier/response-body":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
 			}
 			p := make([]int, 6)
-			modifiers, ok := cfg["modifiers"].([]interface{})
+			modifiers, ok := cfg["modifiers"].([]any)
 			if ok {
 				p[0] = len(modifiers)
 				for i := range modifiers {
 					var kind string
-					for kind = range modifiers[i].(map[string]interface{}) {
+					for kind = range modifiers[i].(map[string]any) {
 					}
 					switch kind {
 					case "regexp":
@@ -561,7 +556,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = p
 		case "modifier/response-headers":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -582,7 +577,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 
 			components[c] = []int{v1}
 		case "websocket":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -644,12 +639,12 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				}
 			}
 
-			if f, ok := cfg["subprotocols"].([]interface{}); ok {
+			if f, ok := cfg["subprotocols"].([]any); ok {
 				d[10] = len(f)
 			}
 			components[c] = d
 		case luaproxy.ProxyNamespace, luaproxy.BackendNamespace, luarouter.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -663,7 +658,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = []int{f}
 		case httpcache.Namespace:
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -680,7 +675,7 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 			}
 			components[c] = []int{f}
 		case "ai/mcp":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -693,25 +688,25 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 
 			numServers := 0
 			numTools := 0
-			servers, serversFound := cfg["servers"].([]interface{})
+			servers, serversFound := cfg["servers"].([]any)
 			if !serversFound {
 				continue
 			}
 
 			for _, server := range servers {
-				server, ok := server.(map[string]interface{})
+				server, ok := server.(map[string]any)
 				if !ok {
 					continue
 				}
 				numServers++
 
-				if tools, ok := server["tools"].([]interface{}); ok {
+				if tools, ok := server["tools"].([]any); ok {
 					numTools += len(tools)
 				}
 			}
 			components[c] = []int{numServers, numTools}
 		case "ai/llm":
-			cfg, ok := v.(map[string]interface{})
+			cfg, ok := v.(map[string]any)
 			if !ok {
 				components[c] = []int{}
 				continue
@@ -721,11 +716,11 @@ func parseComponents(cfg config.ExtraConfig) Component { // skipcq: GO-R1005
 				p := 0
 				customInput := 0
 				customOutput := 0
-				if prCfg, providerFound := cfg[pr[0]].(map[string]interface{}); providerFound {
+				if prCfg, providerFound := cfg[pr[0]].(map[string]any); providerFound {
 					providerVersions := pr[1:]
 					vp := 0
 					for vi, v := range providerVersions {
-						vCfg, versionFound := prCfg[v].(map[string]interface{})
+						vCfg, versionFound := prCfg[v].(map[string]any)
 						if !versionFound {
 							continue
 						}
@@ -811,12 +806,12 @@ func parseRouter(cfg config.ExtraConfig) int {
 		res = addBit(res, RouterForwardedByClientIp)
 	}
 
-	vs, ok := cfg["remote_ip_headers"].([]interface{})
+	vs, ok := cfg["remote_ip_headers"].([]any)
 	if ok && len(vs) > 0 {
 		res = addBit(res, RouterRemoteIpHeaders)
 	}
 
-	vs, ok = cfg["trusted_proxies"].([]interface{})
+	vs, ok = cfg["trusted_proxies"].([]any)
 	if ok && len(vs) > 0 {
 		res = addBit(res, RouterTrustedProxies)
 	}
@@ -830,7 +825,7 @@ func parseRouter(cfg config.ExtraConfig) int {
 		res = addBit(res, RouterMaxMultipartMemory)
 	}
 
-	vs, ok = cfg["logger_skip_paths"].([]interface{})
+	vs, ok = cfg["logger_skip_paths"].([]any)
 	if ok && len(vs) > 0 {
 		res = addBit(res, RouterLoggerSkipPaths)
 	}

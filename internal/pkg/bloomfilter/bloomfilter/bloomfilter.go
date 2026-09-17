@@ -59,7 +59,7 @@ func (b Bloomfilter) Check(elem []byte) bool {
 }
 
 // Union of two bloomfilters
-func (b *Bloomfilter) Union(that interface{}) (float64, error) {
+func (b *Bloomfilter) Union(that any) (float64, error) {
 	other, ok := that.(*Bloomfilter)
 	if !ok {
 		return b.Capacity(), bloomfilter.ErrImpossibleToTreat

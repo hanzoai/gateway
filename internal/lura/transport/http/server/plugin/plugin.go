@@ -18,7 +18,7 @@ var serverRegister = register.New()
 
 func RegisterHandler(
 	name string,
-	handler func(context.Context, map[string]interface{}, http.Handler) (http.Handler, error),
+	handler func(context.Context, map[string]any, http.Handler) (http.Handler, error),
 ) {
 	serverRegister.Register(Namespace, name, handler)
 }
@@ -26,17 +26,17 @@ func RegisterHandler(
 type Registerer interface {
 	RegisterHandlers(func(
 		name string,
-		handler func(context.Context, map[string]interface{}, http.Handler) (http.Handler, error),
+		handler func(context.Context, map[string]any, http.Handler) (http.Handler, error),
 	))
 }
 
 type LoggerRegisterer interface {
-	RegisterLogger(interface{})
+	RegisterLogger(any)
 }
 
 type RegisterHandlerFunc func(
 	name string,
-	handler func(context.Context, map[string]interface{}, http.Handler) (http.Handler, error),
+	handler func(context.Context, map[string]any, http.Handler) (http.Handler, error),
 )
 
 func Load(path, pattern string, rcf RegisterHandlerFunc) (int, error) {
@@ -85,7 +85,7 @@ func open(pluginName string, rcf RegisterHandlerFunc, logger logging.Logger) (er
 	if err != nil {
 		return
 	}
-	var r interface{}
+	var r any
 	r, err = p.Lookup("HandlerRegisterer")
 	if err != nil {
 		return
@@ -107,7 +107,7 @@ func open(pluginName string, rcf RegisterHandlerFunc, logger logging.Logger) (er
 	return
 }
 
-var RegisterExtraComponents = func(interface{}) {}
+var RegisterExtraComponents = func(any) {}
 
 // Plugin is the interface of the loaded plugins
 type Plugin interface {

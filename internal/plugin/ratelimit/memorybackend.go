@@ -15,7 +15,7 @@ func MemoryBackendBuilder(ctx context.Context, ttl, cleanupRate time.Duration,
 	}
 	backends := make([]MemoryBackend, amount)
 	for idx := range backends {
-		backends[idx].data = map[string]interface{}{}
+		backends[idx].data = map[string]any{}
 		backends[idx].lastAccess = map[string]time.Time{}
 		backends[idx].mu = new(sync.RWMutex)
 	}
@@ -48,7 +48,7 @@ func MemoryBackendBuilder(ctx context.Context, ttl, cleanupRate time.Duration,
 func NewMemoryBackend(ctx context.Context, ttl time.Duration) *MemoryBackend {
 	backends := []MemoryBackend{
 		{
-			data:       map[string]interface{}{},
+			data:       map[string]any{},
 			lastAccess: map[string]time.Time{},
 			mu:         new(sync.RWMutex),
 		},
@@ -61,7 +61,7 @@ func NewMemoryBackend(ctx context.Context, ttl time.Duration) *MemoryBackend {
 
 // MemoryBackend implements the backend interface by wrapping a sync.Map
 type MemoryBackend struct {
-	data       map[string]interface{}
+	data       map[string]any
 	lastAccess map[string]time.Time
 	mu         *sync.RWMutex
 }
@@ -94,7 +94,7 @@ func manageEvictions(ctx context.Context, ttl, cleanupRate time.Duration, backen
 // Load implements the Backend interface.
 // The f function should always return a non nil value, or that nil value
 // will be assigned and returned on load.
-func (m *MemoryBackend) Load(key string, f func() interface{}) interface{} {
+func (m *MemoryBackend) Load(key string, f func() any) any {
 	var lastAccess time.Time
 	lastAccessOk := true
 
@@ -131,7 +131,7 @@ func (m *MemoryBackend) Load(key string, f func() interface{}) interface{} {
 }
 
 // Store implements the Backend interface
-func (m *MemoryBackend) Store(key string, v interface{}) error {
+func (m *MemoryBackend) Store(key string, v any) error {
 	m.mu.Lock()
 	m.lastAccess[key] = now()
 	m.data[key] = v

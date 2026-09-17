@@ -353,12 +353,12 @@ type ClientTLSCert struct {
 }
 
 // ExtraConfig is a type to store extra configurations for customized behaviours
-type ExtraConfig map[string]interface{}
+type ExtraConfig map[string]any
 
 func (e *ExtraConfig) sanitize() {
 	for module, extra := range *e {
-		if extra, ok := extra.(map[interface{}]interface{}); ok {
-			sanitized := map[string]interface{}{}
+		if extra, ok := extra.(map[any]any); ok {
+			sanitized := map[string]any{}
 			for k, v := range extra {
 				sanitized[fmt.Sprintf("%v", k)] = v
 			}
@@ -511,7 +511,7 @@ func (s *ServiceConfig) initEndpoints() error {
 		}
 
 		inputParams := s.extractPlaceHoldersFromURLTemplate(e.Endpoint, s.paramExtractionPattern())
-		inputSet := map[string]interface{}{}
+		inputSet := map[string]any{}
 		for ip := range inputParams {
 			inputSet[inputParams[ip]] = nil
 		}
@@ -627,7 +627,7 @@ func (s *ServiceConfig) initBackendDefaults(e, b int) error {
 	return nil
 }
 
-func (s *ServiceConfig) initBackendURLMappings(e, b int, inputParams map[string]interface{}) error {
+func (s *ServiceConfig) initBackendURLMappings(e, b int, inputParams map[string]any) error {
 	backend := s.Endpoints[e].Backend[b]
 
 	backend.URLPattern = s.uriParser.CleanPath(backend.URLPattern)
@@ -668,7 +668,7 @@ func (s *ServiceConfig) initBackendURLMappings(e, b int, inputParams map[string]
 	return nil
 }
 
-func fromSetToSortedSlice(set map[string]interface{}) []string {
+func fromSetToSortedSlice(set map[string]any) []string {
 	res := make([]string, 0, len(set))
 	for element := range set {
 		res = append(res, element)

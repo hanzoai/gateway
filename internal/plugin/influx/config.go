@@ -22,7 +22,7 @@ func configGetter(extraConfig config.ExtraConfig) (influxConfig, error) {
 		database: "krakend",
 	}
 
-	castedConfig, ok := extraConfig[Namespace].(map[string]interface{})
+	castedConfig, ok := extraConfig[Namespace].(map[string]any)
 	if !ok {
 		return cfg, ErrNoConfig
 	}

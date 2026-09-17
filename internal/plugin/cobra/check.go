@@ -85,7 +85,7 @@ func checkFunc(cmd *cobra.Command, _ []string) { // skipcq: GO-R1005
 			return
 		}
 
-		var raw interface{}
+		var raw any
 		if err := json.Unmarshal(data, &raw); err != nil {
 			cmd.Println(errorMsg("ERROR converting configuration content to JSON:") + fmt.Sprintf("\t%s\n", err.Error()))
 			os.Exit(1) // skipcq: RVV-A0003
@@ -196,7 +196,7 @@ func getVersionMinor(ver string) string {
 
 type SchemaHttpLoader http.Client
 
-func (l *SchemaHttpLoader) Load(url string) (interface{}, error) {
+func (l *SchemaHttpLoader) Load(url string) (any, error) {
 	client := (*http.Client)(l)
 	resp, err := client.Get(url)
 	if err != nil {

@@ -14,7 +14,7 @@ type Tree struct {
 }
 
 // New returns a new Tee containning a decomposed version of v
-func New(v interface{}) (*Tree, error) {
+func New(v any) (*Tree, error) {
 	if v == nil {
 		return nil, errNoNilValuesAllowed
 	}
@@ -29,7 +29,7 @@ func New(v interface{}) (*Tree, error) {
 }
 
 // Add introduces the value v at the path defined by ks
-func (t *Tree) Add(ks []string, v interface{}) {
+func (t *Tree) Add(ks []string, v any) {
 	if v == nil {
 		return
 	}
@@ -43,11 +43,11 @@ func (t *Tree) Del(ks []string) {
 
 // Append appends the contents of the array src to the array dst
 func (t *Tree) Append(src, dst []string) {
-	elements1, ok := t.root.Get(src...).([]interface{})
+	elements1, ok := t.root.Get(src...).([]any)
 	if !ok {
 		return
 	}
-	elements2, ok := t.root.Get(dst...).([]interface{})
+	elements2, ok := t.root.Get(dst...).([]any)
 	if !ok {
 		return
 	}
@@ -58,7 +58,7 @@ func (t *Tree) Append(src, dst []string) {
 }
 
 // Get returns all nodes and edges in the tree matching the path defined by ks
-func (t *Tree) Get(ks []string) interface{} {
+func (t *Tree) Get(ks []string) any {
 	return t.root.Get(ks...)
 }
 

@@ -59,7 +59,7 @@ func DefaultWidgetSecurityConfig() WidgetSecurityConfig {
 	origins := defaultAllowedOrigins()
 	if env := os.Getenv("WIDGET_ALLOWED_ORIGINS"); env != "" {
 		origins = nil
-		for _, o := range strings.Split(env, ",") {
+		for o := range strings.SplitSeq(env, ",") {
 			if o = strings.TrimSpace(o); o != "" {
 				origins = append(origins, o)
 			}

@@ -19,13 +19,13 @@ func newNode(depth int) *node {
 }
 
 type node struct {
-	Value        interface{}
+	Value        any
 	isCollection bool
 	edges        []*edge
 	depth        int
 }
 
-func (n *node) Add(ks []string, v interface{}) {
+func (n *node) Add(ks []string, v any) {
 	if len(ks) == 0 {
 		n.flatten(v)
 		return
@@ -79,7 +79,7 @@ func (n *node) Del(ks ...string) {
 	}
 }
 
-func (n *node) Get(ks ...string) interface{} {
+func (n *node) Get(ks ...string) any {
 	lenKs := len(ks)
 	lenEdges := len(n.edges)
 
@@ -92,7 +92,7 @@ func (n *node) Get(ks ...string) interface{} {
 	}
 
 	if ks[0] == wildcard {
-		res := make([]interface{}, lenEdges)
+		res := make([]any, lenEdges)
 		for i, e := range n.edges {
 			res[i] = e.n.Get(ks[1:]...)
 		}
@@ -122,14 +122,14 @@ func (n *node) IsLeaf() bool {
 	return len(n.edges) == 0
 }
 
-func (n *node) expand() interface{} {
+func (n *node) expand() any {
 	children := len(n.edges)
 	if children == 0 {
 		return n.Value
 	}
 
 	if n.isCollection {
-		res := make([]interface{}, children)
+		res := make([]any, children)
 		for i, e := range n.edges {
 			res[i] = e.n.Get()
 		}
@@ -137,16 +137,16 @@ func (n *node) expand() interface{} {
 		return res
 	}
 
-	res := make(map[string]interface{}, children)
+	res := make(map[string]any, children)
 	for _, e := range n.edges {
 		res[e.label] = e.n.Get()
 	}
 	return res
 }
 
-func (n *node) flatten(i interface{}) {
+func (n *node) flatten(i any) {
 	switch v := i.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		n.isCollection = false
 		if len(v) == 0 {
 			n.Value = v
@@ -156,7 +156,7 @@ func (n *node) flatten(i interface{}) {
 		for k, e := range v {
 			n.Add([]string{k}, e)
 		}
-	case []interface{}:
+	case []any:
 		n.isCollection = true
 		if len(v) == 0 {
 			n.Value = v

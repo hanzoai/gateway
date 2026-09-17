@@ -30,6 +30,7 @@ package gateway
 import (
 	"net/netip"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -107,8 +108,8 @@ func (p peerPolicy) clientIP(peer, forwarded string) string {
 	}
 	var leftmost string
 	hops := strings.Split(forwarded, ",")
-	for i := len(hops) - 1; i >= 0; i-- {
-		hop, ok := parseAddr(hops[i])
+	for _, hop := range slices.Backward(hops) {
+		hop, ok := parseAddr(hop)
 		if !ok {
 			// A malformed hop ends the chain: nothing further left can be
 			// attributed, so stop rather than skip past it.

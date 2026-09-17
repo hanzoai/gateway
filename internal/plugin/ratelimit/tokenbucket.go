@@ -66,7 +66,7 @@ func NewTokenBucketBuilder(rate float64, capacity, initialStock uint64, clk Cloc
 	}
 	fillInterval := time.Duration(int64(1e9 / rate))
 
-	return func() interface{} {
+	return func() any {
 		return &TokenBucket{
 			fillInterval: fillInterval,
 			capacity:     capacity,

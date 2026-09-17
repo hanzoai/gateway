@@ -127,8 +127,8 @@ func isEmpty(histogram metrics.HistogramData) bool {
 			histogram.Percentiles[0] == .0 && histogram.Percentiles[len(histogram.Percentiles)-1] == .0)
 }
 
-func newFields(h metrics.HistogramData) map[string]interface{} {
-	fields := map[string]interface{}{
+func newFields(h metrics.HistogramData) map[string]any {
+	fields := map[string]any{
 		"max":      int(h.Max),
 		"min":      int(h.Min),
 		"mean":     int(h.Mean),

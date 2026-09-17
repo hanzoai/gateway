@@ -96,27 +96,27 @@ func cleanupServiceConfig(cfg *config.ServiceConfig) {
 	}
 }
 
-func cleanConfigMap(cfg map[string]interface{}) map[string]interface{} {
+func cleanConfigMap(cfg map[string]any) map[string]any {
 	for k, v := range cfg {
 		cfg[k] = cleanupMapValue(v)
 	}
 	return cfg
 }
 
-func cleanupMapValue(input interface{}) interface{} {
+func cleanupMapValue(input any) any {
 	switch data := input.(type) {
-	case []interface{}:
+	case []any:
 		for key, value := range data {
 			data[key] = cleanupMapValue(value)
 		}
 		return data
-	case map[string]interface{}:
+	case map[string]any:
 		for key, value := range data {
 			data[key] = cleanupMapValue(value)
 		}
 		return data
-	case map[interface{}]interface{}:
-		output := make(map[string]interface{})
+	case map[any]any:
+		output := make(map[string]any)
 		for key, value := range data {
 			output[fmt.Sprintf("%v", key)] = cleanupMapValue(value)
 		}

@@ -129,7 +129,7 @@ func (j *JWKClient) downloadKeys() ([]jose.JSONWebKey, error) {
 }
 
 // GetSecret implements the GetSecret method of the SecretProvider interface.
-func (j *JWKClient) GetSecret(r *http.Request) (interface{}, error) {
+func (j *JWKClient) GetSecret(r *http.Request) (any, error) {
 	token, err := j.extractor.Extract(r)
 	if err != nil {
 		return nil, err

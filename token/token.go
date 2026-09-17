@@ -11,6 +11,7 @@ package token
 
 import (
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -110,7 +111,7 @@ func envOr(key, dflt string) string {
 
 func split(s string) []string {
 	out := make([]string, 0, 4)
-	for _, p := range strings.Split(s, ",") {
+	for p := range strings.SplitSeq(s, ",") {
 		if p = strings.TrimSpace(p); p != "" {
 			out = append(out, p)
 		}
@@ -122,12 +123,7 @@ func split(s string) []string {
 // the same reason every identifier comparison in authz is: folding case would make
 // two registered client ids one.
 func accepts(allow []string, want string) bool {
-	for _, a := range allow {
-		if a == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(allow, want)
 }
 
 // NewValidator builds the edge's verifier from cfg. The check itself lives in

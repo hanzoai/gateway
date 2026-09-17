@@ -19,24 +19,24 @@ import (
 
 // Decoder is a function that reads from the reader and decodes it
 // into an map of interfaces
-type Decoder func(io.Reader, *map[string]interface{}) error
+type Decoder func(io.Reader, *map[string]any) error
 
 // DecoderFactory is a function that returns CollectionDecoder or an EntityDecoder
-type DecoderFactory func(bool) func(io.Reader, *map[string]interface{}) error
+type DecoderFactory func(bool) func(io.Reader, *map[string]any) error
 
 // NOOP is the key for the NoOp encoding
 const NOOP = "no-op"
 
 // NoOpDecoder is a decoder that does nothing
-func NoOpDecoder(_ io.Reader, _ *map[string]interface{}) error { return nil }
+func NoOpDecoder(_ io.Reader, _ *map[string]any) error { return nil }
 
-func noOpDecoderFactory(_ bool) func(io.Reader, *map[string]interface{}) error { return NoOpDecoder }
+func noOpDecoderFactory(_ bool) func(io.Reader, *map[string]any) error { return NoOpDecoder }
 
 // JSON is the key for the json encoding
 const JSON = "json"
 
 // NewJSONDecoder returns the right JSON decoder
-func NewJSONDecoder(isCollection bool) func(io.Reader, *map[string]interface{}) error {
+func NewJSONDecoder(isCollection bool) func(io.Reader, *map[string]any) error {
 	if isCollection {
 		return JSONCollectionDecoder
 	}
@@ -44,21 +44,21 @@ func NewJSONDecoder(isCollection bool) func(io.Reader, *map[string]interface{}) 
 }
 
 // JSONDecoder decodes a json message into a map
-func JSONDecoder(r io.Reader, v *map[string]interface{}) error {
+func JSONDecoder(r io.Reader, v *map[string]any) error {
 	d := json.NewDecoder(r)
 	d.UseNumber()
 	return d.Decode(v)
 }
 
 // JSONCollectionDecoder decodes a json collection and returns a map with the array at the 'collection' key
-func JSONCollectionDecoder(r io.Reader, v *map[string]interface{}) error {
-	var collection []interface{}
+func JSONCollectionDecoder(r io.Reader, v *map[string]any) error {
+	var collection []any
 	d := json.NewDecoder(r)
 	d.UseNumber()
 	if err := d.Decode(&collection); err != nil {
 		return err
 	}
-	*(v) = map[string]interface{}{"collection": collection}
+	*(v) = map[string]any{"collection": collection}
 	return nil
 }
 
@@ -66,25 +66,25 @@ func JSONCollectionDecoder(r io.Reader, v *map[string]interface{}) error {
 const SAFE_JSON = "safejson"
 
 // NewSafeJSONDecoder returns the universal json decoder
-func NewSafeJSONDecoder(_ bool) func(io.Reader, *map[string]interface{}) error {
+func NewSafeJSONDecoder(_ bool) func(io.Reader, *map[string]any) error {
 	return SafeJSONDecoder
 }
 
 // SafeJSONDecoder decodes both json objects and collections
-func SafeJSONDecoder(r io.Reader, v *map[string]interface{}) error {
+func SafeJSONDecoder(r io.Reader, v *map[string]any) error {
 	d := json.NewDecoder(r)
 	d.UseNumber()
-	var t interface{}
+	var t any
 	if err := d.Decode(&t); err != nil {
 		return err
 	}
 	switch tt := t.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		*v = tt
-	case []interface{}:
-		*v = map[string]interface{}{"collection": tt}
+	case []any:
+		*v = map[string]any{"collection": tt}
 	default:
-		*v = map[string]interface{}{"content": tt}
+		*v = map[string]any{"content": tt}
 	}
 	return nil
 }
@@ -93,16 +93,16 @@ func SafeJSONDecoder(r io.Reader, v *map[string]interface{}) error {
 const STRING = "string"
 
 // NewStringDecoder returns a String decoder
-func NewStringDecoder(_ bool) func(io.Reader, *map[string]interface{}) error {
+func NewStringDecoder(_ bool) func(io.Reader, *map[string]any) error {
 	return StringDecoder
 }
 
 // StringDecoder returns a map with the content of the reader under the key 'content'
-func StringDecoder(r io.Reader, v *map[string]interface{}) error {
+func StringDecoder(r io.Reader, v *map[string]any) error {
 	data, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
-	*(v) = map[string]interface{}{"content": string(data)}
+	*(v) = map[string]any{"content": string(data)}
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 func RegisterLuaTable(b *binder.Binder) {
 	tab := b.Table("luaTable")
 	tab.Static("new", func(c *binder.Context) error {
-		c.Push().Data(&lua.Table{Data: map[string]interface{}{}}, "luaTable")
+		c.Push().Data(&lua.Table{Data: map[string]any{}}, "luaTable")
 		return nil
 	})
 	tab.Dynamic("get", tableGet)
@@ -53,9 +53,9 @@ func tableGet(c *binder.Context) error {
 		c.Push().Number(t)
 	case bool:
 		c.Push().Bool(t)
-	case []interface{}:
+	case []any:
 		c.Push().Data(&lua.List{Data: t}, "luaList")
-	case map[string]interface{}:
+	case map[string]any:
 		c.Push().Data(&lua.Table{Data: t}, "luaTable")
 	case client.HTTPResponseError:
 		c.Push().Data(&lua.Table{Data: clientErrorToMap(t)}, "luaTable")
@@ -87,7 +87,7 @@ func tableSet(c *binder.Context) error {
 	case lua.NativeBool:
 		tab.Data[key] = c.Arg(3).Bool()
 	case *lua.NativeTable:
-		res := map[string]interface{}{}
+		res := map[string]any{}
 		t.ForEach(func(k, v lua.NativeValue) {
 			lua.ParseToTable(k, v, res)
 		})
@@ -118,7 +118,7 @@ func tableKeys(c *binder.Context) error {
 		l = append(l, k)
 	}
 	sort.Strings(l)
-	keys := make([]interface{}, len(l))
+	keys := make([]any, len(l))
 	for k, v := range l {
 		keys[k] = v
 	}
@@ -160,8 +160,8 @@ func tableDel(c *binder.Context) error {
 	return nil
 }
 
-func clientErrorToMap(err client.HTTPResponseError) map[string]interface{} {
-	return map[string]interface{}{
+func clientErrorToMap(err client.HTTPResponseError) map[string]any {
+	return map[string]any{
 		"http_status_code":   err.StatusCode(),
 		"http_body":          err.Error(),
 		"http_body_encoding": err.Encoding(),

@@ -833,7 +833,7 @@ func envBool(k string, d bool) bool {
 // parseHostSet turns a comma-separated host list into a lower-cased set.
 func parseHostSet(v string) map[string]bool {
 	set := map[string]bool{}
-	for _, h := range strings.Split(v, ",") {
+	for h := range strings.SplitSeq(v, ",") {
 		if h = strings.ToLower(strings.TrimSpace(h)); h != "" {
 			set[h] = true
 		}

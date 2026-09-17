@@ -147,7 +147,7 @@ func NewSigner(cfg *config.EndpointConfig, te auth0.RequestTokenExtractor) (*Sig
 		Algorithm: jose.SignatureAlgorithm(signerCfg.Alg),
 	}
 	opts := &jose.SignerOptions{
-		ExtraHeaders: map[jose.HeaderKey]interface{}{
+		ExtraHeaders: map[jose.HeaderKey]any{
 			jose.HeaderKey("kid"): key.KeyID,
 			jose.HeaderKey("typ"): "JWT",
 		},
@@ -166,15 +166,15 @@ func NewSigner(cfg *config.EndpointConfig, te auth0.RequestTokenExtractor) (*Sig
 	return signerCfg, compactSerializeSigner{signer{s}}.Sign, nil
 }
 
-type Signer func(interface{}) (string, error)
+type Signer func(any) (string, error)
 
-func nopSigner(_ interface{}) (string, error) { return "", nil }
+func nopSigner(_ any) (string, error) { return "", nil }
 
 type signer struct {
 	signer jose.Signer
 }
 
-func (s signer) sign(v interface{}) (*jose.JSONWebSignature, error) {
+func (s signer) sign(v any) (*jose.JSONWebSignature, error) {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return nil, fmt.Errorf("unable to serialize payload: %s", err.Error())
@@ -186,7 +186,7 @@ type fullSerializeSigner struct {
 	signer
 }
 
-func (f fullSerializeSigner) Sign(v interface{}) (string, error) {
+func (f fullSerializeSigner) Sign(v any) (string, error) {
 	obj, err := f.sign(v)
 	if err != nil {
 		return "", fmt.Errorf("unable to sign payload: %s", err.Error())
@@ -198,7 +198,7 @@ type compactSerializeSigner struct {
 	signer
 }
 
-func (c compactSerializeSigner) Sign(v interface{}) (string, error) {
+func (c compactSerializeSigner) Sign(v any) (string, error) {
 	obj, err := c.sign(v)
 	if err != nil {
 		return "", fmt.Errorf("unable to sign payload: %s", err.Error())

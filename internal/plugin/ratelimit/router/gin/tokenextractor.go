@@ -26,7 +26,7 @@ func NewIPTokenExtractor(header string) TokenExtractor {
 	}
 	return func(c *gin.Context) string {
 		if clientIP := strings.TrimSpace(strings.Split(c.Request.Header.Get(header), ",")[0]); clientIP != "" {
-			ip := strings.Split(clientIP, ":")[0]
+			ip, _, _ := strings.Cut(clientIP, ":")
 			if parsedIP := net.ParseIP(ip); parsedIP != nil {
 				return ip
 			}

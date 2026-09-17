@@ -40,8 +40,8 @@ const fixedInfoRule = `req_body.matches('.*"info\\.getNetworkID".*') || ` +
 
 func celConfig(expr string) config.ExtraConfig {
 	return config.ExtraConfig{
-		internal.Namespace: []interface{}{
-			map[string]interface{}{"check_expr": expr},
+		internal.Namespace: []any{
+			map[string]any{"check_expr": expr},
 		},
 	}
 }

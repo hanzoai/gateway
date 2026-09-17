@@ -74,7 +74,7 @@ type Rejecter struct {
 	Headers   []string
 }
 
-func (r *Rejecter) RejectToken(claims map[string]interface{}) bool {
+func (r *Rejecter) RejectToken(claims map[string]any) bool {
 	for _, k := range r.TokenKeys {
 		v, ok := claims[k]
 		if !ok {

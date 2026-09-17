@@ -30,8 +30,8 @@ type LimiterStore func(string) Limiter
 
 // Backend is the interface of the persistence layer
 type Backend interface {
-	Load(string, func() interface{}) interface{}
-	Store(string, interface{}) error
+	Load(string, func() any) any
+	Store(string, any) error
 }
 
 // DefaultShardedMemoryBackend is a 2048 sharded ShardedMemoryBackend

@@ -19,7 +19,7 @@ func registerResponseTable(resp *proxy.Response, b *binder.Binder) {
 		r.Metadata.Headers = map[string][]string{}
 	}
 	if r.Data == nil {
-		r.Data = map[string]interface{}{}
+		r.Data = map[string]any{}
 	}
 
 	t := b.Table("response")
@@ -114,7 +114,7 @@ func (*ProxyResponse) headerList(c *binder.Context) error {
 		key := http.CanonicalHeaderKey(c.Arg(2).String())
 
 		headers := resp.Metadata.Headers[key]
-		d := make([]interface{}, len(headers))
+		d := make([]any, len(headers))
 		for i := range headers {
 			d[i] = headers[i]
 		}

@@ -73,7 +73,7 @@ func newProxy(schema *jsonschema.Schema, next proxy.Proxy) proxy.Proxy {
 	}
 }
 
-func configGetter(cfg config.ExtraConfig) interface{} {
+func configGetter(cfg config.ExtraConfig) any {
 	v, ok := cfg[Namespace]
 	if !ok {
 		return nil

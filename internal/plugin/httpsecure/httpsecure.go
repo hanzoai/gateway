@@ -14,12 +14,12 @@ var ZeroCfg = secure.Options{}
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
 // package and returns nil if something goes wrong.
-func ConfigGetter(e config.ExtraConfig) interface{} {
+func ConfigGetter(e config.ExtraConfig) any {
 	v, ok := e[Namespace]
 	if !ok {
 		return nil
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -52,12 +52,12 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 	return cfg
 }
 
-func getStrings(data map[string]interface{}, key string, v *[]string) {
+func getStrings(data map[string]any, key string, v *[]string) {
 	vi, ok := data[key]
 	if !ok {
 		return
 	}
-	va, ok := vi.([]interface{})
+	va, ok := vi.([]any)
 	if !ok {
 		return
 	}
@@ -70,12 +70,12 @@ func getStrings(data map[string]interface{}, key string, v *[]string) {
 	*v = result
 }
 
-func getStringMap(data map[string]interface{}, key string) map[string]string {
+func getStringMap(data map[string]any, key string) map[string]string {
 	im, ok := data[key]
 	if !ok {
 		return nil
 	}
-	mi, ok := im.(map[string]interface{})
+	mi, ok := im.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -89,7 +89,7 @@ func getStringMap(data map[string]interface{}, key string) map[string]string {
 	return nm
 }
 
-func getString(data map[string]interface{}, key string, v *string) {
+func getString(data map[string]any, key string, v *string) {
 	vi, ok := data[key]
 	if !ok {
 		return
@@ -101,7 +101,7 @@ func getString(data map[string]interface{}, key string, v *string) {
 	*v = vs
 }
 
-func getBool(data map[string]interface{}, key string, v *bool) {
+func getBool(data map[string]any, key string, v *bool) {
 	if val, ok := data[key]; ok {
 		if b, ok := val.(bool); ok {
 			*v = b
@@ -109,7 +109,7 @@ func getBool(data map[string]interface{}, key string, v *bool) {
 	}
 }
 
-func getInt64(data map[string]interface{}, key string, v *int64) {
+func getInt64(data map[string]any, key string, v *int64) {
 	if val, ok := data[key]; ok {
 		switch i := val.(type) {
 		case int64:

@@ -3,7 +3,8 @@ package binder
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
+
 	"strconv"
 	"strings"
 
@@ -242,7 +243,7 @@ func highlight(s string) string {
 		return s
 	}
 
-	b, err := ioutil.ReadAll(&buf)
+	b, err := io.ReadAll(&buf)
 	if err != nil {
 		return s
 	}

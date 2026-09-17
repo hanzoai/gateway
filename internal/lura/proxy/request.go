@@ -5,6 +5,7 @@ package proxy
 import (
 	"bytes"
 	"io"
+	"maps"
 	"net/url"
 )
 
@@ -91,8 +92,6 @@ func CloneRequestHeaders(headers map[string][]string) map[string][]string {
 // CloneRequestParams returns a copy of the received request params
 func CloneRequestParams(params map[string]string) map[string]string {
 	m := make(map[string]string, len(params))
-	for k, v := range params {
-		m[k] = v
-	}
+	maps.Copy(m, params)
 	return m
 }

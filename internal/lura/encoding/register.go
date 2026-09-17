@@ -14,9 +14,9 @@ func GetRegister() *DecoderRegister {
 }
 
 type untypedRegister interface {
-	Register(name string, v interface{})
-	Get(name string) (interface{}, bool)
-	Clone() map[string]interface{}
+	Register(name string, v any)
+	Get(name string) (any, bool)
+	Clone() map[string]any
 }
 
 // DecoderRegister is the struct responsible of registering the decoder factories
@@ -25,16 +25,16 @@ type DecoderRegister struct {
 }
 
 // Register adds a decoder factory to the register
-func (r *DecoderRegister) Register(name string, dec func(bool) func(io.Reader, *map[string]interface{}) error) error {
+func (r *DecoderRegister) Register(name string, dec func(bool) func(io.Reader, *map[string]any) error) error {
 	r.data.Register(name, dec)
 	return nil
 }
 
 // Get returns a decoder factory from the register by name. If no factory is found, it returns a JSON decoder factory
-func (r *DecoderRegister) Get(name string) func(bool) func(io.Reader, *map[string]interface{}) error {
+func (r *DecoderRegister) Get(name string) func(bool) func(io.Reader, *map[string]any) error {
 	for _, n := range []string{name, JSON} {
 		if v, ok := r.data.Get(n); ok {
-			if dec, ok := v.(func(bool) func(io.Reader, *map[string]interface{}) error); ok {
+			if dec, ok := v.(func(bool) func(io.Reader, *map[string]any) error); ok {
 				return dec
 			}
 		}
@@ -44,7 +44,7 @@ func (r *DecoderRegister) Get(name string) func(bool) func(io.Reader, *map[strin
 
 var (
 	decoders        = initDecoderRegister()
-	defaultDecoders = map[string]func(bool) func(io.Reader, *map[string]interface{}) error{
+	defaultDecoders = map[string]func(bool) func(io.Reader, *map[string]any) error{
 		JSON:      NewJSONDecoder,
 		SAFE_JSON: NewSafeJSONDecoder,
 		STRING:    NewStringDecoder,

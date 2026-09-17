@@ -1,5 +1,7 @@
 package register
 
+import "maps"
+
 import "sync"
 
 const (
@@ -18,7 +20,7 @@ type Scope string
 // Component contains the scope and the module factory
 type Component struct {
 	Scope       []Scope
-	NewFromJSON func(b []byte) (interface{}, error)
+	NewFromJSON func(b []byte) (any, error)
 }
 
 var (
@@ -27,7 +29,7 @@ var (
 )
 
 // Set adds the received data into the register
-func Set(name string, scope []Scope, f func(b []byte) (interface{}, error)) {
+func Set(name string, scope []Scope, f func(b []byte) (any, error)) {
 	mutex.Lock()
 	register[name] = Component{
 		Scope:       scope,
@@ -40,9 +42,7 @@ func Set(name string, scope []Scope, f func(b []byte) (interface{}, error)) {
 func Get() Register {
 	mutex.RLock()
 	r := make(Register, len(register))
-	for k, v := range register {
-		r[k] = v
-	}
+	maps.Copy(r, register)
 	mutex.RUnlock()
 	return r
 }

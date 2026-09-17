@@ -52,7 +52,7 @@ type serviceConfig struct {
 
 func configGetter(l logging.Logger, cfg config.ExtraConfig) (serviceConfig, error) {
 	scfg := serviceConfig{}
-	e, ok := cfg[ValidatorNamespace].(map[string]interface{})
+	e, ok := cfg[ValidatorNamespace].(map[string]any)
 	if !ok {
 		return scfg, ErrNoValidatorCfg
 	}

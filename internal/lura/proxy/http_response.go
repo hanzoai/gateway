@@ -16,7 +16,7 @@ type HTTPResponseParser func(context.Context, *http.Response) (*Response, error)
 
 // DefaultHTTPResponseParserConfig defines a default HTTPResponseParserConfig
 var DefaultHTTPResponseParserConfig = HTTPResponseParserConfig{
-	func(_ io.Reader, _ *map[string]interface{}) error { return nil },
+	func(_ io.Reader, _ *map[string]any) error { return nil },
 	EntityFormatterFunc(func(r Response) Response { return r }),
 }
 
@@ -47,7 +47,7 @@ func DefaultHTTPResponseParserFactory(cfg HTTPResponseParserConfig) HTTPResponse
 			reader = resp.Body
 		}
 
-		var data map[string]interface{}
+		var data map[string]any
 		if err := cfg.Decoder(reader, &data); err != nil {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func DefaultHTTPResponseParserFactory(cfg HTTPResponseParserConfig) HTTPResponse
 // http response body into the proxy response IO
 func NoOpHTTPResponseParser(ctx context.Context, resp *http.Response) (*Response, error) {
 	return &Response{
-		Data:       map[string]interface{}{},
+		Data:       map[string]any{},
 		IsComplete: true,
 		Io:         NewReadCloserWrapper(ctx, resp.Body),
 		Metadata: Metadata{

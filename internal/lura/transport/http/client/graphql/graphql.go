@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -40,9 +41,9 @@ const (
 
 // GraphQLRequest represents the graphql request body
 type GraphQLRequest struct {
-	Query         string                 `json:"query"`
-	OperationName string                 `json:"operationName,omitempty"`
-	Variables     map[string]interface{} `json:"variables,omitempty"`
+	Query         string         `json:"query"`
+	OperationName string         `json:"operationName,omitempty"`
+	Variables     map[string]any `json:"variables,omitempty"`
 }
 
 // Options defines a GraphQLRequest with a type, so the middlewares know what to do
@@ -123,11 +124,9 @@ func New(opt Options) *Extractor {
 		val := GraphQLRequest{
 			Query:         opt.Query,
 			OperationName: opt.OperationName,
-			Variables:     map[string]interface{}{},
+			Variables:     map[string]any{},
 		}
-		for k, v := range opt.Variables {
-			val.Variables[k] = v
-		}
+		maps.Copy(val.Variables, opt.Variables)
 		for _, vs := range replacements {
 			val.Variables[vs[0]] = params[vs[1]]
 		}
@@ -191,7 +190,7 @@ func (e *Extractor) fromBody(r io.Reader) (*GraphQLRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	vars := map[string]interface{}{}
+	vars := map[string]any{}
 
 	if err := json.Unmarshal(b, &vars); err != nil {
 		return nil, err

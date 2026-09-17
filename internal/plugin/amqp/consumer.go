@@ -80,7 +80,7 @@ func (f backendFactory) initConsumer(ctx context.Context, remote *config.Backend
 				}
 				return nil, fmt.Errorf("connection not available, trying to reconnect")
 			}
-			var data map[string]interface{}
+			var data map[string]any
 			err := remote.Decoder(bytes.NewBuffer(msg.Body), &data)
 			if err != nil && err != io.EOF {
 				msg.Nack(false, !cfg.NackDiscard)

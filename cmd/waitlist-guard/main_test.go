@@ -103,11 +103,10 @@ func jwtSignerConfig(t *testing.T, iamURL string, failOpen bool) (*config, strin
 	t.Cleanup(jwksSrv.Close)
 
 	now := time.Now()
-	claims := authz.Claims{RegisteredClaims: jwt.RegisteredClaims{
+	claims := authz.Claims{
 		Issuer: iss, Subject: "alice", Audience: jwt.ClaimStrings{aud},
 		IssuedAt:  jwt.NewNumericDate(now.Add(-time.Minute)),
-		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
-	}, Owner: "hanzo", Name: "alice"}
+		ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)), Owner: "hanzo", Name: "alice"}
 	tok := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
 	tok.Header["kid"] = kid
 	raw, err := tok.SignedString(key)

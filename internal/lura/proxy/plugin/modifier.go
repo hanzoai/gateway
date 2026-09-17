@@ -28,7 +28,7 @@ const (
 var modifierRegister = register.New()
 
 // ModifierFactory is a function that, given a config passed as a map, returns a modifier
-type ModifierFactory func(map[string]interface{}) func(interface{}) (interface{}, error)
+type ModifierFactory func(map[string]any) func(any) (any, error)
 
 // GetRequestModifier returns a ModifierFactory from the request namespace by name
 func GetRequestModifier(name string) (ModifierFactory, bool) {
@@ -49,7 +49,7 @@ func getModifier(namespace, name string) (ModifierFactory, bool) {
 	if !ok {
 		return nil, ok
 	}
-	res, ok := m.(func(map[string]interface{}) func(interface{}) (interface{}, error))
+	res, ok := m.(func(map[string]any) func(any) (any, error))
 	if !ok {
 		return nil, ok
 	}
@@ -59,7 +59,7 @@ func getModifier(namespace, name string) (ModifierFactory, bool) {
 // RegisterModifier registers the injected modifier factory with the given name at the selected namespace
 func RegisterModifier(
 	name string,
-	modifierFactory func(map[string]interface{}) func(interface{}) (interface{}, error),
+	modifierFactory func(map[string]any) func(any) (any, error),
 	appliesToRequest bool,
 	appliesToResponse bool,
 ) {
@@ -75,14 +75,14 @@ func RegisterModifier(
 type Registerer interface {
 	RegisterModifiers(func(
 		name string,
-		modifierFactory func(map[string]interface{}) func(interface{}) (interface{}, error),
+		modifierFactory func(map[string]any) func(any) (any, error),
 		appliesToRequest bool,
 		appliesToResponse bool,
 	))
 }
 
 type LoggerRegisterer interface {
-	RegisterLogger(interface{})
+	RegisterLogger(any)
 }
 
 type ContextRegisterer interface {
@@ -92,7 +92,7 @@ type ContextRegisterer interface {
 // RegisterModifierFunc type is the function passed to the loaded Registerers
 type RegisterModifierFunc func(
 	name string,
-	modifierFactory func(map[string]interface{}) func(interface{}) (interface{}, error),
+	modifierFactory func(map[string]any) func(any) (any, error),
 	appliesToRequest bool,
 	appliesToResponse bool,
 )
@@ -149,7 +149,7 @@ func open(ctx context.Context, pluginName string, rmf RegisterModifierFunc, logg
 	if err != nil {
 		return
 	}
-	var r interface{}
+	var r any
 	r, err = p.Lookup("ModifierRegisterer")
 	if err != nil {
 		return
@@ -175,7 +175,7 @@ func open(ctx context.Context, pluginName string, rmf RegisterModifierFunc, logg
 	return
 }
 
-var RegisterExtraComponents = func(interface{}) {}
+var RegisterExtraComponents = func(any) {}
 
 // Plugin is the interface of the loaded plugins
 type Plugin interface {

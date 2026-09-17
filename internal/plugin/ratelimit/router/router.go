@@ -47,7 +47,7 @@ func ConfigGetter(e config.ExtraConfig) (Config, error) {
 	if !ok {
 		return ZeroCfg, ErrNoExtraCfg
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return ZeroCfg, ErrWrongExtraCfg
 	}

@@ -242,11 +242,11 @@ func (c Dumper) dumpExtraConfig(cfg config.ExtraConfig, prefix string) {
 		c.cmd.Printf("%s%s- %s%s\n", prefix, c.colorYellow, k, c.colorReset)
 		if c.verboseLevel > 1 {
 			switch s := cfg[k].(type) {
-			case map[string]interface{}:
+			case map[string]any:
 				for i, v := range s {
 					c.cmd.Printf("\t%s%s: %+v\n", prefix, i, v)
 				}
-			case []interface{}:
+			case []any:
 				c.cmd.Printf("\t%s: %+v\n", prefix, s)
 			default:
 				c.cmd.Printf("\t%s: %+v\n", prefix, s)

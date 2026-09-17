@@ -15,12 +15,12 @@ import (
 
 // Logger collects logging information at several levels
 type Logger interface {
-	Debug(v ...interface{})
-	Info(v ...interface{})
-	Warning(v ...interface{})
-	Error(v ...interface{})
-	Critical(v ...interface{})
-	Fatal(v ...interface{})
+	Debug(v ...any)
+	Info(v ...any)
+	Warning(v ...any)
+	Error(v ...any)
+	Critical(v ...any)
+	Fatal(v ...any)
 }
 
 const (
@@ -67,7 +67,7 @@ type BasicLogger struct {
 }
 
 // Debug logs a message using DEBUG as log level.
-func (l BasicLogger) Debug(v ...interface{}) {
+func (l BasicLogger) Debug(v ...any) {
 	if l.Level > LEVEL_DEBUG {
 		return
 	}
@@ -75,7 +75,7 @@ func (l BasicLogger) Debug(v ...interface{}) {
 }
 
 // Info logs a message using INFO as log level.
-func (l BasicLogger) Info(v ...interface{}) {
+func (l BasicLogger) Info(v ...any) {
 	if l.Level > LEVEL_INFO {
 		return
 	}
@@ -83,7 +83,7 @@ func (l BasicLogger) Info(v ...interface{}) {
 }
 
 // Warning logs a message using WARNING as log level.
-func (l BasicLogger) Warning(v ...interface{}) {
+func (l BasicLogger) Warning(v ...any) {
 	if l.Level > LEVEL_WARNING {
 		return
 	}
@@ -91,7 +91,7 @@ func (l BasicLogger) Warning(v ...interface{}) {
 }
 
 // Error logs a message using ERROR as log level.
-func (l BasicLogger) Error(v ...interface{}) {
+func (l BasicLogger) Error(v ...any) {
 	if l.Level > LEVEL_ERROR {
 		return
 	}
@@ -99,18 +99,18 @@ func (l BasicLogger) Error(v ...interface{}) {
 }
 
 // Critical logs a message using CRITICAL as log level.
-func (l BasicLogger) Critical(v ...interface{}) {
+func (l BasicLogger) Critical(v ...any) {
 	l.prependLog("CRITICAL:", v...)
 }
 
 // Fatal is equivalent to l.Critical(fmt.Sprint()) followed by a call to os.Exit(1).
-func (l BasicLogger) Fatal(v ...interface{}) {
+func (l BasicLogger) Fatal(v ...any) {
 	l.prependLog("FATAL:", v...)
 	os.Exit(1)
 }
 
-func (l BasicLogger) prependLog(level string, v ...interface{}) {
-	msg := make([]interface{}, len(v)+2)
+func (l BasicLogger) prependLog(level string, v ...any) {
+	msg := make([]any, len(v)+2)
 	msg[0] = l.Prefix
 	msg[1] = level
 	copy(msg[2:], v)

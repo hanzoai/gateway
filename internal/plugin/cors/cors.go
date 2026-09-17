@@ -25,13 +25,13 @@ type Config struct {
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config an allowed
 // origin must be defined, the rest of the options will use a default if not defined.
-func ConfigGetter(e config.ExtraConfig) interface{} {
+func ConfigGetter(e config.ExtraConfig) any {
 	v, ok := e[Namespace]
 	if !ok {
 		return nil
 	}
 
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -77,10 +77,10 @@ func ConfigGetter(e config.ExtraConfig) interface{} {
 	return cfg
 }
 
-func getList(data map[string]interface{}, name string) []string {
+func getList(data map[string]any, name string) []string {
 	var out []string
 	if vs, ok := data[name]; ok {
-		if v, ok := vs.([]interface{}); ok {
+		if v, ok := vs.([]any); ok {
 			for _, s := range v {
 				if j, ok := s.(string); ok {
 					out = append(out, j)

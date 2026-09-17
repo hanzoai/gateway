@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
 	"github.com/hanzoai/gateway/v2/internal/lura/logging"
@@ -41,14 +42,12 @@ func NewStaticMiddleware(logger logging.Logger, endpointConfig *config.EndpointC
 			}
 
 			if result == nil {
-				result = &Response{Data: map[string]interface{}{}}
+				result = &Response{Data: map[string]any{}}
 			} else if result.Data == nil {
-				result.Data = map[string]interface{}{}
+				result.Data = map[string]any{}
 			}
 
-			for k, v := range cfg.Data {
-				result.Data[k] = v
-			}
+			maps.Copy(result.Data, cfg.Data)
 
 			return result, err
 		}
@@ -66,7 +65,7 @@ const (
 )
 
 type staticConfig struct {
-	Data     map[string]interface{}
+	Data     map[string]any
 	Strategy string
 	Match    func(*Response, error) bool
 }
@@ -76,7 +75,7 @@ func getStaticMiddlewareCfg(extra config.ExtraConfig) (staticConfig, bool) {
 	if !ok {
 		return staticConfig{}, ok
 	}
-	e, ok := v.(map[string]interface{})
+	e, ok := v.(map[string]any)
 	if !ok {
 		return staticConfig{}, ok
 	}
@@ -84,11 +83,11 @@ func getStaticMiddlewareCfg(extra config.ExtraConfig) (staticConfig, bool) {
 	if !ok {
 		return staticConfig{}, ok
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return staticConfig{}, ok
 	}
-	data, ok := tmp["data"].(map[string]interface{})
+	data, ok := tmp["data"].(map[string]any)
 	if !ok {
 		return staticConfig{}, ok
 	}

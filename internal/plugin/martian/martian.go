@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/hanzoai/gateway/v2/internal/lura/config"
@@ -82,7 +82,7 @@ func HTTPRequestExecutor(result *parse.Result, re client.HTTPRequestExecutor) cl
 				Request:    req,
 				Header:     http.Header{},
 				StatusCode: http.StatusOK,
-				Body:       ioutil.NopCloser(bytes.NewBufferString("")),
+				Body:       io.NopCloser(bytes.NewBufferString("")),
 			}
 		}
 
@@ -93,7 +93,7 @@ func HTTPRequestExecutor(result *parse.Result, re client.HTTPRequestExecutor) cl
 
 func modifyRequest(mod martian.RequestModifier, req *http.Request) error {
 	if req.Body == nil {
-		req.Body = ioutil.NopCloser(bytes.NewBufferString(""))
+		req.Body = io.NopCloser(bytes.NewBufferString(""))
 	}
 	if req.Header == nil {
 		req.Header = http.Header{}
@@ -107,7 +107,7 @@ func modifyRequest(mod martian.RequestModifier, req *http.Request) error {
 
 func modifyResponse(mod martian.ResponseModifier, resp *http.Response) error {
 	if resp.Body == nil {
-		resp.Body = ioutil.NopCloser(bytes.NewBufferString(""))
+		resp.Body = io.NopCloser(bytes.NewBufferString(""))
 	}
 	if resp.Header == nil {
 		resp.Header = http.Header{}
@@ -133,13 +133,13 @@ type Result struct {
 
 // ConfigGetter implements the config.ConfigGetter interface. It parses the extra config for the
 // martian adapter and returns a Result wrapping the results.
-func ConfigGetter(e config.ExtraConfig) interface{} {
+func ConfigGetter(e config.ExtraConfig) any {
 	cfg, ok := e[Namespace]
 	if !ok {
 		return Result{nil, ErrEmptyValue}
 	}
 
-	data, ok := cfg.(map[string]interface{})
+	data, ok := cfg.(map[string]any)
 	if !ok {
 		return Result{nil, ErrBadValue}
 	}

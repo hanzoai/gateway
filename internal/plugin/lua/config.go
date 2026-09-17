@@ -35,7 +35,7 @@ func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, er
 	if !ok {
 		return res, ErrNoExtraConfig
 	}
-	c, ok := v.(map[string]interface{})
+	c, ok := v.(map[string]any)
 	if !ok {
 		return res, ErrWrongExtraConfig
 	}
@@ -52,7 +52,7 @@ func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, er
 		res.AllowOpenLibs = b
 	}
 
-	sources, ok := c["sources"].([]interface{})
+	sources, ok := c["sources"].([]any)
 	if ok {
 		s := make([]string, 0, len(sources))
 		for _, source := range sources {
@@ -82,7 +82,7 @@ func Parse(l logging.Logger, e config.ExtraConfig, namespace string) (Config, er
 
 	// TODO: at some point we might want to change the hashing
 	// function, but we need to do it in a backards compat mode:
-	checksums, ok := c["md5"].(map[string]interface{}) // skipcq: GO-S1023, GSC-G401
+	checksums, ok := c["md5"].(map[string]any) // skipcq: GO-S1023, GSC-G401
 	if !ok {
 		return res, nil
 	}

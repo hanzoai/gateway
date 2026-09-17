@@ -18,7 +18,7 @@ import (
 // RequestModifiers are executed before passing the request to the next middlware. ResponseModifiers are executed
 // once the response is returned from the next middleware.
 func NewPluginMiddleware(logger logging.Logger, endpoint *config.EndpointConfig) Middleware {
-	cfg, ok := endpoint.ExtraConfig[plugin.Namespace].(map[string]interface{})
+	cfg, ok := endpoint.ExtraConfig[plugin.Namespace].(map[string]any)
 
 	if !ok {
 		return emptyMiddlewareFallback(logger)
@@ -32,7 +32,7 @@ func NewPluginMiddleware(logger logging.Logger, endpoint *config.EndpointConfig)
 // RequestModifiers are executed before passing the request to the next middlware. ResponseModifiers are executed
 // once the response is returned from the next middleware.
 func NewBackendPluginMiddleware(logger logging.Logger, remote *config.Backend) Middleware {
-	cfg, ok := remote.ExtraConfig[plugin.Namespace].(map[string]interface{})
+	cfg, ok := remote.ExtraConfig[plugin.Namespace].(map[string]any)
 
 	if !ok {
 		return emptyMiddlewareFallback(logger)
@@ -42,15 +42,15 @@ func NewBackendPluginMiddleware(logger logging.Logger, remote *config.Backend) M
 		fmt.Sprintf("%s %s -> %s", remote.ParentEndpointMethod, remote.ParentEndpoint, remote.URLPattern), cfg)
 }
 
-func newPluginMiddleware(logger logging.Logger, tag, pattern string, cfg map[string]interface{}) Middleware {
-	plugins, ok := cfg["name"].([]interface{})
+func newPluginMiddleware(logger logging.Logger, tag, pattern string, cfg map[string]any) Middleware {
+	plugins, ok := cfg["name"].([]any)
 	if !ok {
 		return emptyMiddlewareFallback(logger)
 	}
 
-	var reqModifiers []func(interface{}) (interface{}, error)
+	var reqModifiers []func(any) (any, error)
 
-	var respModifiers []func(interface{}) (interface{}, error)
+	var respModifiers []func(any) (any, error)
 
 	for _, p := range plugins {
 		name, ok := p.(string)
@@ -134,7 +134,7 @@ func newPluginMiddleware(logger logging.Logger, tag, pattern string, cfg map[str
 	}
 }
 
-func executeRequestModifiers(ctx context.Context, reqModifiers []func(interface{}) (interface{}, error), r *Request) (*Request, error) {
+func executeRequestModifiers(ctx context.Context, reqModifiers []func(any) (any, error), r *Request) (*Request, error) {
 	var tmp RequestWrapper
 	tmp = newRequestWrapper(ctx, r)
 
@@ -161,7 +161,7 @@ func executeRequestModifiers(ctx context.Context, reqModifiers []func(interface{
 	return r, nil
 }
 
-func executeResponseModifiers(ctx context.Context, respModifiers []func(interface{}) (interface{}, error), r *Response, req RequestWrapper) (*Response, error) {
+func executeResponseModifiers(ctx context.Context, respModifiers []func(any) (any, error), r *Response, req RequestWrapper) (*Response, error) {
 	var tmp ResponseWrapper
 	tmp = responseWrapper{
 		ctx:        ctx,
@@ -209,7 +209,7 @@ type RequestWrapper interface {
 
 // ResponseWrapper is an interface for passing proxy response between the lura pipe and the loaded plugins
 type ResponseWrapper interface {
-	Data() map[string]interface{}
+	Data() map[string]any
 	Io() io.Reader
 	IsComplete() bool
 	Headers() map[string][]string
@@ -259,16 +259,16 @@ func (m metadataWrapper) StatusCode() int              { return m.statusCode }
 
 type responseWrapper struct {
 	ctx        context.Context
-	request    interface{}
-	data       map[string]interface{}
+	request    any
+	data       map[string]any
 	isComplete bool
 	metadata   metadataWrapper
 	io         io.Reader
 }
 
 func (r responseWrapper) Context() context.Context     { return r.ctx }
-func (r responseWrapper) Request() interface{}         { return r.request }
-func (r responseWrapper) Data() map[string]interface{} { return r.data }
+func (r responseWrapper) Request() any                 { return r.request }
+func (r responseWrapper) Data() map[string]any         { return r.data }
 func (r responseWrapper) IsComplete() bool             { return r.isComplete }
 func (r responseWrapper) Io() io.Reader                { return r.io }
 func (r responseWrapper) Headers() map[string][]string { return r.metadata.headers }

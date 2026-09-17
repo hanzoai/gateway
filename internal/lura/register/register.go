@@ -5,6 +5,8 @@ Package register offers tools for creating and managing registers.
 */
 package register
 
+import "maps"
+
 import "sync"
 
 // New returns an initialized Namespaced register
@@ -29,7 +31,7 @@ func (n *Namespaced) Get(namespace string) (*Untyped, bool) {
 }
 
 // Register stores v at the key name of the Untyped register named namespace
-func (n *Namespaced) Register(namespace, name string, v interface{}) {
+func (n *Namespaced) Register(namespace, name string, v any) {
 	if register, ok := n.Get(namespace); ok {
 		register.Register(name, v)
 		return
@@ -52,26 +54,26 @@ func (n *Namespaced) AddNamespace(namespace string) {
 // NewUntyped returns an empty Untyped register
 func NewUntyped() *Untyped {
 	return &Untyped{
-		data:  map[string]interface{}{},
+		data:  map[string]any{},
 		mutex: &sync.RWMutex{},
 	}
 }
 
 // Untyped is a simple register, safe for concurrent access
 type Untyped struct {
-	data  map[string]interface{}
+	data  map[string]any
 	mutex *sync.RWMutex
 }
 
 // Register stores v under the key name
-func (u *Untyped) Register(name string, v interface{}) {
+func (u *Untyped) Register(name string, v any) {
 	u.mutex.Lock()
 	u.data[name] = v
 	u.mutex.Unlock()
 }
 
 // Get returns the value stored at the key name
-func (u *Untyped) Get(name string) (interface{}, bool) {
+func (u *Untyped) Get(name string) (any, bool) {
 	u.mutex.RLock()
 	v, ok := u.data[name]
 	u.mutex.RUnlock()
@@ -79,12 +81,10 @@ func (u *Untyped) Get(name string) (interface{}, bool) {
 }
 
 // Clone returns a snapshot of the register
-func (u *Untyped) Clone() map[string]interface{} {
+func (u *Untyped) Clone() map[string]any {
 	u.mutex.RLock()
-	res := make(map[string]interface{}, len(u.data))
-	for k, v := range u.data {
-		res[k] = v
-	}
+	res := make(map[string]any, len(u.data))
+	maps.Copy(res, u.data)
 	u.mutex.RUnlock()
 	return res
 }

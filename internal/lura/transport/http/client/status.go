@@ -52,7 +52,7 @@ type HTTPStatusHandler func(context.Context, *http.Response) (*http.Response, er
 func GetHTTPStatusHandler(remote *config.Backend) HTTPStatusHandler {
 	errPrefix := fmt.Sprintf("[%s %s]:", remote.Method, remote.URLPattern)
 	if e, ok := remote.ExtraConfig[Namespace]; ok {
-		if m, ok := e.(map[string]interface{}); ok {
+		if m, ok := e.(map[string]any); ok {
 			if v, ok := m["return_error_details"]; ok {
 				if b, ok := v.(string); ok && b != "" {
 					return DetailedHTTPStatusHandlerWithErrPrefix(b, errPrefix)

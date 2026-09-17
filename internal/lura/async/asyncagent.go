@@ -58,7 +58,6 @@ func (a AgentStarter) Start(
 	g, ctx := errgroup.WithContext(ctx)
 
 	for i, agent := range agents {
-		i, agent := i, agent
 		if agent.Name == "" {
 			agent.Name = fmt.Sprintf("AsyncAgent-%02d", i)
 		}

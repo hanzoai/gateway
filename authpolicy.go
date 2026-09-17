@@ -327,8 +327,8 @@ func unavailable() *refusal {
 // happens once here rather than at each call site — where one of them would
 // eventually forget and a public host would stop matching on a non-default port.
 func hostOnly(host string) string {
-	if i := strings.IndexByte(host, ':'); i >= 0 {
-		return host[:i]
+	if before, _, ok := strings.Cut(host, ":"); ok {
+		return before
 	}
 	return host
 }

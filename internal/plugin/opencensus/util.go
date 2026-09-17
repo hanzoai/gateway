@@ -1,14 +1,14 @@
 package opencensus
 
 import (
+	"slices"
+
 	"go.opencensus.io/tag"
 )
 
 func appendIfMissing(slice []tag.Key, i tag.Key) []tag.Key {
-	for _, ele := range slice {
-		if ele == i {
-			return slice
-		}
+	if slices.Contains(slice, i) {
+		return slice
 	}
 	return append(slice, i)
 }

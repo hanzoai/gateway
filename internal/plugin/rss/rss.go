@@ -14,17 +14,17 @@ func Register() error {
 // Name is the key for the rss encoding
 const Name = "rss"
 
-func DecoderFactory(_ bool) func(io.Reader, *map[string]interface{}) error { return NewDecoder() }
+func DecoderFactory(_ bool) func(io.Reader, *map[string]any) error { return NewDecoder() }
 
 // NewDecoder returns the RSS decoder
-func NewDecoder() func(io.Reader, *map[string]interface{}) error {
+func NewDecoder() func(io.Reader, *map[string]any) error {
 	fp := gofeed.NewParser()
-	return func(r io.Reader, v *map[string]interface{}) error {
+	return func(r io.Reader, v *map[string]any) error {
 		feed, err := fp.Parse(r)
 		if err != nil {
 			return err
 		}
-		*(v) = map[string]interface{}{
+		*(v) = map[string]any{
 			"items":       feed.Items,
 			"author":      feed.Author,
 			"categories":  feed.Categories,

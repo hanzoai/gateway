@@ -47,12 +47,12 @@ type Config struct {
 // ZeroCfg is the zero value for the Config struct
 var ZeroCfg = Config{}
 
-func configGetter(e config.ExtraConfig) interface{} {
+func configGetter(e config.ExtraConfig) any {
 	v, ok := e[Namespace]
 	if !ok {
 		return nil
 	}
-	tmp, ok := v.(map[string]interface{})
+	tmp, ok := v.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -73,11 +73,11 @@ func configGetter(e config.ExtraConfig) interface{} {
 		cfg.Scopes = v.(string)
 	}
 	if v, ok := tmp["endpoint_params"]; ok {
-		tmp = v.(map[string]interface{})
+		tmp = v.(map[string]any)
 		res := map[string][]string{}
 		for k, vs := range tmp {
 			values := []string{}
-			for _, v := range vs.([]interface{}) {
+			for _, v := range vs.([]any) {
 				values = append(values, v.(string))
 			}
 			res[k] = values

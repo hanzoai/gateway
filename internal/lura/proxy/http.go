@@ -63,7 +63,7 @@ func redirectPostReaderFactory(cfg *config.Backend) func(r io.ReadCloser) io.Rea
 	if cfg == nil || cfg.ExtraConfig == nil {
 		return emptyFactory
 	}
-	v, ok := cfg.ExtraConfig[clientHTTPOptions].(map[string]interface{})
+	v, ok := cfg.ExtraConfig[clientHTTPOptions].(map[string]any)
 	if !ok {
 		return emptyFactory
 	}
@@ -122,7 +122,7 @@ func NewHTTPProxyDetailed(cfg *config.Backend, re client.HTTPRequestExecutor, ch
 		if err != nil {
 			if t, ok := err.(responseError); ok {
 				return &Response{
-					Data: map[string]interface{}{
+					Data: map[string]any{
 						fmt.Sprintf("error_%s", t.Name()): t,
 					},
 					Metadata: Metadata{StatusCode: t.StatusCode()},

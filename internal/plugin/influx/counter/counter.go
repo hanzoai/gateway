@@ -50,7 +50,7 @@ func requestPoints(hostname string, now time.Time, counters map[string]int64, lo
 		if !ok {
 			last = 0
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"total": int(count),
 			"count": int(count) - last,
 		}
@@ -84,7 +84,7 @@ func responsePoints(hostname string, now time.Time, counters map[string]int64, l
 		if !ok {
 			last = 0
 		}
-		fields := map[string]interface{}{
+		fields := map[string]any{
 			"total": int(count),
 			"count": int(count) - last,
 		}
@@ -104,7 +104,7 @@ func responsePoints(hostname string, now time.Time, counters map[string]int64, l
 func connectionPoints(hostname string, now time.Time, counters map[string]int64, logger logging.Logger) []*client.Point {
 	res := make([]*client.Point, 2)
 
-	in := map[string]interface{}{
+	in := map[string]any{
 		"current": int(counters["krakend.router.connected"]),
 		"total":   int(counters["krakend.router.connected-total"]),
 	}
@@ -115,7 +115,7 @@ func connectionPoints(hostname string, now time.Time, counters map[string]int64,
 	}
 	res[0] = incoming
 
-	out := map[string]interface{}{
+	out := map[string]any{
 		"current": int(counters["krakend.router.disconnected"]),
 		"total":   int(counters["krakend.router.disconnected-total"]),
 	}

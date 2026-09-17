@@ -17,7 +17,7 @@ func Register() error {
 const Name = "xml"
 
 // NewDecoder return the right XML decoder
-func NewDecoder(isCollection bool) func(io.Reader, *map[string]interface{}) error {
+func NewDecoder(isCollection bool) func(io.Reader, *map[string]any) error {
 	if isCollection {
 		return CollectionDecoder
 	}
@@ -25,7 +25,7 @@ func NewDecoder(isCollection bool) func(io.Reader, *map[string]interface{}) erro
 }
 
 // Decoder implements the Decoder interface
-func Decoder(r io.Reader, v *map[string]interface{}) error {
+func Decoder(r io.Reader, v *map[string]any) error {
 	mxj.XmlCharsetReader = charset.NewReaderLabel
 	mv, err := mxj.NewMapXmlReader(xmlReader{r: r})
 	if err != nil {
@@ -36,13 +36,13 @@ func Decoder(r io.Reader, v *map[string]interface{}) error {
 }
 
 // CollectionDecoder implements the Decoder interface over a collection
-func CollectionDecoder(r io.Reader, v *map[string]interface{}) error {
+func CollectionDecoder(r io.Reader, v *map[string]any) error {
 	mxj.XmlCharsetReader = charset.NewReaderLabel
 	mv, err := mxj.NewMapXmlReader(xmlReader{r: r})
 	if err != nil {
 		return err
 	}
-	*(v) = map[string]interface{}{"collection": mv}
+	*(v) = map[string]any{"collection": mv}
 	return nil
 }
 

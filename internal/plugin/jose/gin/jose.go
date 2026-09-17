@@ -94,7 +94,7 @@ func TokenSignatureValidator(hf ginlura.HandlerFactory, logger logging.Logger, r
 			return erroredHandler
 		}
 
-		var aclCheck func(string, map[string]interface{}, []string) bool
+		var aclCheck func(string, map[string]any, []string) bool
 
 		if scfg.RolesKeyIsNested && strings.Contains(scfg.RolesKey, ".") && scfg.RolesKey[:4] != "http" {
 			logger.Debug(logPrefix, fmt.Sprintf("Roles will be matched against the nested key: '%s'", scfg.RolesKey))
@@ -104,7 +104,7 @@ func TokenSignatureValidator(hf ginlura.HandlerFactory, logger logging.Logger, r
 			aclCheck = krakendjose.CanAccess
 		}
 
-		var scopesMatcher func(string, map[string]interface{}, []string) bool
+		var scopesMatcher func(string, map[string]any, []string) bool
 
 		if len(scfg.Scopes) > 0 && scfg.ScopesKey != "" {
 			if scfg.ScopesMatcher == "all" {
@@ -137,7 +137,7 @@ func TokenSignatureValidator(hf ginlura.HandlerFactory, logger logging.Logger, r
 				return
 			}
 
-			claims := map[string]interface{}{}
+			claims := map[string]any{}
 			err = validator.Claims(c.Request, token, &claims)
 			if err != nil {
 				if scfg.OperationDebug {
@@ -188,7 +188,7 @@ func propagateHeaders(
 	cfg *config.EndpointConfig,
 	propagationCfg [][]string,
 	propagationPreserveArrays bool,
-	claims map[string]interface{},
+	claims map[string]any,
 	c *gin.Context,
 	logger logging.Logger,
 ) {
@@ -218,7 +218,7 @@ func propagateHeaders(
 
 var jwtParamsPattern = regexp.MustCompile(`{{\.JWT\.([^}]*)}}`)
 
-func extractRequiredJWTClaims(cfg *config.EndpointConfig) func(*gin.Context, map[string]interface{}) {
+func extractRequiredJWTClaims(cfg *config.EndpointConfig) func(*gin.Context, map[string]any) {
 	var required []string
 
 	for _, backend := range cfg.Backend {
@@ -230,10 +230,10 @@ func extractRequiredJWTClaims(cfg *config.EndpointConfig) func(*gin.Context, map
 		}
 	}
 	if len(required) == 0 {
-		return func(_ *gin.Context, _ map[string]interface{}) {}
+		return func(_ *gin.Context, _ map[string]any) {}
 	}
 
-	return func(c *gin.Context, claims map[string]interface{}) {
+	return func(c *gin.Context, claims map[string]any) {
 		cl := krakendjose.Claims(claims)
 		for _, param := range required {
 			// TODO: check for nested claims

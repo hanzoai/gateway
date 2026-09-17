@@ -124,7 +124,7 @@ func (r ginRouter) registerEndpointsAndMiddlewares(cfg config.ServiceConfig) {
 
 	r.registerKrakendEndpoints(endpointGroup, cfg)
 
-	if opts, ok := cfg.ExtraConfig[Namespace].(map[string]interface{}); ok {
+	if opts, ok := cfg.ExtraConfig[Namespace].(map[string]any); ok {
 		if v, ok := opts["auto_options"].(bool); ok && v {
 			r.cfg.Logger.Debug(logPrefix, "Enabling the auto options endpoints")
 			r.registerOptionEndpoints(endpointGroup)

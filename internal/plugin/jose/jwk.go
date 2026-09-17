@@ -180,11 +180,9 @@ func newJWKClientOptions(cfg SecretProviderConfig) (JWKClientOptions, error) {
 	}
 
 	return JWKClientOptions{
-		JWKClientOptions: auth0.JWKClientOptions{
-			URI: cfg.URI,
-			Client: &http.Client{
-				Transport: transport,
-			},
+		URI: cfg.URI,
+		Client: &http.Client{
+			Transport: transport,
 		},
 		KeyIdentifyStrategy: cfg.KeyIdentifyStrategy,
 		UnknownKeysTTL:      cfg.UnknownKeysTTL,

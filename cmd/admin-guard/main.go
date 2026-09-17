@@ -900,7 +900,7 @@ func (c *config) iamFor(host string) string {
 // skipped; the result is never nil.
 func parseBrandMap(s string) map[string]string {
 	m := make(map[string]string)
-	for _, pair := range strings.Split(s, ",") {
+	for pair := range strings.SplitSeq(s, ",") {
 		k, v, ok := strings.Cut(strings.TrimSpace(pair), "=")
 		if !ok {
 			continue

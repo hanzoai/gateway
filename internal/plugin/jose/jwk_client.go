@@ -103,7 +103,7 @@ func NewJWKClientWithCache(options JWKClientOptions, extractor auth0.RequestToke
 }
 
 // GetSecret implements the GetSecret method of the SecretProvider interface.
-func (j *JWKClient) GetSecret(r *http.Request) (interface{}, error) {
+func (j *JWKClient) GetSecret(r *http.Request) (any, error) {
 	token, err := j.extractor.Extract(r)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (j *JWKClient) GetSecret(r *http.Request) (interface{}, error) {
 }
 
 // SecretFromToken implements the GetSecret method of the SecretProvider interface.
-func (j *JWKClient) SecretFromToken(token *jwt.JSONWebToken) (interface{}, error) {
+func (j *JWKClient) SecretFromToken(token *jwt.JSONWebToken) (any, error) {
 	if len(token.Headers) < 1 {
 		return nil, auth0.ErrNoJWTHeaders
 	}

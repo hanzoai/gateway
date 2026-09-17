@@ -54,7 +54,7 @@ func NewMiddleware(remote *config.Backend, logger logging.Logger) proxy.Middlewa
 			panic(proxy.ErrTooManyProxies)
 		}
 		return func(ctx context.Context, request *proxy.Request) (*proxy.Response, error) {
-			result, err := cb.Execute(func() (interface{}, error) { return next[0](ctx, request) })
+			result, err := cb.Execute(func() (any, error) { return next[0](ctx, request) })
 			if err != nil {
 				return nil, err
 			}

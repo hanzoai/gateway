@@ -164,7 +164,7 @@ func (*ProxyRequest) headerList(c *binder.Context) error {
 		key := textproto.CanonicalMIMEHeaderKey(c.Arg(2).String())
 
 		headers := req.Headers[key]
-		d := make([]interface{}, len(headers))
+		d := make([]any, len(headers))
 		for i := range headers {
 			d[i] = headers[i]
 		}

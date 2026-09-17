@@ -1,7 +1,6 @@
 // Copyright © 2026 Hanzo AI. Apache-2.0 License.
 
 //go:build !legacy
-// +build !legacy
 
 package main
 

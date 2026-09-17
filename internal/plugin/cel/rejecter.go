@@ -36,9 +36,9 @@ type Rejecter struct {
 	logger     logging.Logger
 }
 
-func (r *Rejecter) Reject(data map[string]interface{}) bool {
+func (r *Rejecter) Reject(data map[string]any) bool {
 	now := timeNow().Format("2006-01-02T15:04:05.999Z07:00")
-	reqActivation := map[string]interface{}{
+	reqActivation := map[string]any{
 		internal.JwtKey: data,
 		internal.NowKey: now,
 	}

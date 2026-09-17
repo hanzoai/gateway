@@ -29,7 +29,7 @@ func NewTemplateParser(cfg Config) *TemplateParser {
 		Partials:  cfg.Partials,
 		Templates: []string{},
 		Parser:    cfg.Parser,
-		Vars:      map[string]interface{}{},
+		Vars:      map[string]any{},
 		Path:      cfg.Path,
 		err:       parserError{errors: map[string]error{}},
 	}
@@ -49,7 +49,7 @@ func NewTemplateParser(cfg Config) *TemplateParser {
 				t.err.errors[settingsFile.Name()] = err
 				continue
 			}
-			var v map[string]interface{}
+			var v map[string]any
 			if err := json.Unmarshal(b, &v); err != nil {
 				t.err.errors[settingsFile.Name()] = err
 				continue
@@ -80,7 +80,7 @@ func NewTemplateParser(cfg Config) *TemplateParser {
 }
 
 type TemplateParser struct {
-	Vars      map[string]interface{}
+	Vars      map[string]any
 	Partials  string
 	Parser    config.Parser
 	Templates []string
@@ -91,7 +91,7 @@ type TemplateParser struct {
 	lastSource []byte
 }
 
-func (t *TemplateParser) AddFunc(name string, f interface{}) {
+func (t *TemplateParser) AddFunc(name string, f any) {
 	t.funcMap[name] = f
 }
 
@@ -162,12 +162,12 @@ func (t *TemplateParser) LastSource() ([]byte, error) {
 	return t.lastSource, nil
 }
 
-func (*TemplateParser) marshal(v interface{}) string {
+func (*TemplateParser) marshal(v any) string {
 	a, _ := json.Marshal(v)
 	return string(a)
 }
 
-func (t *TemplateParser) include(v interface{}) string {
+func (t *TemplateParser) include(v any) string {
 	a, _ := os.ReadFile(path.Join(t.Partials, v.(string)))
 	return string(a)
 }

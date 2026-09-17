@@ -122,7 +122,7 @@ func newProxy(l logging.Logger, name string, defs []internal.InterpretableDefini
 	}, nil
 }
 
-func evalChecks(l logging.Logger, name string, args map[string]interface{}, ps []cel.Program) error {
+func evalChecks(l logging.Logger, name string, args map[string]any, ps []cel.Program) error {
 	for i, eval := range ps {
 		res, _, err := eval.Eval(args)
 		if err != nil {
@@ -178,8 +178,8 @@ func readBodyForEval(r *proxy.Request, wanted bool) (string, error) {
 	return string(buf), nil
 }
 
-func newReqActivation(r *proxy.Request, body, now string) map[string]interface{} {
-	return map[string]interface{}{
+func newReqActivation(r *proxy.Request, body, now string) map[string]any {
+	return map[string]any{
 		internal.PreKey + "_method":      r.Method,
 		internal.PreKey + "_path":        r.Path,
 		internal.PreKey + "_params":      r.Params,
@@ -190,8 +190,8 @@ func newReqActivation(r *proxy.Request, body, now string) map[string]interface{}
 	}
 }
 
-func newRespActivation(r *proxy.Response, now string) map[string]interface{} {
-	return map[string]interface{}{
+func newRespActivation(r *proxy.Response, now string) map[string]any {
+	return map[string]any{
 		internal.PostKey + "_completed":        r.IsComplete,
 		internal.PostKey + "_metadata_status":  r.Metadata.StatusCode,
 		internal.PostKey + "_metadata_headers": r.Metadata.Headers,

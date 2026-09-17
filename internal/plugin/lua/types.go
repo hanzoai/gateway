@@ -12,11 +12,11 @@ import (
 )
 
 type Table struct {
-	Data map[string]interface{}
+	Data map[string]any
 }
 
 func NewTableFromStringMap(input map[string]string) *Table {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	for k, v := range input {
 		data[k] = v
 	}
@@ -24,9 +24,9 @@ func NewTableFromStringMap(input map[string]string) *Table {
 }
 
 func NewTableFromStringSliceMap(input map[string][]string) *Table {
-	data := make(map[string]interface{})
+	data := make(map[string]any)
 	for k, v := range input {
-		var list []interface{}
+		var list []any
 		for i := range v {
 			list = append(list, v[i])
 		}
@@ -36,7 +36,7 @@ func NewTableFromStringSliceMap(input map[string][]string) *Table {
 }
 
 type List struct {
-	Data []interface{}
+	Data []any
 }
 
 type HttpResponse struct {
@@ -78,7 +78,7 @@ type NativeBool = glua.LBool
 type NativeUserData = glua.LUserData
 type NativeTable = glua.LTable
 
-func ParseToTable(k, v NativeValue, acc map[string]interface{}) {
+func ParseToTable(k, v NativeValue, acc map[string]any) {
 	switch v.Type() {
 	case glua.LTString:
 		acc[k.String()] = v.String()
@@ -104,7 +104,7 @@ func ParseToTable(k, v NativeValue, acc map[string]interface{}) {
 			}
 		}
 	case glua.LTTable:
-		res := map[string]interface{}{}
+		res := map[string]any{}
 		v.(*NativeTable).ForEach(func(k, v NativeValue) {
 			ParseToTable(k, v, res)
 		})
@@ -117,8 +117,8 @@ func ParseToTable(k, v NativeValue, acc map[string]interface{}) {
 	}
 }
 
-func MapNativeTable(t *NativeTable) (interface{}, bool) {
-	res := map[string]interface{}{}
+func MapNativeTable(t *NativeTable) (any, bool) {
+	res := map[string]any{}
 	t.ForEach(func(k, v NativeValue) {
 		ParseToTable(k, v, res)
 	})
@@ -131,9 +131,9 @@ func MapNativeTable(t *NativeTable) (interface{}, bool) {
 	return res, false
 }
 
-func tryConvertToSlice(input map[string]interface{}) ([]interface{}, error) {
+func tryConvertToSlice(input map[string]any) ([]any, error) {
 	keys := make([]int, 0, len(input))
-	values := map[int]interface{}{}
+	values := map[int]any{}
 
 	for k, v := range input {
 		ik, err := strconv.Atoi(k)
@@ -146,7 +146,7 @@ func tryConvertToSlice(input map[string]interface{}) ([]interface{}, error) {
 
 	sort.Ints(keys)
 
-	var result []interface{}
+	var result []any
 	for _, k := range keys {
 		result = append(result, values[k])
 	}
