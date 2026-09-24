@@ -23,7 +23,6 @@ redirects:
   hub.hanzo.bot: https://hanzo.bot/hub
   gw.hanzo.bot: https://hanzo.bot/gw
   dev.hanzo.team: https://hanzo.team
-  app.flow.hanzo.ai: https://flow.hanzo.ai
   # Legacy console hosts → the one canonical Cloud Console.
   console.hanzo.ai: https://cloud.hanzo.ai
   console2.hanzo.ai: https://cloud.hanzo.ai
@@ -138,10 +137,8 @@ routes:
       backend: http://chat.hanzo.svc.cluster.local:80
 
   flow.hanzo.ai:
-    - prefix: /api/
-      backend: http://flow.hanzo.svc.cluster.local:80
     - prefix: /
-      backend: http://flow-site.hanzo.svc.cluster.local:80
+      backend: http://flow.hanzo.svc.cluster.local:80
 
   commerce.hanzo.ai:
     - prefix: /api/
