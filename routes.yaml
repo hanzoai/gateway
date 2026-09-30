@@ -42,7 +42,7 @@ redirects:
 # --- Core domains (static + app on same origin) ---
 routes:
   hanzo.app:
-    - prefix: /api/
+    - prefix: /v1/
       backend: http://hanzo-app.hanzo.svc.cluster.local:8080
     - prefix: /
       backend: http://hanzo-app.hanzo.svc.cluster.local:80
