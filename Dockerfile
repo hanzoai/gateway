@@ -8,7 +8,7 @@ FROM --platform=$BUILDPLATFORM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} 
 
 ARG TARGETOS TARGETARCH
 
-RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git wget
+RUN apk --no-cache --virtual .build-deps add make gcc musl-dev binutils-gold git wget tzdata
 
 COPY . /app
 WORKDIR /app
