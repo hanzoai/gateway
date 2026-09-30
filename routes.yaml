@@ -68,8 +68,6 @@ routes:
       backend: http://hanzo-playground.hanzo.svc.cluster.local:8080
 
   hanzo.team:
-    - prefix: /api/
-      backend: http://team-nginx.team.svc.cluster.local:80
     - prefix: /
       backend: http://team-nginx.team.svc.cluster.local:80
 

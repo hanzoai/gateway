@@ -5,11 +5,14 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // apiSegment is the `/api/` PATH segment on a bare path or on one of our own
@@ -66,5 +69,29 @@ func TestNoAPIPrefix(t *testing.T) {
 	}
 	if len(offenders) > 0 {
 		t.Fatalf("first-party /api/ path literal(s); routes are /v1/:\n%s", strings.Join(offenders, "\n"))
+	}
+}
+
+// TestTeamRoutesNoAPI fails if routes.yaml maps hanzo.team under /api/.
+func TestTeamRoutesNoAPI(t *testing.T) {
+	b, err := os.ReadFile("routes.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doc map[string]any
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range doc {
+		hosts, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		routes, _ := hosts["hanzo.team"].([]any)
+		for _, r := range routes {
+			if p, _ := r.(map[string]any)["prefix"].(string); strings.HasPrefix(p, "/api") {
+				t.Fatalf("hanzo.team routes %s; routes are /v1/", p)
+			}
+		}
 	}
 }
