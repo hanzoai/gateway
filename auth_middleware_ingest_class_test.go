@@ -18,12 +18,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// These tests pin the CTO's orthogonal-route-class design for the tokenless
-// Sentry/o11y DSN ingest edge:
-//   - Class 1 (ingest): POST .../{envelope,store}[/] forwards to cloud with NO
-//     IAM-JWT gate and NO written/forwarded identity (cloud DSN-auths + org-from-DSN).
-//   - Class 2 (authed): every other /v1/* validates the IAM-JWT and WRITES identity
-//     FROM the JWT over a stripped slate — the gateway is the SOLE identity source.
+// These tests pin the authed class: every /v1/* validates the IAM-JWT and WRITES
+// identity FROM the JWT over a stripped slate — the gateway is the SOLE identity
+// source.
 // The global ingress strip is load-bearing (several identity headers are written only
 // conditionally, so a forged copy would otherwise survive on the authed class).
 
@@ -110,50 +107,5 @@ func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	}
 	if saw.glob != "" {
 		t.Errorf("SECURITY: forged legacy X-User-IsGlobalAdmin survived (%q) — never written now (platform sudo = org==admin); the ingress strip must drop a forged copy", saw.glob)
-	}
-}
-
-// Scenario 4: tokenless DSN ingest through the gateway reaches cloud (not 401).
-func TestIngestClass_TokenlessIngestReachesBackend(t *testing.T) {
-	r, _, jwks := setupMiddlewareWithJWKS(t, nil)
-	defer jwks.Close()
-	var saw backendSaw
-	recordingBackend(r, &saw)
-
-	for _, p := range []string{
-		"/v1/event/019f5339/envelope/",
-		"/v1/event/019f5339/store/",
-		"/v1/o11y/api/hanzo/envelope/", // the o11y errortracking wire, same class
-	} {
-		saw = backendSaw{}
-		w := send(r, http.MethodPost, p, "", nil)
-		if w.Code == http.StatusUnauthorized {
-			t.Errorf("tokenless ingest %s was 401; must pass through to DSN auth at cloud", p)
-		}
-		if !saw.reached {
-			t.Errorf("tokenless ingest %s did not reach the backend", p)
-		}
-	}
-}
-
-// Scenario 5: the ingest class forwards NO client identity — a forged X-Org-Id on
-// an ingest POST is stripped, so cloud only ever has the DSN to resolve the org.
-func TestIngestClass_IngestForwardsNoClientIdentity(t *testing.T) {
-	r, _, jwks := setupMiddlewareWithJWKS(t, nil)
-	defer jwks.Close()
-	var saw backendSaw
-	recordingBackend(r, &saw)
-
-	w := send(r, http.MethodPost, "/v1/event/019f5339/envelope/", "", map[string]string{
-		"X-Org-Id":             "victim-org",
-		"X-User-Id":            "attacker",
-		"X-User-IsGlobalAdmin": "true",
-		"X-User-Owner":         "admin",
-	})
-	if w.Code == http.StatusUnauthorized {
-		t.Fatalf("tokenless ingest was 401; must pass through")
-	}
-	if saw.org != "" || saw.user != "" || saw.glob != "" || saw.owner != "" {
-		t.Errorf("SECURITY: ingest forwarded client identity (org=%q user=%q glob=%q owner=%q); it must forward none — cloud resolves org from the DSN", saw.org, saw.user, saw.glob, saw.owner)
 	}
 }

@@ -402,46 +402,6 @@ func (c AuthConfig) Validate() error {
 //   - Fail-open: if billing service is unreachable, request proceeds
 //   - If balance <= 0: returns 402 Payment Required
 //
-// ingestRoots are the two prefixes the DSN-authed error wire arrives on. It is
-// ONE list because it answers ONE question, and it is the same pair cloud's own
-// module.IngestWire names: /v1/event is the door a minted DSN spells, and
-// /v1/o11y/api is the suffix a stock Sentry SDK appends to whatever DSN path it
-// is given — a third party's shape, received rather than published.
-//
-// THE TWO SIDES MUST AGREE. The gateway lets this class through tokenless and
-// cloud DSN-authenticates it; a path one admits and the other refuses is a beacon
-// that dies at 401 with nothing on either side saying why. This used to be two
-// functions of identical shape differing only by prefix, which is two places for
-// that agreement to rot.
-var ingestRoots = []string{"/v1/event/", "/v1/o11y/api/"}
-
-// isIngestPath is the ROUTE-CLASS selector for the tokenless DSN ingest plane.
-// POST-only and suffix-anchored on {envelope,store}, NEVER a bare prefix, so it
-// can never match a read: every error-plane READ — issues, discover, projects,
-// logs, traces, stats — routes to the authed class and stays JWT-gated. Cloud
-// DSN-authenticates this class and resolves the org FROM the DSN, so the gateway
-// writes no identity for it. This is the routing selector for class 1, not a
-// bypass hole in a global gate.
-func isIngestPath(method, path string) bool {
-	if method != http.MethodPost {
-		return false
-	}
-	under := false
-	for _, root := range ingestRoots {
-		if strings.HasPrefix(path, root) {
-			under = true
-			break
-		}
-	}
-	if !under {
-		return false
-	}
-	// The trailing slash is the wire's form; the slash-less variant is tolerated
-	// defensively.
-	return strings.HasSuffix(path, "/envelope/") || strings.HasSuffix(path, "/envelope") ||
-		strings.HasSuffix(path, "/store/") || strings.HasSuffix(path, "/store")
-}
-
 // The ALLOW/DENY ladder itself — strip, route class, public allowlists, token
 // extraction, JWT validation, the identity write, the balance gate — is
 // [authGate.admit] in authpolicy.go, which knows about no framework. Its

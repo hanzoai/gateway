@@ -29,8 +29,8 @@ import (
 )
 
 // TestBothTransportsAdmitAlike pins the AUTH gate on the cases that distinguish
-// its route classes: refuse, tokenless, public path, public host, ingest, API
-// key, valid token.
+// its route classes: refuse, tokenless, public path, public host, API key,
+// valid token.
 func TestBothTransportsAdmitAlike(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwks := tj.serveJWKS(t)
@@ -50,7 +50,7 @@ func TestBothTransportsAdmitAlike(t *testing.T) {
 		{"garbage_token_refused", "GET", "api.hanzo.ai", "/v1/chat/completions", "Bearer not-a-jwt", 401},
 		{"public_path", "GET", "api.hanzo.ai", "/healthz", "", 200},
 		{"public_host", "GET", "hanzo.id", "/v1/anything", "", 200},
-		{"ingest_class", "POST", "api.hanzo.ai", "/v1/event/proj/envelope/", "", 200},
+		{"envelope_is_gated", "POST", "api.hanzo.ai", "/v1/event/proj/envelope/", "", 401},
 		{"ingest_read_is_gated", "GET", "api.hanzo.ai", "/v1/event/proj/issues", "", 401},
 		{"api_key", "GET", "api.hanzo.ai", "/v1/chat/completions", "Bearer sk-live-abcdef", 200},
 		{"valid_jwt", "GET", "api.hanzo.ai", "/v1/chat/completions", valid, 200},
