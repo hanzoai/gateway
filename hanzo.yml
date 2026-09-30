@@ -1,17 +1,18 @@
 # Canonical CI/CD config for hanzoai/gateway — read by the hanzoai/ci reusable
 # workflow (.hanzo/workflows/cicd.yml) and by platform.hanzo.ai.
 #
-# TEST ONLY, deliberately. This repo had NO workflow at all, so `make test` was
-# never a gate anywhere: it went years reporting `build constraints exclude all
-# Go files` on every tree, healthy or broken, and nothing looked. Turning the
-# GATE on is this file's whole job.
+# The gate: this repo once had no workflow, so `make test` gated nothing and
+# went years reporting `build constraints exclude all Go files` on every tree.
 #
-# `images:` and `deploy:` are intentionally absent. The edge image is rolled by
-# an explicitly pinned tag in k8s/*/deployment.yaml (a reviewed decision, per
-# cluster); wiring the build+push+rollout lane here would change how a
-# production gateway ships, which is a separate call to make deliberately — not
-# a side effect of fixing the test gate. hanzoai/ci handles a test-only caller
-# natively ("no images: in hanzo.yml — test-only caller, skipping build").
+# `images:` publishes the OSS image; `deploy:` stays absent. The image carries no
+# route table: every deployment mounts its gateway.json at /etc/gateway, so a
+# build here changes no running gateway until a deployment pins it.
+images:
+  - name: gateway
+    repo: ghcr.io/hanzoai/gateway
+    dockerfile: Dockerfile
+    context: .
+
 test:
   - name: go-test
     # `go` directly, NOT `make test` — the runner has no make. That is the whole

@@ -36,15 +36,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Per-REF, so this can only ever cancel a superseded run of the same branch or
-# the same tag. A `v*` tag has a ref of its own and cannot be cancelled by a
-# push to main. Cancelling is right here because hanzo.yml is a test-only
-# caller — it declares no `images:` and no `deploy:`, and hanzoai/ci skips both
-# for such a caller — so a superseded run has nothing to leave half-done. If
-# this repo ever gains a deploy: block, this flips to false in the same commit.
+# Per-REF, and never cancelled: hanzo.yml declares `images:`, so a run cut short
+# mid-publish would leave a version half-written in the registry.
 concurrency:
   group: cicd-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   cicd:
