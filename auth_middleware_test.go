@@ -98,8 +98,8 @@ func TestAuthMiddlewarePublicPaths(t *testing.T) {
 	}{
 		{"health check bypasses auth", "/healthz", "api.hanzo.ai", http.StatusOK},
 		{"well-known bypasses auth", "/.well-known/jwks", "api.hanzo.ai", http.StatusOK},
-		{"public host bypasses auth", "/api/anything", "hanzo.id", http.StatusOK},
-		{"non-public path requires auth", "/api/chat/completions", "api.hanzo.ai", http.StatusUnauthorized},
+		{"public host bypasses auth", "/v1/anything", "hanzo.id", http.StatusOK},
+		{"non-public path requires auth", "/v1/chat/completions", "api.hanzo.ai", http.StatusUnauthorized},
 	}
 
 	for _, tt := range tests {
@@ -147,12 +147,12 @@ func TestAuthMiddlewareNoTokenOptional(t *testing.T) {
 
 	var gotOrgHeader string
 	r.Use(middleware)
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrgHeader = c.Request.Header.Get("X-Org-Id")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 
 	r.ServeHTTP(w, req)
@@ -291,11 +291,11 @@ func TestAuthMiddlewareDisabled(t *testing.T) {
 	_, r := gin.CreateTestContext(w)
 
 	r.Use(middleware)
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer not-a-valid-jwt")
 
@@ -344,14 +344,14 @@ func TestHeaderInjectionPublicHost(t *testing.T) {
 
 	var gotOrg, gotUser, gotEmail string
 	r.Use(middleware)
-	r.GET("/api/anything", func(c *gin.Context) {
+	r.GET("/v1/anything", func(c *gin.Context) {
 		gotOrg = c.Request.Header.Get("X-Org-Id")
 		gotUser = c.Request.Header.Get("X-User-Id")
 		gotEmail = c.Request.Header.Get("X-User-Email")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/anything", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/anything", nil)
 	req.Host = "hanzo.id"
 	// Attacker injects identity headers
 	req.Header.Set("X-Org-Id", "admin")
@@ -435,12 +435,12 @@ func TestHeaderInjectionNoToken(t *testing.T) {
 
 	var gotUser string
 	r.Use(middleware)
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotUser = c.Request.Header.Get("X-User-Id")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	// No Authorization header, but attacker injects identity
 	req.Header.Set("X-User-Id", "forged-admin")
@@ -518,14 +518,14 @@ func TestHeaderInjectionDisabledAuth(t *testing.T) {
 
 	var gotOrg, gotUser, gotEmail string
 	r.Use(middleware)
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrg = c.Request.Header.Get("X-Org-Id")
 		gotUser = c.Request.Header.Get("X-User-Id")
 		gotEmail = c.Request.Header.Get("X-User-Email")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("X-Org-Id", "forged-org")
 	req.Header.Set("X-User-Id", "forged-admin")

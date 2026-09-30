@@ -180,12 +180,12 @@ func TestJWTAuth_AudienceAllowlist_AnySemantics(t *testing.T) {
 	})
 	defer jwksServer.Close()
 
-	r.GET("/api/test", func(c *gin.Context) { c.Status(http.StatusOK) })
+	r.GET("/v1/test", func(c *gin.Context) { c.Status(http.StatusOK) })
 
 	for _, aud := range allow {
 		w := httptest.NewRecorder()
 		token := tj.signToken(t, validClaims("https://hanzo.id", aud))
-		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+		req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 		req.Host = "api.hanzo.ai"
 		req.Header.Set("Authorization", "Bearer "+token)
 		r.ServeHTTP(w, req)
@@ -196,7 +196,7 @@ func TestJWTAuth_AudienceAllowlist_AnySemantics(t *testing.T) {
 
 	w := httptest.NewRecorder()
 	token := tj.signToken(t, validClaims("https://hanzo.id", "evil-client"))
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	r.ServeHTTP(w, req)

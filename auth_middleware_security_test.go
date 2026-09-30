@@ -111,7 +111,7 @@ func TestJWTAuth_RejectsEmptyIssuer(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -121,7 +121,7 @@ func TestJWTAuth_RejectsEmptyIssuer(t *testing.T) {
 	claims.RegisteredClaims.Issuer = "" // Empty issuer -- this MUST be rejected
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -143,7 +143,7 @@ func TestJWTAuth_RejectsMissingIssuer(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -163,7 +163,7 @@ func TestJWTAuth_RejectsMissingIssuer(t *testing.T) {
 	}
 	token := tj.signToken(t, claimsMap)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -185,7 +185,7 @@ func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID, gotEmail string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrgID = c.Request.Header.Get("X-Org-Id")
 		gotUserID = c.Request.Header.Get("X-User-Id")
 		gotEmail = c.Request.Header.Get("X-User-Email")
@@ -195,7 +195,7 @@ func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -223,7 +223,7 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID, gotEmail string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrgID = c.Request.Header.Get("X-Org-Id")
 		gotUserID = c.Request.Header.Get("X-User-Id")
 		gotEmail = c.Request.Header.Get("X-User-Email")
@@ -238,7 +238,7 @@ func TestValidAuth_SetsCorrectXIdentityHeaders(t *testing.T) {
 	claims.Email = "bob@acme-corp.com"
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Attacker tries to override with forged headers alongside a valid JWT
@@ -273,7 +273,7 @@ func TestValidAuth_WritesProjectFromClaim(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotProject string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotProject = c.Request.Header.Get("X-Project-Id")
 		c.Status(http.StatusOK)
 	})
@@ -282,7 +282,7 @@ func TestValidAuth_WritesProjectFromClaim(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims.Owner = "acme-corp"
 	claims.Project = "research"
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims))
 	req.Header.Set("X-Project-Id", "victim-project") // forgery attempt
@@ -299,7 +299,7 @@ func TestValidAuth_WritesProjectFromClaim(t *testing.T) {
 	gotProject = "sentinel"
 	claims2 := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	claims2.Owner = "acme-corp"
-	req2 := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req2.Host = "api.hanzo.ai"
 	req2.Header.Set("Authorization", "Bearer "+tj.signToken(t, claims2))
 	req2.Header.Set("X-Project-Id", "victim-project") // forgery attempt
@@ -372,7 +372,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			name:        "Valid JWT with forged X-Identity headers",
 			authHeader:  "Bearer " + validToken,
 			host:        "api.hanzo.ai",
-			path:        "/api/test",
+			path:        "/v1/test",
 			requireAuth: true,
 			expectCode:  http.StatusOK,
 		},
@@ -380,7 +380,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			name:        "No auth (optional) with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
-			path:        "/api/test",
+			path:        "/v1/test",
 			requireAuth: false,
 			expectCode:  http.StatusOK,
 		},
@@ -396,7 +396,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			name:        "Public host with forged X-Identity headers",
 			authHeader:  "",
 			host:        "hanzo.id",
-			path:        "/api/test",
+			path:        "/v1/test",
 			requireAuth: true,
 			expectCode:  http.StatusOK,
 		},
@@ -404,7 +404,7 @@ func TestAllAuthPaths_NoXIdentityPassthrough(t *testing.T) {
 			name:        "Auth disabled with forged X-Identity headers",
 			authHeader:  "",
 			host:        "api.hanzo.ai",
-			path:        "/api/test",
+			path:        "/v1/test",
 			requireAuth: false,
 			expectCode:  http.StatusOK,
 		},
@@ -546,7 +546,7 @@ func TestJWTAuth_RejectsWrongIssuer(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -555,7 +555,7 @@ func TestJWTAuth_RejectsWrongIssuer(t *testing.T) {
 	claims := validClaims("https://evil-issuer.com", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -577,7 +577,7 @@ func TestJWTAuth_RejectsExpiredToken(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -588,7 +588,7 @@ func TestJWTAuth_RejectsExpiredToken(t *testing.T) {
 	claims.RegisteredClaims.IssuedAt = jwt.NewNumericDate(time.Now().Add(-20 * time.Minute))
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -610,7 +610,7 @@ func TestJWTAuth_RejectsWrongAudience(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -619,7 +619,7 @@ func TestJWTAuth_RejectsWrongAudience(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://wrong-audience.com")
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -642,7 +642,7 @@ func TestJWTAuth_RejectsWrongSigningKey(t *testing.T) {
 	defer jwksServer.Close()
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -655,7 +655,7 @@ func TestJWTAuth_RejectsWrongSigningKey(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	raw := signAs(t, attackerKey, "attacker-key", claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+raw)
 
@@ -1039,7 +1039,7 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 	r.Use(NewAuthMiddleware(cfg))
 
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		backendReached = true
 		c.Status(http.StatusOK)
 	})
@@ -1047,7 +1047,7 @@ func TestBillingCheck_Returns402WhenNoBalance(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1165,11 +1165,11 @@ func TestBillingCheck_HitsV1PathAndAllows(t *testing.T) {
 	r := gin.New()
 	r.Use(NewAuthMiddleware(cfg))
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
+	r.GET("/v1/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
@@ -1206,11 +1206,11 @@ func TestBillingCheck_FailsClosedOnCommerceError(t *testing.T) {
 	r := gin.New()
 	r.Use(NewAuthMiddleware(cfg))
 	backendReached := false
-	r.GET("/api/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
+	r.GET("/v1/test", func(c *gin.Context) { backendReached = true; c.Status(http.StatusOK) })
 
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
@@ -1252,7 +1252,7 @@ func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotOrgID, gotUserID string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrgID = c.Request.Header.Get("X-Org-Id")
 		gotUserID = c.Request.Header.Get("X-User-Id")
 		c.Status(http.StatusOK)
@@ -1263,7 +1263,7 @@ func TestCookieAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	claims.RegisteredClaims.Subject = "legit-user"
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	// Token via cookie instead of Authorization header
 	req.AddCookie(&http.Cookie{Name: "iam_access_token", Value: token})
@@ -1293,12 +1293,12 @@ func TestPublishableKeyAuth_StripsForgedXIdentityHeaders(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotOrgID string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotOrgID = c.Request.Header.Get("X-Org-Id")
 		c.Status(http.StatusOK)
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer pk-publishable-key-xyz")
 	req.Header.Set("X-Org-Id", "forged-org")
@@ -1329,7 +1329,7 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 	}
 	results := make([]result, 100)
 
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		// Capture what the backend sees
 		res := result{
 			orgID:  c.Request.Header.Get("X-Org-Id"),
@@ -1347,7 +1347,7 @@ func TestConcurrentHeaderInjection(t *testing.T) {
 		wg.Add(1)
 		go func(n int) {
 			defer wg.Done()
-			req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+			req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 			req.Host = "api.hanzo.ai"
 			req.Header.Set("X-Org-Id", fmt.Sprintf("forged-org-%d", n))
 			req.Header.Set("X-User-Id", fmt.Sprintf("forged-user-%d", n))
@@ -1387,7 +1387,7 @@ func TestPermissions_ForgedHeaderStripped(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotPerms string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotPerms = c.Request.Header.Get("X-User-Permissions")
 		c.Status(http.StatusOK)
 	})
@@ -1397,7 +1397,7 @@ func TestPermissions_ForgedHeaderStripped(t *testing.T) {
 	claims := validClaims("https://hanzo.id", "https://api.hanzo.ai")
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Attacker forges Admin|Live (16|4 = 20)
@@ -1427,7 +1427,7 @@ func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotPerms, gotGlobalAdmin string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotPerms = c.Request.Header.Get("X-User-Permissions")
 		gotGlobalAdmin = c.Request.Header.Get("X-User-IsGlobalAdmin")
 		c.Status(http.StatusOK)
@@ -1439,7 +1439,7 @@ func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 	claims.IsAdmin = true
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 	// Attacker also forges the platform-superadmin header — MUST be stripped.
@@ -1468,7 +1468,7 @@ func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	defer jwksServer.Close()
 
 	var gotPerms, gotGlobalAdmin string
-	r.GET("/api/test", func(c *gin.Context) {
+	r.GET("/v1/test", func(c *gin.Context) {
 		gotPerms = c.Request.Header.Get("X-User-Permissions")
 		gotGlobalAdmin = c.Request.Header.Get("X-User-IsGlobalAdmin")
 		c.Status(http.StatusOK)
@@ -1484,7 +1484,7 @@ func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	claims.Orgs = []authz.Membership{{Org: "admin", Role: "admin"}}
 	token := tj.signToken(t, claims)
 
-	req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/v1/test", nil)
 	req.Host = "api.hanzo.ai"
 	req.Header.Set("Authorization", "Bearer "+token)
 

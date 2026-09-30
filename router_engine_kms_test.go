@@ -61,7 +61,7 @@ func withEnv(t *testing.T, kv map[string]string) {
 const sampleRoutesYAML = `
 routes:
   example.com:
-    - prefix: /api
+    - prefix: /v1/app
       backend: http://api.example.internal:8080
 redirects:
   www.example.com: https://example.com
@@ -91,8 +91,8 @@ func TestLoadRoutesFromEnv_KMSPath_UsesResolver(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected example.com to be loaded from KMS payload")
 	}
-	if len(got) != 1 || got[0].prefix != "/api" {
-		t.Fatalf("expected /api prefix, got %+v", got)
+	if len(got) != 1 || got[0].prefix != "/v1/app" {
+		t.Fatalf("expected /v1/app prefix, got %+v", got)
 	}
 	if redirects["www.example.com"] != "https://example.com" {
 		t.Fatalf("expected www.example.com redirect, got %+v", redirects)
