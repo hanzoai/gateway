@@ -5,7 +5,7 @@
 # Pattern:
 #   host:
 #     paths:
-#       - prefix: /api/
+#       - prefix: /v1/
 #         backend: http://service.namespace.svc.cluster.local:port
 #       - prefix: /
 #         backend: http://static.namespace.svc.cluster.local:80
@@ -29,10 +29,10 @@ redirects:
   # Legacy API hosts → the ONE canonical gated API host (no .cloud., no cloud-api.).
   cloud-api.hanzo.ai: https://api.hanzo.ai
   api.cloud.hanzo.ai: https://api.hanzo.ai
-  api.commerce.hanzo.ai: https://commerce.hanzo.ai/api
+  api.commerce.hanzo.ai: https://commerce.hanzo.ai/v1
   admin.commerce.hanzo.ai: https://commerce.hanzo.ai/admin
   store.commerce.hanzo.ai: https://commerce.hanzo.ai/store
-  api.platform.hanzo.ai: https://platform.hanzo.ai/api
+  api.platform.hanzo.ai: https://platform.hanzo.ai/v1
   api.zen.hanzo.ai: https://zen.hanzo.ai/v1
   vm.hanzo.ai: https://visor.hanzo.ai
   ztc.hanzo.ai: https://zt.hanzo.ai
@@ -82,7 +82,7 @@ routes:
       backend: http://chat.hanzo.svc.cluster.local:80
 
   base.hanzo.ai:
-    - prefix: /api/
+    - prefix: /v1/
       backend: http://base.hanzo.svc.cluster.local:8090
     - prefix: /_/
       backend: http://base.hanzo.svc.cluster.local:8090
@@ -102,8 +102,6 @@ routes:
   platform.hanzo.ai:
     - prefix: /sync/
       backend: http://sync.hanzo.svc.cluster.local:4000
-    - prefix: /api/
-      backend: http://platform.hanzo.svc.cluster.local:4000
     - prefix: /socket.io/
       backend: http://platform.hanzo.svc.cluster.local:4000
     - prefix: /v1/
@@ -141,7 +139,7 @@ routes:
       backend: http://flow.hanzo.svc.cluster.local:80
 
   commerce.hanzo.ai:
-    - prefix: /api/
+    - prefix: /v1/
       backend: http://commerce.hanzo.svc.cluster.local:8001
     - prefix: /admin/
       backend: http://commerce-admin.hanzo.svc.cluster.local:80
