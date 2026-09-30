@@ -149,7 +149,7 @@ Taken:
 - Upstream's `cors.NewRunServerWithLogger` wrapper — this fork serves its own
   CORS preflight via `hostProxyMiddleware`; taking it double-sets headers.
 - `router_engine.go`, `krakend.json`, upstream `Makefile`/`README`/`SECURITY.md`
-  branding — superseded by `legacy_engine.go` + `configs/{hanzo,lux}`.
+  branding — superseded by `legacy_engine.go` + `configs/{example,lux}`.
 
 **Load-bearing upstream literals — never rebrand these.** Everything else in
 this repo is de-branded; these four are behaviour, not branding:
@@ -330,7 +330,8 @@ routes are public. The three that reach the node itself — `POST /v1/admin`,
 `POST /v1/keystore`, `GET /v1/metrics` — were open by omission and now require
 an identity.
 
-`configs/hanzo/gateway.json` endpoints fall in three auth classes:
+The Hanzo route table (universe `infra/k8s/gateway/gateway.json`) falls in
+three auth classes:
 
 - **PUBLIC** (13): health/discovery/catalog (`/`, `/health`, `/v1/*/health`,
   `GET /v1/ai/providers`, `GET /v1/ai/providers/{owner}/{name}`,
@@ -413,7 +414,7 @@ That is the landmine that made the second validator unfixable rather than merely
 redundant, and it is why the config could never state the audience it was
 supposedly enforcing. The validator is gone;
 `TestShippingConfig_NoEndpointValidator` keeps both it and any `"audience"` key
-out of every shipping config.
+out of every config this repo carries.
 
 **`X-Project-Id` is stripped at the edge** (`edge.Strip`): it
 is forgeable and written from no claim, so it can never reach a backend
@@ -482,13 +483,15 @@ and `qos/ratelimit/router` extra_config, nothing in the auth namespace. The
 accept cases are derived from that same file, so the only difference between a
 refused config and a served one is the statement itself.
 
-### The shipped configs say what canon's validators said
+### The configs say what canon's validators said
 
-`configs/hanzo/gateway.json` is 21 open + 216 gated. The 216 are exactly the
-routes canon gated with `auth/validator`; the migration moved where that is
-written down, not which routes are which, and
-`TestShippedConfigMatchesTheGatingItReplaced` parses canon's copy through the
-same parser and compares route by route so the two cannot drift apart quietly.
+The Hanzo route table is 21 open + 216 gated. The 216 are exactly the routes
+canon gated with `auth/validator`; the migration moved where that is written
+down, not which routes are which. That table is deployment config and lives in
+universe beside the deployment; this repo carries `configs/example/gateway.json`,
+held to the same policy check (`TestPolicyAdmitsRepoConfigs`,
+`TestExampleConfig_PublicSurface`). `gateway check -c <file>` runs the same
+check against any config before it is mounted.
 
 `configs/lux/gateway.json` is 11 open + 3 gated. The gated three all reach the
 node rather than the chain — `POST /v1/admin` (admin API), `POST /v1/keystore`
@@ -505,10 +508,10 @@ be reachable without one. Decide each route on what it reaches.
 
 ### Deploy pre-flight — the ConfigMap and the image go together
 
-**hanzo** ships them together already: `make apply-hanzo` creates the ConfigMap
-from `configs/hanzo/gateway.json`, applies `k8s/hanzo/`, and restarts the
-rollout, in that order, in one target. That config classifies all 237 routes, so
-it boots.
+**The image carries no config.** Every deployment mounts its route table at
+`/etc/gateway/gateway.json`, so one image serves every brand. **hanzo**'s
+ConfigMap `gateway-config` is declared in universe
+(`infra/k8s/gateway/gateway.json`); it classifies all 237 routes, so it boots.
 
 **lux is the one that must be sequenced by hand.** Its ConfigMap is declared in
 the universe repo and the image tag is pinned there too, and the repo config is

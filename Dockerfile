@@ -101,8 +101,11 @@ COPY --from=builder /etc/group.gateway /etc/group
 
 COPY --from=builder /app/gateway /usr/bin/gateway
 
-ARG CONFIG=hanzo
-COPY configs/${CONFIG}/gateway.json /etc/gateway/gateway.json
+# The image carries no route table. The deployment mounts its config at
+# /etc/gateway/gateway.json (a ConfigMap in k8s/*/deployment.yaml), so one
+# image serves every brand and the routes stay with the deployment.
+# configs/example/gateway.json is a local starting point:
+#   docker run -v $PWD/configs/example:/etc/gateway ghcr.io/hanzoai/gateway
 
 USER 1000:1000
 WORKDIR /etc/gateway

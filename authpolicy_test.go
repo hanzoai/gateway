@@ -216,10 +216,10 @@ func TestPolicyAdmitsNoRoutes(t *testing.T) {
 	}
 }
 
-// The configs built into this image classify EVERY route, so the binary serves
-// the config it ships with — and no route in either of them is unsaid.
-func TestPolicyAdmitsShippedConfigs(t *testing.T) {
-	for _, path := range []string{"configs/hanzo/gateway.json", "configs/lux/gateway.json"} {
+// The configs this repo carries classify EVERY route, so the binary serves
+// them — and no route in either of them is unsaid.
+func TestPolicyAdmitsRepoConfigs(t *testing.T) {
+	for _, path := range []string{"configs/example/gateway.json", "configs/lux/gateway.json"} {
 		p := readPolicy(parse(t, path))
 		if err := p.check(); err != nil {
 			t.Errorf("%s: check() = %v, want nil", path, err)
@@ -230,52 +230,3 @@ func TestPolicyAdmitsShippedConfigs(t *testing.T) {
 		t.Logf("%s: routes=%d open=%d gated=%d", path, p.routes, p.open, p.gated)
 	}
 }
-
-// The shipped hanzo config must still mean what the validators it replaced
-// meant, one route at a time: the routes canon gated with auth/validator are the
-// routes this config states as needing an identity, and the routes canon left
-// open are the ones it states as public. The migration moved where that is
-// written down, not which routes are which.
-//
-// The baseline is a frozen fixture, not a moving ref. Reading it from
-// canon/main worked only until this change merged — after which that ref
-// returns this very config and the check compares it against itself. The
-// fixture is the pre-migration gating captured once, so the property is guarded
-// the same way in review, in CI with no remotes, and on main tomorrow.
-func TestShippedConfigMatchesTheGatingItReplaced(t *testing.T) {
-	var baseline struct {
-		Routes map[string]bool `json:"routes"`
-	}
-	raw, err := os.ReadFile("tests/fixtures/policy/canon_gating.json")
-	if err != nil {
-		t.Fatalf("read baseline: %v", err)
-	}
-	if err := json.Unmarshal(raw, &baseline); err != nil {
-		t.Fatalf("decode baseline: %v", err)
-	}
-	if len(baseline.Routes) == 0 {
-		t.Fatal("baseline fixture declares no routes")
-	}
-
-	now := parse(t, "configs/hanzo/gateway.json")
-	if len(now.Endpoints) != len(baseline.Routes) {
-		t.Fatalf("%d endpoints now, %d in the baseline", len(now.Endpoints), len(baseline.Routes))
-	}
-	for _, e := range now.Endpoints {
-		wasGated, known := baseline.Routes[route(e)]
-		if !known {
-			t.Errorf("%s is not in the baseline", route(e))
-			continue
-		}
-		open, stated := e.ExtraConfig[authPublic].(bool)
-		if !stated {
-			t.Errorf("%s states no policy", route(e))
-			continue
-		}
-		if open == wasGated {
-			t.Errorf("%s: baseline gated=%v, this config states open=%v", route(e), wasGated, open)
-		}
-	}
-}
-
-func route(e *config.EndpointConfig) string { return e.Method + " " + e.Endpoint }

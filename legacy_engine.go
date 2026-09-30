@@ -51,7 +51,7 @@ func NewEngine(cfg config.ServiceConfig, opt luragin.EngineOptions) *gin.Engine 
 	// MERGE it into whatever the operator configured under the `router`
 	// namespace — do NOT replace that map. Replacing it silently discarded every
 	// other key an operator set, and `router: {"return_error_msg": true}` is set
-	// in BOTH shipping configs (configs/hanzo, configs/lux): the deployed edge
+	// in every config (the deployed one, configs/example, configs/lux): the edge
 	// answered every upstream failure with a bare status and a zero-length body,
 	// so a caller seeing a 500 had nothing to report. The clobber also made the
 	// error_body 404/405 re-read at the bottom of this function dead code — it

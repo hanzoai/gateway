@@ -88,8 +88,8 @@ copy here would be the second source of truth the design exists to avoid.
 
 ## Rate limiting
 
-Configured in `configs/<brand>/gateway.json` under
-`qos/ratelimit/router`. Current Hanzo values:
+Configured in the mounted `gateway.json` under `qos/ratelimit/router`.
+Values in `configs/example/gateway.json`:
 
 | Scope | Limit |
 |---|---|
@@ -144,8 +144,9 @@ only.
 
 ```
 configs/
-  hanzo/gateway.json    Hanzo config
-  lux/                  same, Lux brand
+  example/gateway.json  local example; a deployment mounts its own at
+                        /etc/gateway/gateway.json (the image carries none)
+  lux/                  Lux brand
 k8s/                    cluster manifests
 cmd/gateway/            gateway entry point
 tests/                  integration tests

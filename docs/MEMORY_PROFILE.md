@@ -41,7 +41,7 @@ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
 Run:
 
 ```sh
-GATEWAY_PPROF=1 ./bin/gateway run -c configs/hanzo/gateway.json
+GATEWAY_PPROF=1 ./bin/gateway run -c configs/example/gateway.json
 ```
 
 ## Idle measurement

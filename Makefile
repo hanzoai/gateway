@@ -118,14 +118,14 @@ docker: ## Build Docker image
 	docker build --no-cache --pull --build-arg GOLANG_VERSION=${GOLANG_VERSION} --build-arg ALPINE_VERSION=${ALPINE_VERSION} \
 		-t ${REGISTRY}:${VERSION} -t ${REGISTRY}:latest .
 
-docker-hanzo: ## Build hanzo config Docker image
-	docker build --build-arg CONFIG=hanzo \
+docker-hanzo: ## Build hanzo Docker image
+	docker build \
 		-t ${REGISTRY}:latest \
 		-t ${REGISTRY}:v${VERSION} \
 		-t ${REGISTRY}:v${VERSION}-${GIT_COMMIT} .
 
-docker-lux: ## Build lux config Docker image
-	docker build --build-arg CONFIG=lux \
+docker-lux: ## Build lux Docker image
+	docker build \
 		-t ${REGISTRY}:lux-latest \
 		-t ${REGISTRY}:lux-v${VERSION} .
 
@@ -140,13 +140,14 @@ docker-push-hanzo: docker-hanzo ## Build and push hanzo gateway
 ## Validation
 
 validate: ## Validate all configs
-	./$(BIN_NAME) check -c configs/hanzo/gateway.json
+	./$(BIN_NAME) check -c configs/example/gateway.json
 	./$(BIN_NAME) check -c configs/lux/gateway.json
 
 ## Hanzo cluster (hanzo-k8s)
 
-apply-hanzo: ## Apply hanzo gateway config to k8s
-	kubectl --context do-sfo3-hanzo-k8s -n hanzo create configmap gateway-config --from-file=gateway.json=configs/hanzo/gateway.json --dry-run=client -o yaml | kubectl --context do-sfo3-hanzo-k8s apply -f -
+# The hanzo ConfigMap gateway-config is declared in universe
+# (infra/k8s/gateway/gateway.json), not here.
+apply-hanzo: ## Apply hanzo gateway manifests to k8s
 	kubectl --context do-sfo3-hanzo-k8s apply -f k8s/hanzo/
 	kubectl --context do-sfo3-hanzo-k8s -n hanzo rollout restart deployment gateway
 

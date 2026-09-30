@@ -6,11 +6,11 @@
 // Regression guards for NewEngine's two overrides of lura's router config.
 //
 // Both were WRITE-ONLY over the operator's `router` extra_config, and both
-// reproduced against the SHIPPING config (configs/hanzo/gateway.json) with the
-// real binary, not just in the fixture suite:
+// reproduced against the deployed config with the real binary, not just in the
+// fixture suite:
 //
 //   - the disable_health injection REPLACED the whole `router` map, so
-//     `return_error_msg: true` — set in configs/hanzo, configs/lux AND
+//     `return_error_msg: true` — set in configs/example, configs/lux AND
 //     tests/fixtures — never reached lura. Every upstream failure answered with
 //     a bare status and Content-Length: 0.
 //   - `engine.RedirectFixedPath = false` ran AFTER lura's NewEngine, so lura's
@@ -60,7 +60,7 @@ func TestWithRouterOption_PreservesOperatorKeys(t *testing.T) {
 
 // TestNewEngine_KeepsOperatorRouterConfig is the pin on the clobber as NewEngine
 // itself performs it. The config it hands lura must still carry the operator's
-// keys — `return_error_msg: true` is set in configs/hanzo, configs/lux and
+// keys — `return_error_msg: true` is set in configs/example, configs/lux and
 // tests/fixtures, and losing it is what emptied every 5xx body on the edge.
 func TestNewEngine_KeepsOperatorRouterConfig(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -102,7 +102,7 @@ func TestNewEngine_KeepsOperatorRouterConfig(t *testing.T) {
 // the removal is not a trade of a 404 for a crash.
 //
 // The route shape is the production one: a static segment with a param sibling
-// and a static child under the param (configs/hanzo/gateway.json ships
+// and a static child under the param (the deployed config serves
 // /v1/async-invoke, /v1/async-invoke/{id} and /v1/async-invoke/{id}/status).
 func TestNewEngine_MixedStaticParamRoutes_FixedPathRedirect(t *testing.T) {
 	gin.SetMode(gin.TestMode)

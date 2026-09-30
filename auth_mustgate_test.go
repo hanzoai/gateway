@@ -222,10 +222,11 @@ func TestJWTAuth_AudienceAllowlist_AnySemantics(t *testing.T) {
 // whether it needs an identity with `auth/public`. These tests are what makes
 // that checkable rather than asserted.
 
-// shippingConfigs are the configs baked into the image (Dockerfile: COPY
-// configs/${CONFIG}/gateway.json). Both are held to the same invariant.
-var shippingConfigs = []string{
-	"configs/hanzo/gateway.json",
+// repoConfigs are the configs this repo carries. The image carries none: the
+// deployment mounts its own at /etc/gateway/gateway.json. Both are held to the
+// same invariant the deployed one is.
+var repoConfigs = []string{
+	"configs/example/gateway.json",
 	"configs/lux/gateway.json",
 }
 
@@ -256,7 +257,7 @@ type gatewayConfig struct {
 // so one that appeared would be silently ignored — which is worse than either
 // gating or not gating, because it would READ as a gate.
 func TestShippingConfig_NoEndpointValidator(t *testing.T) {
-	for _, path := range shippingConfigs {
+	for _, path := range repoConfigs {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
@@ -285,72 +286,48 @@ func TestShippingConfig_NoEndpointValidator(t *testing.T) {
 	}
 }
 
-// hanzoPublicEndpoints is the surface that answers WITHOUT a credential,
-// written out so the diff that changes it is the diff that has to justify it.
-//
-// It is EXACTLY the set that carried no auth/validator before the collapse, so
-// every route that authenticated then authenticates now:
-//
-//   - the AI inference surface, which takes an hk-/sk- API key the backend
-//     resolves (the edge passes those through; the old validator 401'd them,
-//     which is why these endpoints could never carry one),
-//   - the health probes,
-//   - the public catalogs (provider list, pricing policy, analytics heartbeat).
-var hanzoPublicEndpoints = map[string]bool{
-	"POST /v1/chat":                       true,
-	"POST /v1/chat/completions":           true,
-	"POST /v1/completions":                true,
-	"POST /v1/messages":                   true,
-	"GET /v1/models":                      true,
-	"GET /ai/{path}":                      true,
-	"POST /ai/{path}":                     true,
-	"GET /v1/ai/{path}":                   true,
-	"POST /v1/ai/{path}":                  true,
-	"GET /v1/ai/providers":                true,
-	"GET /v1/ai/providers/{owner}/{name}": true,
-	"GET /v1/pricing-policy":              true,
-	"GET /v1/analytics/heartbeat":         true,
-	"GET /health":                         true,
-	"GET /":                               true,
-	"GET /bot/health":                     true,
-	"GET /v1/bot/health":                  true,
-	"GET /pubsub/healthz":                 true,
-	"GET /v1/pubsub/healthz":              true,
-	"GET /v1/ml/health":                   true,
-	"GET /v1/train/health":                true,
+// examplePublicEndpoints is the example's surface that answers WITHOUT a
+// credential, written out so the diff that changes it is the diff that has to
+// justify it: the health probes, the model catalog, and the inference route,
+// which takes an hk-/sk- API key the backend resolves (the edge passes those
+// through).
+var examplePublicEndpoints = map[string]bool{
+	"GET /":                     true,
+	"GET /health":               true,
+	"GET /v1/models":            true,
+	"POST /v1/chat/completions": true,
 }
 
-// TestHanzoConfig_PublicSurfaceUnchanged is the behavioural pin on the collapse:
-// the set of endpoints reachable without a credential must be exactly the set
-// that was reachable without one before. A route that loses its gate shows up
-// here as an unexpected public entry; a route that gains one shows up as a
-// missing entry (and would 401 traffic that works today).
-func TestHanzoConfig_PublicSurfaceUnchanged(t *testing.T) {
-	cfg := readConfig(t, "configs/hanzo/gateway.json")
+// TestExampleConfig_PublicSurface is the behavioural pin on the example: every
+// route states a policy, and the set reachable without a credential is exactly
+// the set written above. A route that loses its gate shows up as an unexpected
+// public entry; a route that gains one shows up as a missing entry.
+func TestExampleConfig_PublicSurface(t *testing.T) {
+	cfg := readConfig(t, "configs/example/gateway.json")
 
 	seen := map[string]bool{}
 	for _, ep := range cfg.Endpoints {
 		key := ep.Method + " " + ep.Endpoint
+		raw, stated := ep.ExtraConfig["auth/public"]
+		if !stated {
+			t.Errorf("%s states no policy", key)
+			continue
+		}
 		var open bool
-		if raw, ok := ep.ExtraConfig["auth/public"]; ok {
-			if err := json.Unmarshal(raw, &open); err != nil {
-				t.Errorf("%s: auth/public is not a boolean: %s", key, raw)
-			}
+		if err := json.Unmarshal(raw, &open); err != nil {
+			t.Errorf("%s: auth/public is not a boolean: %s", key, raw)
 		}
 		if open {
 			seen[key] = true
-			if !hanzoPublicEndpoints[key] {
-				t.Errorf("SECURITY: %s is declared public but authenticated before the collapse", key)
+			if !examplePublicEndpoints[key] {
+				t.Errorf("SECURITY: %s is declared public and is not in the public set", key)
 			}
 		}
 	}
-	for key := range hanzoPublicEndpoints {
+	for key := range examplePublicEndpoints {
 		if !seen[key] {
-			t.Errorf("%s was reachable without a credential before the collapse and is now gated", key)
+			t.Errorf("%s is in the public set and is gated", key)
 		}
-	}
-	if len(cfg.Endpoints) != 237 {
-		t.Errorf("endpoint count = %d, want 237 (the routing table is unchanged by this collapse)", len(cfg.Endpoints))
 	}
 }
 

@@ -1,0 +1,127 @@
+{
+  "$schema": "https://gateway.hanzo.ai/schema/v3.json",
+  "version": 3,
+  "name": "Example API Gateway",
+  "port": 8080,
+  "timeout": "120s",
+  "cache_ttl": "0s",
+  "output_encoding": "no-op",
+  "extra_config": {
+    "router": {
+      "return_error_msg": true
+    },
+    "qos/ratelimit/router": {
+      "max_rate": 5000,
+      "client_max_rate": 100,
+      "strategy": "ip"
+    },
+    "telemetry/logging": {
+      "level": "INFO",
+      "prefix": "[GATEWAY]",
+      "syslog": false,
+      "stdout": true
+    }
+  },
+  "endpoints": [
+    {
+      "endpoint": "/",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/healthz",
+          "host": ["http://localhost:8080"],
+          "encoding": "json"
+        }
+      ],
+      "extra_config": {
+        "auth/public": true
+      }
+    },
+    {
+      "endpoint": "/health",
+      "method": "GET",
+      "output_encoding": "json",
+      "backend": [
+        {
+          "url_pattern": "/healthz",
+          "host": ["http://localhost:8080"],
+          "encoding": "json"
+        }
+      ],
+      "extra_config": {
+        "auth/public": true
+      }
+    },
+    {
+      "endpoint": "/v1/models",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-Project-Id", "X-Billing-Account-Id"],
+      "backend": [
+        {
+          "url_pattern": "/v1/models",
+          "host": ["http://localhost:8000"],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/public": true
+      }
+    },
+    {
+      "endpoint": "/v1/chat/completions",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-Project-Id", "X-Billing-Account-Id"],
+      "backend": [
+        {
+          "url_pattern": "/v1/chat/completions",
+          "host": ["http://localhost:8000"],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "qos/ratelimit/router": {
+          "max_rate": 5000,
+          "client_max_rate": 100,
+          "strategy": "ip",
+          "every": "1m"
+        },
+        "auth/public": true
+      }
+    },
+    {
+      "endpoint": "/v1/billing/balance",
+      "method": "GET",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-Project-Id", "X-Billing-Account-Id", "X-User-Id"],
+      "backend": [
+        {
+          "url_pattern": "/v1/billing/balance",
+          "host": ["http://localhost:8001"],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/public": false
+      }
+    },
+    {
+      "endpoint": "/v1/memory/{action}",
+      "method": "POST",
+      "output_encoding": "no-op",
+      "input_headers": ["Authorization", "Content-Type", "Accept", "X-Request-ID", "X-Org-Id", "X-Project-Id", "X-Billing-Account-Id", "X-User-Id"],
+      "backend": [
+        {
+          "url_pattern": "/v1/memory/{action}",
+          "host": ["http://localhost:8000"],
+          "encoding": "no-op"
+        }
+      ],
+      "extra_config": {
+        "auth/public": false
+      }
+    }
+  ]
+}
