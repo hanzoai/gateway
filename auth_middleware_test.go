@@ -170,7 +170,7 @@ func TestIsAPIKey(t *testing.T) {
 		token    string
 		expected bool
 	}{
-		{"hk-0d2eb9cfafd049389f2904cad770a9d8", true},
+		{"hk-test-placeholder", true},
 		{"sk-ant-api03-cPXAHvR", true},
 		{"sk-live-abc123", true},
 		{"fw_6UVdtest", true},
@@ -212,7 +212,7 @@ func TestAuthMiddlewareAPIKeyPassthrough(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
 	req.Host = "api.hanzo.ai"
-	req.Header.Set("Authorization", "Bearer sk-0d2eb9cfafd049389f2904cad770a9d8")
+	req.Header.Set("Authorization", "Bearer sk-test-placeholder")
 
 	r.ServeHTTP(w, req)
 
