@@ -579,6 +579,16 @@ was the one host it gated; declared state routes it nowhere and the standing
 decision for the Go module proxy is no public ingress at all, so that is a
 decision to confirm rather than a route to port.
 
+## Paths are `/v1`, never `/api`
+
+`apiprefix_test.go` (untagged, so every lane runs it) walks every Go string
+literal and fails on `/api` as a bare path segment or on one of our hosts;
+third-party URLs (`gitlab.com/api/v4`, a Jaeger `:14268/api/traces`) pass.
+`routes.yaml` still maps `/api/` on hanzo.app, hanzo.bot and hanzo.team — those
+backends serve `/api` themselves and move with their own repos.
+`tests/fixtures/policy/unstated.json` `/api/v2/stats` is the Lux indexer's own
+protocol.
+
 ## Upstream Kinds
 
 - **default** — legacy HTTP passthrough.
