@@ -9,16 +9,13 @@
 //  1. aggregate — sources (IAM, platform, commerce) → datastore. A background
 //     ticker plus an on-demand POST /v1/admin/sync.
 //  2. serve — /v1/admin/* reads over the `admin` db. Every request is gated to
-//     a Hanzo superadmin (owner == AdminOrg), enforced at the DATA LAYER here
-//     independently of the ingress admin-guard ForwardAuth. Defense in depth:
-//     a request that slips past the edge still cannot read god-mode data
-//     without a superadmin session or JWT. Fail-closed.
+//     a Hanzo superadmin (owner == AdminOrg), enforced here: no request reads
+//     god-mode data without a superadmin session or JWT. Fail-closed.
 //
 // Identity is resolved exactly like the rest of the platform: a Bearer/Basic
 // JWT validated through the edge, or the first-party session cookie minted by
 // cloud (forwarded to /v1/ai/account). Either way the predicate is the
-// same single fact — owner == AdminOrg — the same one admin-guard enforces at
-// the edge (hanzoai/authz/edge).
+// same single fact — owner == AdminOrg (hanzoai/authz/edge).
 package main
 
 import (

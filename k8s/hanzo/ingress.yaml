@@ -16,11 +16,9 @@ spec:
   # admin.hanzo.ai is DELIBERATELY NOT claimed here. The operator cockpit is a
   # ZERO-TRUST surface: it is owned solely by the `console2-admin` Ingress
   # (universe infra/k8s/admin-console/ingress.yaml) which routes admin.hanzo.ai
-  # to the console SPA (service `console`:4000) + cloud-api behind the
-  # admin-guard@file ForwardAuth gate. Claiming admin.hanzo.ai here too created a
-  # second, UNGUARDED router (gateway:8080) for the same host+path — a
-  # guard-bypass footgun that only survived because Traefik happened to prefer
-  # the gated router on the priority tie. One owner, no dual-routing. admin.hanzo.ai
+  # to the console SPA (service `console`:4000) + cloud-api. Claiming
+  # admin.hanzo.ai here too would create a second router (gateway:8080) for the
+  # same host+path. One owner, no dual-routing. admin.hanzo.ai
   # has its own cert (admin-hanzo-tls) via console2-admin, so it is out of the
   # gateway-tls SAN set as well.
   tls:

@@ -26,8 +26,8 @@ type cachedID struct {
 	exp time.Time
 }
 
-// gate is the DATA-LAYER superadmin enforcement, independent of the ingress
-// admin-guard ForwardAuth. The predicate is the single platform fact: the
+// gate is the superadmin enforcement for every /v1/admin read. The predicate is
+// the single platform fact: the
 // caller's org equals AdminOrg. Resolved from a Bearer/Basic JWT (the API path)
 // or the cloud first-party session cookie (the browser path). Fail-closed:
 // no superadmin identity → 403, never god-mode data.

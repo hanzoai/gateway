@@ -42,15 +42,15 @@ type Config struct {
 }
 
 // DefaultAudiences is the baked allowlist: the known IAM client_ids (each app's
-// `aud` is its client_id) plus the API origin. Forwards-only — append a new
-// client_id, never remove one. Override entirely with GATEWAY_ALLOWED_AUDIENCES.
+// `aud` is its client_id) plus the API origin. A client_id is appended when a
+// surface starts minting it and removed when IAM no longer holds the client.
+// Override entirely with GATEWAY_ALLOWED_AUDIENCES.
 var DefaultAudiences = []string{
 	"hanzo-app",
 	"hanzo-console",
 	"hanzo-chat",
 	"hanzo-ai",
 	"hanzo-id",
-	"hanzo-admin-guard",
 	"admin-console",
 	"hanzo-world",
 	"cowork",

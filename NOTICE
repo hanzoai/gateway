@@ -60,5 +60,4 @@ Edition and Lura:
     peer routing (base_network_backend.go, base_ha_backend.go,
     peer_resolver.go).
   - KMS-driven route loading added (router_kms.go).
-  - Operator binaries added beyond the single upstream binary: cmd/admin-api,
-    cmd/admin-guard, cmd/waitlist-guard.
+  - Operator binary added beyond the single upstream binary: cmd/admin-api.
