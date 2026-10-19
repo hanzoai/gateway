@@ -58,7 +58,6 @@ func fakeIAM(t *testing.T) *httptest.Server {
 
 func newTestServer(cloudURL, iamURL string) *server {
 	cfg := &config{
-		adminOrg:    "admin",
 		cloudURL:    cloudURL,
 		iamInternal: iamURL,
 		validator:   token.NewValidator(token.Config{}), // no token in tests → ErrNoToken → session path
@@ -95,9 +94,8 @@ func TestGate_DeniesTenantOrgAdmin(t *testing.T) {
 }
 
 // The known misconfig angle: a `hanzo` TENANT org-admin must STILL be denied
-// here, because the data-layer gate is owner==AdminOrg and `hanzo` != `admin`.
-// Proves the gateway admin-api is not fooled by the ai-repo
-// globalAdminOrgs=admin,hanzo override.
+// here — an org's own admin is never a SuperAdmin, whatever a deployment value
+// once said about which orgs were "admin" ones.
 func TestGate_DeniesHanzoTenantOrg(t *testing.T) {
 	cloud := fakeCloudAPI(t, map[string]any{"owner": "hanzo", "name": "dave", "isAdmin": true, "type": "normal-user"})
 	defer cloud.Close()
@@ -139,11 +137,10 @@ func TestGate_DeniesNoCookie(t *testing.T) {
 	}
 }
 
-// A global admin (owner == AdminOrg) passes the gate and gets the live IAM
-// applications via the unified /v1/admin/* surface — the IAM page now loads
-// real data through the gated god-mode API instead of 404ing on /v1/iam/*.
-func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
-	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user"})
+// A SuperAdmin — the server's verdict on the session — passes the gate and gets
+// the live IAM applications via the unified /v1/admin/* surface.
+func TestGate_AllowsSuperAdmin_Applications(t *testing.T) {
+	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user", "isSuperAdmin": true})
 	defer cloud.Close()
 	idp := fakeIAM(t)
 	defer idp.Close()
@@ -151,7 +148,7 @@ func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
 
 	rec := gatedGet(srv, srv.handleApplications, "/v1/admin/applications")
 	if rec.Code != http.StatusOK {
-		t.Fatalf("global admin should be 200, got %d (%s)", rec.Code, rec.Body.String())
+		t.Fatalf("SuperAdmin should be 200, got %d (%s)", rec.Code, rec.Body.String())
 	}
 	var env struct {
 		Status string           `json:"status"`
@@ -166,8 +163,8 @@ func TestGate_AllowsGlobalAdmin_Applications(t *testing.T) {
 	}
 }
 
-func TestGate_AllowsGlobalAdmin_Roles(t *testing.T) {
-	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user"})
+func TestGate_AllowsSuperAdmin_Roles(t *testing.T) {
+	cloud := fakeCloudAPI(t, map[string]any{"owner": "admin", "name": "root", "isAdmin": true, "type": "normal-user", "isSuperAdmin": true})
 	defer cloud.Close()
 	idp := fakeIAM(t)
 	defer idp.Close()
@@ -175,6 +172,6 @@ func TestGate_AllowsGlobalAdmin_Roles(t *testing.T) {
 
 	rec := gatedGet(srv, srv.handleRoles, "/v1/admin/roles")
 	if rec.Code != http.StatusOK {
-		t.Fatalf("global admin should be 200, got %d (%s)", rec.Code, rec.Body.String())
+		t.Fatalf("SuperAdmin should be 200, got %d (%s)", rec.Code, rec.Body.String())
 	}
 }

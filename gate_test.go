@@ -101,7 +101,7 @@ func TestGateValidJWTInjectsIdentity(t *testing.T) {
 	if f.IsAdmin {
 		t.Error("SECURITY: an org admin was marked a PLATFORM admin on the relay")
 	}
-	// Org-level admin -> Live ONLY (the Admin money bit is global-admin-only).
+	// Org-level admin -> Live ONLY (the Admin money bit is SuperAdmin-only).
 	if wantBits := permissionBits["live"]; f.Permissions != wantBits {
 		t.Errorf("org-admin Permissions: got %d want %d (Live only, no Admin bit)", f.Permissions, wantBits)
 	}
@@ -135,7 +135,7 @@ func TestGatePlatformSudoGetsAdminBit(t *testing.T) {
 		"Authorization": {"Bearer " + token},
 	})
 	if deny, err := gate(context.Background(), &f); err != nil || deny != nil {
-		t.Fatalf("global-admin JWT unexpectedly denied: deny=%v err=%v", deny, err)
+		t.Fatalf("SuperAdmin JWT unexpectedly denied: deny=%v err=%v", deny, err)
 	}
 	wantBits := permissionBits["admin"] | permissionBits["live"]
 	if f.Permissions != wantBits {
@@ -422,8 +422,8 @@ func TestRegisterRelayEndToEnd(t *testing.T) {
 	if err := json.Unmarshal(body, &echoed); err != nil {
 		t.Fatalf("decode backend echo %q: %v", body, err)
 	}
-	if echoed["org"] != "hanzo" {
-		t.Errorf("backend saw X-Org-Id=%q want hanzo (identity did not survive relay)", echoed["org"])
+	if echoed["org"] != "acme" {
+		t.Errorf("backend saw X-Org-Id=%q want acme (identity did not survive relay)", echoed["org"])
 	}
 	if echoed["user"] != "alice" {
 		t.Errorf("backend saw X-User-Id=%q want alice", echoed["user"])

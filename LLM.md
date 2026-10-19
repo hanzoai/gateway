@@ -262,15 +262,16 @@ JWT validation, the gateway re-injects the headers from the validated claims.
 | X-Roles             | `roles`              | comma-joined role names               |
 | X-User-Email        | `email`              | string                                |
 | X-Phone-Number      | `phone_number`/`phone` | E.164 string                        |
-| X-User-IsAdmin      | `isAdmin`            | "true" iff platform superadmin        |
+| X-User-IsAdmin      | `orgs[0]` (`Claims.Sudo`) | "true" iff SuperAdmin            |
 | X-User-Permissions  | `permissions`+`isAdmin` | base-10 int64 bit.Field            |
 
 **X-User-Permissions** is gateway-derived from the JWT `permissions` claim
 (any of: numeric bit-field, `[]string` of names, `[]{"name":"..."}` upstream-IAM
 permission objects). Names are looked up in `permissionBits` (see
 `auth_middleware.go`); unknown names are dropped silently (forwards-compatible
-with new IAM permissions). If the JWT carries `isAdmin: true` the gateway also
-ORs in `permission.Admin | permission.Live` (16 | 4 = 20). The header is
+with new IAM permissions). A SuperAdmin (`Claims.Sudo`) also gets
+`permission.Admin`, and `isAdmin` (an org's own admin) gets `permission.Live` only;
+together 16 | 4 = 20. The header is
 omitted when the resulting bit-field is zero — commerce treats absent and "0"
 identically (`bit.Field(0)`, fail-closed, see `commerce/middleware/iammiddleware`).
 
@@ -617,54 +618,28 @@ protocol.
 
   Prometheus metrics: `gateway_base_ha_leader_polls_total`, `gateway_base_ha_leader_poll_errors_total`, `gateway_base_ha_leader_changes_total`, `gateway_base_ha_writer_failures_total`, `gateway_base_ha_writer_failures_fatal_total`, `gateway_base_ha_no_writer_total`.
 
-## admin-guard — global-admin forward-auth gate (cmd/admin-guard)
+## SuperAdmin — one predicate, `authz.Claims.Sudo`
 
-`cmd/admin-guard` is the single forward-auth gate that restricts Hanzo's RAW
-global-admin surfaces to GLOBAL ADMINS ONLY. Image: `ghcr.io/hanzoai/admin-guard`.
-Consumed by hanzoai/ingress (Traefik) as a `forwardAuth` Middleware whose
-`address` is `http://admin-guard.hanzo.svc:8080/__guard/verify`.
+Platform authority is a PERSON whose home org — `orgs[0]`, the org IAM keeps the
+account in — is the reserved `admin` org, compared verbatim. Both transports ask
+exactly that: the HTTP edge renders `X-User-IsAdmin` through `edge.Apply` and the
+money `Admin` bit through `moneyBits`, and the ZAP relay sets `Forward.IsAdmin` and
+the same bits in `gate.go`. `cmd/admin-api` asks `Claims.Sudo` of a bearer and the
+server's `isSuperAdmin` verdict of a session (cloud `/v1/ai/account`).
 
-Global admin = IAM user whose org (`owner`) equals the admin org (IAM
-`IsGlobalAdmin`: `owner == conf.AdminOrg`, env `IAM_ADMIN_ORG`, default `admin`).
+None of these is SuperAdmin: an `admin` membership further down the set (authz's
+retired `PlatformSudo` granted on that, and so did this gateway until authz
+v1.10.47), the `owner` claim (the minting application's org), `isAdmin` (an org's
+own admin), an admin-org program or a token with no membership set, and an org
+named `Admin`/`ADMIN`. `sudo_test.go` and `cmd/admin-api/sudo_test.go` hold them.
+There is no `IAM_ADMIN_ORG` knob: the reserved org is IAM's constant
+(`authz.AdminOrg`).
 
-Endpoints:
-- `GET /__guard/verify` — forward-auth target. 2xx = allow (global admin);
-  302 = redirect (non-admin → `CONSOLE_URL`; anonymous browser → IAM PKCE login).
-  API callers (Bearer/Basic, non-html Accept) fail closed with 401/403 instead
-  of an interactive redirect.
-- `GET /__guard/callback` — OAuth2 Authorization-Code + PKCE callback.
-- `GET /__guard/logout`, `GET /__guard/healthz`.
-
-Identity resolution — one predicate (`owner == AdminOrg`), three sources tried
-in order, all reusing hanzoai/authz/edge:
-  1. the guard's own signed session cookie (HMAC, parent-domain `.hanzo.ai`, so
-     one admin login covers every guarded `*.hanzo.ai` host) — browser fast path;
-  2. a Bearer/Basic JWT via hanzoai/authz/edge.Validator.Validate` (the JWT already carries
-     `owner`, no IAM round-trip) — API path;
-  3. an IAM session cookie, resolved by calling IAM `GET /v1/iam/get-account`
-     server-side and reading `owner` — browser-with-IAM-session path.
-
-Login is standard OAuth2 PKCE against IAM (`client_id=hanzo-admin-guard`, app is
-org-locked to `admin`). `Validator.ValidateRaw` (added to hanzoai/authz/edge) validates
-the id_token/access_token from the code exchange.
-
-Config (env): `IAM_PUBLIC_URL` (browser IAM), `IAM_INTERNAL_URL` (in-cluster IAM
-for get-account/token), `IAM_CLIENT_ID`/`IAM_CLIENT_SECRET`, `IAM_ADMIN_ORG`,
-`AUTH_ISSUER`/`AUTH_JWKS_URL` + `GATEWAY_ALLOWED_AUDIENCES` (must include
-`hanzo-admin-guard`), `CONSOLE_URL`, `GUARD_COOKIE_DOMAIN`/`_TTL`, `GUARD_HMAC_KEY`.
-
-Deploy: operator `Service` CR `universe/infra/k8s/operator/crs/admin-guard-v1.yaml`
-(internal-only, no ingress). Wiring: `universe/infra/k8s/ingress/routes.yaml`
-middleware `admin-guard-auth` + per-host `/__guard` bypass routers (priority 200+)
-+ `admin-guard-auth` attached to the gated routers (platform, app.platform,
-studio, commerce-admin, kms `/admin`). The IAM management API self-gates
-already (returns Unauthorized to non-admins) so iam.hanzo.ai/hanzo.id login &
-oauth are left ungated. K8s secrets: `admin-guard-secrets`
-(GUARD_HMAC_KEY + IAM_CLIENT_SECRET).
-
-Tests: `cmd/admin-guard/main_test.go` (ownerFromAccount, HMAC sign/verify,
-expiry). Build via arcd BuildKit Job (Dockerfile `cmd/admin-guard/Dockerfile`),
-NOT GHA.
+`cmd/admin-guard` is deleted (a9188d8c). A Deployment `admin-guard`
+(`ghcr.io/hanzoai/admin-guard:v0.1.10`) still runs in ns `hanzo`, built from the
+deleted source, which judged SuperAdmin on the `owner` claim; the middlewares that
+call it (`ci-guard`, `o11y-guard`, both `/__guard/verify-authn`) are attached to no
+IngressRoute as of 2026-10-19.
 
 ## waitlist-guard — approval forward-auth gate (cmd/waitlist-guard)
 
@@ -681,7 +656,7 @@ gate is not bypassable via a non-password signup.
 Hardening vs the admin-guard clone (Red rework):
 - **NO org pin.** `startLogin` must NOT set `organization=admin` (admin-guard
   does — it needs the admin identity). Consumer users log in under their own org;
-  pinning admin would break their login. Global admins still resolve `owner==admin`.
+  pinning admin would break their login. SuperAdmins still resolve through `Claims.Sudo`.
 - **Fail-OPEN on IAM 5xx** (`GUARD_FAIL_OPEN_ON_IAM_ERROR`, default true). `iamGet`
   is tri-state — `iamOK` / `iamUnavailable` (transport err or 5xx) / `iamDenied`
   (4xx). An authenticated caller (valid JWT or IAM session) whose approval lookup

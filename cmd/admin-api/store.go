@@ -54,7 +54,7 @@ func (s *store) bootstrap(ctx context.Context) error {
 		) ENGINE = ReplacingMergeTree(synced_at) ORDER BY (org)`,
 		`CREATE TABLE IF NOT EXISTS admin.dim_users (
 			org String, name String, email String, display String,
-			is_admin UInt8 DEFAULT 0, is_global_admin UInt8 DEFAULT 0,
+			is_admin UInt8 DEFAULT 0,
 			tag String DEFAULT '', forbidden UInt8 DEFAULT 0,
 			created DateTime64(3), last_signin DateTime64(3),
 			synced_at DateTime64(3) DEFAULT now64(3)
@@ -108,21 +108,21 @@ func (s *store) upsertOrgs(ctx context.Context, rows []orgRow) error {
 }
 
 type userRow struct {
-	Org, Name, Email, Display, Tag    string
-	IsAdmin, IsGlobalAdmin, Forbidden uint8
-	Created, LastSignin               time.Time
+	Org, Name, Email, Display, Tag string
+	IsAdmin, Forbidden             uint8
+	Created, LastSignin            time.Time
 }
 
 func (s *store) upsertUsers(ctx context.Context, rows []userRow) error {
 	if len(rows) == 0 {
 		return nil
 	}
-	b, err := s.conn.PrepareBatch(ctx, "INSERT INTO admin.dim_users (org, name, email, display, is_admin, is_global_admin, tag, forbidden, created, last_signin)")
+	b, err := s.conn.PrepareBatch(ctx, "INSERT INTO admin.dim_users (org, name, email, display, is_admin, tag, forbidden, created, last_signin)")
 	if err != nil {
 		return err
 	}
 	for _, r := range rows {
-		if err := b.Append(r.Org, r.Name, r.Email, r.Display, r.IsAdmin, r.IsGlobalAdmin, r.Tag, r.Forbidden, r.Created, r.LastSignin); err != nil {
+		if err := b.Append(r.Org, r.Name, r.Email, r.Display, r.IsAdmin, r.Tag, r.Forbidden, r.Created, r.LastSignin); err != nil {
 			return err
 		}
 	}

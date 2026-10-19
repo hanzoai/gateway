@@ -133,7 +133,9 @@ func validClaims(issuer, audience string) authz.Claims {
 		Owner: "hanzo",
 		Name:  "Alice",
 		Email: "alice@hanzo.ai",
-		Orgs:  []authz.Membership{{Org: "hanzo", Role: authz.Member}},
+		// A customer's own org. A brand org ("hanzo") opens only to the people who
+		// run it (authz Claims.opens), so a plain member's home there acts nowhere.
+		Orgs: []authz.Membership{{Org: "acme", Role: authz.Member}},
 	}
 }
 
@@ -157,7 +159,7 @@ func iamToken(owner string, extra map[string]any) map[string]any {
 // without `orgs` is a token that cannot exist (see validClaims).
 func memberToken() map[string]any {
 	return iamToken("hanzo", map[string]any{
-		"orgs": []map[string]any{{"org": "hanzo", "role": "member"}},
+		"orgs": []map[string]any{{"org": "acme", "role": "member"}},
 	})
 }
 
@@ -192,7 +194,7 @@ func zipEdge(t *testing.T, h zip.Handler, method, path, host string, hdr map[str
 	t.Helper()
 	z := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
 	z.Use(h)
-	z.All(path, func(c *zip.Ctx) error { return c.String(http.StatusOK, "") })
+	z.Raw(method, path, func(c *zip.Ctx) error { return c.String(http.StatusOK, "") })
 
 	req := httptest.NewRequest(method, path, nil)
 	req.Host = host

@@ -9,13 +9,15 @@
 //  1. aggregate — sources (IAM, platform, commerce) → datastore. A background
 //     ticker plus an on-demand POST /v1/admin/sync.
 //  2. serve — /v1/admin/* reads over the `admin` db. Every request is gated to
-//     a Hanzo superadmin (owner == AdminOrg), enforced here: no request reads
-//     god-mode data without a superadmin session or JWT. Fail-closed.
+//     a Hanzo SuperAdmin, enforced here: no request reads god-mode data without
+//     a SuperAdmin session or JWT. Fail-closed.
 //
-// Identity is resolved exactly like the rest of the platform: a Bearer/Basic
-// JWT validated through the edge, or the first-party session cookie minted by
-// cloud (forwarded to /v1/ai/account). Either way the predicate is the
-// same single fact — owner == AdminOrg (hanzoai/authz/edge).
+// SuperAdmin is one fact, asked two ways because there are two credentials: a
+// Bearer/Basic JWT validated through the edge is asked authz.Claims.Sudo (a
+// person whose home org, orgs[0], is the reserved admin org), and a first-party
+// session cookie is forwarded to cloud's /v1/ai/account, whose isSuperAdmin is
+// the boundary's verdict on that same rule. The `owner` claim — the org of the
+// application that minted the token — is never asked.
 package main
 
 import (
@@ -33,8 +35,7 @@ import (
 )
 
 type config struct {
-	addr     string
-	adminOrg string
+	addr string
 
 	// Datastore (the analytics layer).
 	dsAddr     string
@@ -59,8 +60,7 @@ type config struct {
 
 func loadConfig() *config {
 	return &config{
-		addr:     envOr("ADMIN_API_ADDR", ":8080"),
-		adminOrg: envOr("IAM_ADMIN_ORG", "admin"),
+		addr: envOr("ADMIN_API_ADDR", ":8080"),
 
 		dsAddr:     envOr("DATASTORE_ADDR", "datastore.hanzo.svc.cluster.local:9000"),
 		dsUser:     envOr("DATASTORE_USER", "hanzo"),
@@ -123,8 +123,8 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 15 * time.Second,
 	}
-	log.Printf("admin-api listening on %s (adminOrg=%q datastore=%s/%s sync=%s)",
-		cfg.addr, cfg.adminOrg, cfg.dsAddr, cfg.dsDatabase, cfg.syncInterval)
+	log.Printf("admin-api listening on %s (datastore=%s/%s sync=%s)",
+		cfg.addr, cfg.dsAddr, cfg.dsDatabase, cfg.syncInterval)
 	log.Fatal(h.ListenAndServe())
 }
 
@@ -132,11 +132,11 @@ func main() {
 
 // identity is the resolved caller, attached to the request context by gate().
 type identity struct {
-	Owner         string `json:"owner"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	DisplayName   string `json:"displayName"`
-	IsGlobalAdmin bool   `json:"isGlobalAdmin"`
+	Owner        string `json:"owner"`
+	Name         string `json:"name"`
+	Email        string `json:"email"`
+	DisplayName  string `json:"displayName"`
+	IsSuperAdmin bool   `json:"isSuperAdmin"`
 }
 
 type ctxKey int

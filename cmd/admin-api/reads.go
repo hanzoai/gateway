@@ -40,16 +40,15 @@ type orgAgg struct {
 }
 
 type userOut struct {
-	Owner         string `json:"owner"`
-	Name          string `json:"name"`
-	Email         string `json:"email"`
-	DisplayName   string `json:"displayName"`
-	IsAdmin       bool   `json:"isAdmin"`
-	IsGlobalAdmin bool   `json:"isGlobalAdmin"`
-	Tag           string `json:"tag"`
-	Created       string `json:"created"`
-	LastSignin    string `json:"lastSignin"`
-	Forbidden     bool   `json:"forbidden"`
+	Owner       string `json:"owner"`
+	Name        string `json:"name"`
+	Email       string `json:"email"`
+	DisplayName string `json:"displayName"`
+	IsAdmin     bool   `json:"isAdmin"`
+	Tag         string `json:"tag"`
+	Created     string `json:"created"`
+	LastSignin  string `json:"lastSignin"`
+	Forbidden   bool   `json:"forbidden"`
 }
 
 type usagePoint struct {
@@ -234,7 +233,7 @@ func (s *store) listUsers(ctx context.Context, q, org string, limit, offset int)
 	total, _ := scanCount(ctx, s, "SELECT count() FROM admin.dim_users "+where, args...)
 
 	rows, err := s.conn.Query(ctx,
-		"SELECT org, name, email, display, is_admin, is_global_admin, tag, forbidden, created, last_signin FROM admin.dim_users "+
+		"SELECT org, name, email, display, is_admin, tag, forbidden, created, last_signin FROM admin.dim_users "+
 			where+" ORDER BY org, name LIMIT ? OFFSET ?", append(args, limit, offset)...)
 	if err != nil {
 		return nil, 0, err
@@ -243,12 +242,12 @@ func (s *store) listUsers(ctx context.Context, q, org string, limit, offset int)
 	var out []userOut
 	for rows.Next() {
 		var u userOut
-		var isAdmin, isGA, forbidden uint8
+		var isAdmin, forbidden uint8
 		var created, lastSignin time.Time
-		if err := rows.Scan(&u.Owner, &u.Name, &u.Email, &u.DisplayName, &isAdmin, &isGA, &u.Tag, &forbidden, &created, &lastSignin); err != nil {
+		if err := rows.Scan(&u.Owner, &u.Name, &u.Email, &u.DisplayName, &isAdmin, &u.Tag, &forbidden, &created, &lastSignin); err != nil {
 			continue
 		}
-		u.IsAdmin, u.IsGlobalAdmin, u.Forbidden = isAdmin == 1, isGA == 1, forbidden == 1
+		u.IsAdmin, u.Forbidden = isAdmin == 1, forbidden == 1
 		u.Created = created.Format(iso)
 		if !lastSignin.IsZero() {
 			u.LastSignin = lastSignin.Format(iso)

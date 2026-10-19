@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"github.com/hanzoai/gateway/v2/iam"
+
+	"github.com/hanzoai/authz"
 )
 
 // aggregator is the write side: it pulls every product's identity, usage and
@@ -169,8 +171,8 @@ func (a *aggregator) syncUsers(ctx context.Context, orgs []string) {
 		for _, u := range people {
 			rows = append(rows, userRow{
 				Org: u.Owner, Name: u.Name, Email: u.Email, Display: nz(u.DisplayName, u.Name),
-				IsAdmin: b2u(u.IsAdmin), IsGlobalAdmin: b2u(u.Owner == a.cfg.adminOrg),
-				Tag: u.Tag, Forbidden: b2u(u.IsForbidden),
+				IsAdmin: b2u(u.IsAdmin),
+				Tag:     u.Tag, Forbidden: b2u(u.IsForbidden),
 				Created: parseTime(u.CreatedTime), LastSignin: parseTime(u.LastSigninTime),
 			})
 		}
@@ -270,7 +272,7 @@ func (a *aggregator) syncCommerce(ctx context.Context, orgs []string) {
 		return
 	}
 	if len(orgs) == 0 {
-		orgs = []string{a.cfg.adminOrg, "hanzo"}
+		orgs = []string{authz.AdminOrg, "hanzo"}
 	}
 	today := time.Now().UTC().Truncate(24 * time.Hour)
 	var usage []usageRow
@@ -354,7 +356,7 @@ func (a *aggregator) syncCommerce(ctx context.Context, orgs []string) {
 // which is the only thing that varies between these reads.
 func (a *aggregator) liveList(ctx context.Context, path, owner, key string, size int) ([]map[string]any, int, error) {
 	if owner == "" {
-		owner = a.cfg.adminOrg
+		owner = authz.AdminOrg
 	}
 	u := a.cfg.iamInternal + path + "?owner=" + url.QueryEscape(owner)
 	var body map[string]json.RawMessage

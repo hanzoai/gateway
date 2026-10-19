@@ -79,7 +79,7 @@ func TestIngestClass_AuthedReadRequiresJWT(t *testing.T) {
 
 // Scenario 3 (+ the load-bearing-strip proof): a valid JWT with a forged X-Org-Id
 // AND a forged X-User-IsGlobalAdmin — the backend must see the JWT's org (hanzo),
-// NOT the forged org, and must NOT see global-admin (the JWT asserts neither, and
+// NOT the forged org, and must NOT see SuperAdmin (the JWT asserts neither, and
 // the conditional write does not re-set it, so the strip is what defeats the forge).
 func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	r, tj, jwks := setupMiddlewareWithJWKS(t, nil)
@@ -87,7 +87,7 @@ func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	var saw backendSaw
 	recordingBackend(r, &saw)
 
-	tok := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai")) // Owner=hanzo, not global-admin
+	tok := tj.signToken(t, validClaims("https://hanzo.id", "https://api.hanzo.ai")) // a customer, not a SuperAdmin
 	w := send(r, http.MethodGet, "/v1/sentinel/issues", tok, map[string]string{
 		"X-Org-Id":             "victim-org",
 		"X-User-IsGlobalAdmin": "true",
@@ -99,11 +99,11 @@ func TestIngestClass_AuthedWriteOverwritesForgedIdentity(t *testing.T) {
 	if !saw.reached {
 		t.Fatal("valid-JWT read did not reach the backend")
 	}
-	if saw.org != "hanzo" {
-		t.Errorf("SECURITY: backend saw X-Org-Id %q, want the JWT owner \"hanzo\" (forge not overwritten)", saw.org)
+	if saw.org != "acme" {
+		t.Errorf("SECURITY: backend saw X-Org-Id %q, want the token's home org \"acme\" (forge not overwritten)", saw.org)
 	}
-	if saw.owner != "hanzo" {
-		t.Errorf("SECURITY: backend saw X-User-Owner %q, want JWT owner \"hanzo\" (home org from JWT; forged \"admin\" overwritten)", saw.owner)
+	if saw.owner != "acme" {
+		t.Errorf("SECURITY: backend saw X-User-Owner %q, want the token's home org \"acme\" (orgs[0]; forged \"admin\" overwritten)", saw.owner)
 	}
 	if saw.glob != "" {
 		t.Errorf("SECURITY: forged legacy X-User-IsGlobalAdmin survived (%q) — never written now (platform sudo = org==admin); the ingress strip must drop a forged copy", saw.glob)

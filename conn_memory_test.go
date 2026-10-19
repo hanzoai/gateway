@@ -14,6 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -42,7 +43,7 @@ func TestConnMemory(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var holding atomic.Int64
-	app.Get("/hold", func(c *zip.Ctx) error {
+	app.Raw(http.MethodGet, "/hold", func(c *zip.Ctx) error {
 		holding.Add(1)
 		defer holding.Add(-1)
 		// Block until shutdown. Fiber returns when the underlying

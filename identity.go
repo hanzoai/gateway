@@ -151,7 +151,7 @@ func moneyBits(claims *authz.Claims) int64 {
 	if claims.IsAdmin {
 		bits |= permissionBits["live"]
 	}
-	if claims.PlatformSudo() {
+	if claims.Sudo() {
 		bits |= permissionBits["admin"]
 	}
 	return bits

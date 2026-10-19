@@ -129,7 +129,7 @@ func newGate(cfg AuthConfig) forward.Gate {
 		// PLATFORM authority, from the platform predicate. forward re-emits this as
 		// X-User-IsAdmin (forward/serve.go), so setting it from claims.IsAdmin — IAM's
 		// ORG-role bit — made every org owner a platform admin on the relay path too.
-		f.IsAdmin = claims.PlatformSudo()
+		f.IsAdmin = claims.Sudo()
 
 		// The money bit-field, from the ONE rule both transports read (identity.go).
 		f.Permissions = moneyBits(claims)

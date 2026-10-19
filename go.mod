@@ -20,7 +20,7 @@ require (
 	github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible
 	github.com/google/uuid v1.6.1-0.20241114170450-2d3c2a9cc518
 	github.com/hanzo-ds/go v1.0.1
-	github.com/hanzoai/authz v1.10.29
+	github.com/hanzoai/authz v1.10.47
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/influxdata/influxdb v1.11.6
 	github.com/knadh/koanf/parsers/json v1.0.0
@@ -51,7 +51,7 @@ require (
 	github.com/valyala/fastrand v1.1.0
 	github.com/yuin/gopher-lua v1.1.1
 	github.com/zap-proto/http v0.3.5
-	github.com/zap-proto/zip v1.36.50
+	github.com/zap-proto/zip v1.37.3
 	go.opencensus.io v0.24.0
 	gocloud.dev v0.45.0
 	gocloud.dev/pubsub/kafkapubsub v0.45.0

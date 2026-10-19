@@ -26,11 +26,11 @@ type cachedID struct {
 	exp time.Time
 }
 
-// gate is the superadmin enforcement for every /v1/admin read. The predicate is
-// the single platform fact: the
-// caller's org equals AdminOrg. Resolved from a Bearer/Basic JWT (the API path)
-// or the cloud first-party session cookie (the browser path). Fail-closed:
-// no superadmin identity → 403, never god-mode data.
+// gate is the SuperAdmin enforcement for every /v1/admin read: a person whose
+// home org is the reserved admin org (authz.Claims.Sudo), resolved from a
+// Bearer/Basic JWT (the API path) or from the server's verdict on the cloud
+// first-party session (the browser path). Fail-closed: no SuperAdmin → 403,
+// never god-mode data.
 func (s *server) gate(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, ok := s.authenticate(r)
@@ -44,15 +44,16 @@ func (s *server) gate(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func (s *server) authenticate(r *http.Request) (identity, bool) {
-	// (1) JWT (Bearer/Basic) — carries `owner` directly.
+	// (1) JWT (Bearer/Basic): asked Sudo — its home org, never its `owner` claim,
+	// which names the application that minted it.
 	if claims, err := s.cfg.validator.Verify(r.Header); err == nil && claims != nil {
-		if claims.Owner == s.cfg.adminOrg {
+		if claims.Sudo() {
 			return identity{
-				Owner: claims.Owner, Name: claims.Name, Email: claims.Email,
-				DisplayName: claims.Name, IsGlobalAdmin: true,
+				Owner: claims.Home(), Name: claims.Username(), Email: claims.Email,
+				DisplayName: nz(claims.Name, claims.Username()), IsSuperAdmin: true,
 			}, true
 		}
-		return identity{}, false // a valid non-admin token is a definitive deny
+		return identity{}, false // a valid non-SuperAdmin token is a definitive deny
 	}
 	// (2) cloud session cookie → /v1/ai/account.
 	return s.sessionIdentity(r)
@@ -65,7 +66,7 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	}
 	key := hashStr(cookie)
 	if id, ok := s.cacheGet(key); ok {
-		return id, id.Owner == s.cfg.adminOrg
+		return id, id.IsSuperAdmin
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
@@ -88,13 +89,15 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	var env struct {
 		Status string `json:"status"`
 		Data   struct {
-			Owner         string `json:"owner"`
-			Name          string `json:"name"`
-			Email         string `json:"email"`
-			DisplayName   string `json:"displayName"`
-			Type          string `json:"type"`
-			IsForbidden   bool   `json:"isForbidden"`
-			IsGlobalAdmin bool   `json:"isGlobalAdmin"`
+			Owner       string `json:"owner"`
+			Name        string `json:"name"`
+			Email       string `json:"email"`
+			DisplayName string `json:"displayName"`
+			Type        string `json:"type"`
+			IsForbidden bool   `json:"isForbidden"`
+			// IsSuperAdmin is the server's verdict (the boundary's Sudo), and the
+			// only thing this path reads to admit.
+			IsSuperAdmin bool `json:"isSuperAdmin"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &env); err != nil {
@@ -104,10 +107,10 @@ func (s *server) sessionIdentity(r *http.Request) (identity, bool) {
 	if d.Type == "anonymous-user" || d.IsForbidden {
 		return identity{}, false
 	}
-	if d.Owner != s.cfg.adminOrg {
+	if !d.IsSuperAdmin {
 		return identity{}, false
 	}
-	id := identity{Owner: d.Owner, Name: d.Name, Email: d.Email, DisplayName: nz(d.DisplayName, d.Name), IsGlobalAdmin: true}
+	id := identity{Owner: d.Owner, Name: d.Name, Email: d.Email, DisplayName: nz(d.DisplayName, d.Name), IsSuperAdmin: true}
 	s.cachePut(key, id)
 	return id, true
 }

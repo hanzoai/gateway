@@ -205,8 +205,8 @@ func TestJWTAuth_AcceptsValidIssuer(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("valid JWT should get 200, got %d", w.Code)
 	}
-	if gotOrgID != "hanzo" {
-		t.Errorf("X-Org-Id = %q, want %q", gotOrgID, "hanzo")
+	if gotOrgID != "acme" {
+		t.Errorf("X-Org-Id = %q, want %q", gotOrgID, "acme")
 	}
 	if gotUserID != "alice" {
 		t.Errorf("X-User-Id = %q, want %q", gotUserID, "alice")
@@ -1456,13 +1456,13 @@ func TestPermissions_OrgAdminGetsNoAdminBit(t *testing.T) {
 		t.Errorf("SECURITY: org-admin X-User-Permissions = %q, want %q (Live only, no Admin money bit)", gotPerms, "4")
 	}
 	// The forged platform-superadmin header must not survive; an org admin is
-	// not a global admin, so the gateway must not write it either.
+	// not a SuperAdmin, so the gateway must not write it either.
 	if gotGlobalAdmin != "" {
 		t.Errorf("SECURITY: X-User-IsGlobalAdmin = %q, want empty (org admin is not global; forged value must be stripped)", gotGlobalAdmin)
 	}
 }
 
-// --- Test 21c: a real global admin DOES get Admin|Live + the superadmin header ---
+// --- Test 21c: a real SuperAdmin DOES get Admin|Live, and no retired boolean header ---
 func TestPermissions_PlatformSudoGetsAdminBitNoHeader(t *testing.T) {
 	r, tj, jwksServer := setupMiddlewareWithJWKS(t, nil)
 	defer jwksServer.Close()
@@ -1566,19 +1566,19 @@ func TestPermissions_ClaimCannotGrantBits(t *testing.T) {
 	}
 }
 
-// --- Test 25: a GLOBAL admin's isAdmin auto-writes Admin|Live ---
+// --- Test 25: a SuperAdmin gets Admin|Live ---
 //
-// The Admin (money) bit is written from isAdmin ONLY for a platform (global)
-// admin — here owner=="admin". An org-level admin gets Live only; that half of
-// the contract is TestPermissions_OrgAdminGetsNoAdminBit (the free-money
-// regression). Global-admin tooling keeps its Admin|Live so it still works.
+// The Admin (money) bit is written ONLY for a SuperAdmin — a person whose home
+// org, orgs[0], is admin. An org-level admin gets Live only; that half of the
+// contract is TestPermissions_OrgAdminGetsNoAdminBit (the free-money
+// regression). SuperAdmin tooling keeps its Admin|Live so it still works.
 func TestPermissions_IsAdminWritesAdminLive(t *testing.T) {
 	tj := newTestJWKS(t)
 	jwksServer := tj.serveJWKS(t)
 	defer jwksServer.Close()
 
 	now := time.Now()
-	// No "permissions" claim, isAdmin=true, owner=="admin" (global admin org)
+	// No "permissions" claim, isAdmin=true, home org admin (a SuperAdmin)
 	// → gateway writes Admin|Live.
 	claims := map[string]interface{}{
 		"iss":     "https://hanzo.id",

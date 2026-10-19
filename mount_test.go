@@ -104,7 +104,7 @@ func TestZipAuth_StripSurvives(t *testing.T) {
 	app := mountApp(t)
 
 	seen := map[string]string{}
-	app.Get("/echo", func(c *zip.Ctx) error {
+	app.Raw(http.MethodGet, "/echo", func(c *zip.Ctx) error {
 		for _, h := range append(append([]string{}, authz.Headers...), authz.Retired...) {
 			if v := c.Header(h); v != "" {
 				seen[h] = v
@@ -152,7 +152,7 @@ func TestZipAuth_WritesValidatedIdentityDownstream(t *testing.T) {
 	app.Use(zipAuth(edgeAuthConfig(jwks.URL)))
 
 	var org, user, email string
-	app.Get("/x", func(c *zip.Ctx) error {
+	app.Raw(http.MethodGet, "/x", func(c *zip.Ctx) error {
 		org, user, email = c.Header(authz.HeaderOrg), c.Header(authz.HeaderUser), c.Header(authz.HeaderUserEmail)
 		return c.String(200, "ok")
 	})
@@ -172,8 +172,8 @@ func TestZipAuth_WritesValidatedIdentityDownstream(t *testing.T) {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("status %d: %s", resp.StatusCode, body)
 	}
-	if org != "hanzo" {
-		t.Errorf("X-Org-Id: got %q want %q (a forged selection must not be honoured)", org, "hanzo")
+	if org != "acme" {
+		t.Errorf("X-Org-Id: got %q want %q (a forged selection must not be honoured)", org, "acme")
 	}
 	if user == "" || user == "attacker" {
 		t.Errorf("X-User-Id: got %q, want the token's subject", user)
@@ -189,7 +189,7 @@ func TestZipAuth_WritesValidatedIdentityDownstream(t *testing.T) {
 // that observes or caches them would see credentials.
 func TestZipAuth_DoesNotReflectRequestHeadersOntoResponse(t *testing.T) {
 	app := mountApp(t)
-	app.Get("/echo", func(c *zip.Ctx) error { return c.String(200, "ok") })
+	app.Raw(http.MethodGet, "/echo", func(c *zip.Ctx) error { return c.String(200, "ok") })
 
 	req := httptest.NewRequest("GET", "/echo", nil)
 	req.Header.Set("Authorization", "Bearer super-secret-jwt")
@@ -222,7 +222,7 @@ func TestMount_GatesAreOnTheChainMountInstalls(t *testing.T) {
 	// harder case on purpose: these two gates must hold even when nothing is
 	// validating tokens, because neither of them is an authn gate.
 	app := mountApp(t)
-	app.Get("/v1/chat/completions", func(c *zip.Ctx) error { return c.String(http.StatusOK, "ok") })
+	app.Raw(http.MethodGet, "/v1/chat/completions", func(c *zip.Ctx) error { return c.String(http.StatusOK, "ok") })
 
 	t.Run("cors_preflight_is_answered", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodOptions, "/v1/chat/completions", nil)

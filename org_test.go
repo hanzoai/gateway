@@ -60,7 +60,7 @@ func orgRequest(t *testing.T, claims authz.Claims, selected string) (org, home, 
 
 	app := zip.New(zip.Config{Logger: luxlog.New("test"), AppName: "gateway"})
 	app.Use(zipAuth(cfg))
-	app.Get("/v1/cloud/thing", func(c *zip.Ctx) error {
+	app.Raw(http.MethodGet, "/v1/cloud/thing", func(c *zip.Ctx) error {
 		org = c.Header("X-Org-Id")
 		home = c.Header("X-User-Owner")
 		return c.String(http.StatusOK, "")

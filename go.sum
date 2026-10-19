@@ -405,6 +405,8 @@ github.com/hanzo-ds/native v0.72.0 h1:lQhH2dza3foJCHN6scIVsEpqdj/xzI1N0QlI94vtWh
 github.com/hanzo-ds/native v0.72.0/go.mod h1:11FZtFdtfXMnmpybDEW6+uPRWFeC3TOT59YaV+lED+E=
 github.com/hanzoai/authz v1.10.29 h1:b4vWtI9g4Mvay1zizW7cwly/hDk06r+oAdA/y+317Do=
 github.com/hanzoai/authz v1.10.29/go.mod h1:xkzFdiIFx4UQMlU0NkmSRz0dgRQYqSXpKgVjn8ijn3E=
+github.com/hanzoai/authz v1.10.47 h1:ary/mw4lUYRetRlX+Ou61QXh8ig8EbD/ALR9fpg23EU=
+github.com/hanzoai/authz v1.10.47/go.mod h1:UaE7uejr8GTgosNO/teyBOItT85/T6+L3hpFPkSOzWE=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
@@ -746,6 +748,8 @@ github.com/zap-proto/mcp v1.0.5 h1:1Hi0KNi4YlWW2zkQUMDK9n3jP3wZaRJ1rseMW9p9F0c=
 github.com/zap-proto/mcp v1.0.5/go.mod h1:cYOsq+33NyW4X8nUVtIs/qtezVovYazw1s0V7mrQBYA=
 github.com/zap-proto/zip v1.36.50 h1:b5rEFyAR/uLlvQABb9e17eJbcWiVC9AFvaBgXkql334=
 github.com/zap-proto/zip v1.36.50/go.mod h1:sjlwTZhK8yLnjLWreVhK9VZrf2M/doKtEaqgZzCx+I0=
+github.com/zap-proto/zip v1.37.3 h1:QdSB0xqr4c7frwR8c+bVTQSWIpiavPYk3AnMXOpj/LA=
+github.com/zap-proto/zip v1.37.3/go.mod h1:mYE5BMXclZ14Wz4tw/3ir+QBI7A7DPpi3ROXgwnXpfU=
 go.mongodb.org/mongo-driver/v2 v2.5.0 h1:yXUhImUjjAInNcpTcAlPHiT7bIXhshCTL3jVBkF3xaE=
 go.mongodb.org/mongo-driver/v2 v2.5.0/go.mod h1:yOI9kBsufol30iFsl1slpdq1I0eHPzybRWdyYUs8K/0=
 go.opencensus.io v0.15.0/go.mod h1:UffZAU+4sDEINUGP/B7UfBBkq4fqLu9zXAX7ke6CHW0=

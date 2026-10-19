@@ -67,8 +67,8 @@ type ProbeOut struct {
 // surface and the :8081 k8s listener), so the two cannot answer differently
 // about one process.
 func Probes(app *zip.App) {
-	zip.Get(app, "/healthz", healthz)
-	zip.Get(app, "/readyz", readyz)
+	app.Get("/healthz", healthz)
+	app.Get("/readyz", readyz)
 }
 
 // MountProbes registers the SAME two ops under the gateway's reserved prefix,
@@ -88,8 +88,8 @@ func Probes(app *zip.App) {
 // point of declaration.
 func MountProbes(app *zip.App) {
 	g := app.Group("/_/gateway")
-	zip.Get(g, "/healthz", healthz)
-	zip.Get(g, "/readyz", readyz)
+	g.Get("/healthz", healthz)
+	g.Get("/readyz", readyz)
 }
 
 // healthz reports that the gateway process is running and answering HTTP.
@@ -130,7 +130,7 @@ func readyz(context.Context, *ProbeIn) (*ProbeOut, error) {
 // middleware when GATEWAY_METRICS_ENABLED=true; this keeps the path answering
 // for scrapers when telemetry is off (dev/local) rather than 404ing at them.
 func MountMetrics(app *zip.App) {
-	app.Get("/metrics", func(c *zip.Ctx) error {
+	app.Raw(http.MethodGet, "/metrics", func(c *zip.Ctx) error {
 		c.SetHeader("Content-Type", "text/plain; version=0.0.4")
 		return c.String(http.StatusOK, "# gateway up\n")
 	})
