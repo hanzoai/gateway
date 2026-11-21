@@ -2,6 +2,8 @@
 
 # Hanzo Gateway
 
+[![Open in Hanzo](https://hanzo.app/badges/open-in-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/gateway&ref=main&action=open) [![Edit with Hanzo](https://hanzo.app/badges/edit-with-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/gateway&ref=main&action=edit) [![Deploy with Hanzo](https://hanzo.app/badges/deploy-with-hanzo.svg)](https://hanzo.app/dev/open?repo=github.com/hanzoai/gateway&ref=main&action=deploy)
+
 Gateway is the trust boundary in front of the Hanzo API. Every request to
 `api.hanzo.ai` passes through it, and what it does is decide who the caller is
 and whether the request may proceed — validate the JWT against Hanzo IAM's
